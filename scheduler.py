@@ -1,12 +1,3 @@
-"""
-Master V Scheduler - Auto Sync Every Hour
-==========================================
-بيجيب الداتا من الموقع كل ساعة ويقارنها بالـ database
-- يضيف الوحدات الجديدة
-- يحدث الوحدات المتغيرة (السعر، الحالة، إلخ)
-- يعلم على الوحدات المباعة (status = 0)
-"""
-
 import requests
 import psycopg2
 import psycopg2.extras
@@ -16,7 +7,6 @@ import logging
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
-# ─── Logging Setup ────────────────────────────────────────────────────────────
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -27,7 +17,6 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-# ─── Config ───────────────────────────────────────────────────────────────────
 DB_CONFIG = {
     "host":     "caboose.proxy.rlwy.net",
     "port":     21778,
@@ -55,7 +44,6 @@ PLACES = {
     "Ain Sokhna":     7
 }
 
-# ─── DB Helpers ───────────────────────────────────────────────────────────────
 def get_conn():
     return psycopg2.connect(**DB_CONFIG)
 
@@ -75,14 +63,12 @@ def ensure_columns_exist(conn):
 
 
 def get_existing_units(conn) -> Dict[int, Dict]:
-    """يجيب كل الوحدات الموجودة مع detail_id كـ key"""
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute("SELECT * FROM units")
         rows = cur.fetchall()
     return {row["detail_id"]: dict(row) for row in rows}
 
 
-# ─── API Helpers (نفس الكود الأصلي) ──────────────────────────────────────────
 def fetch_filters(city_id: int) -> Dict:
     url = f"{BASE_URL}/data/filter"
     try:
@@ -198,7 +184,6 @@ def flatten_compound(compound_info: Dict, compound_data: Dict, city_name: str) -
     return rows
 
 
-# ─── Sync Logic ───────────────────────────────────────────────────────────────
 TRACKED_FIELDS = [
     "total_price_egp", "total_price_to_egp", "cash_price_from_egp",
     "cash_price_to_egp", "price_per_sqm_egp", "status",
@@ -217,14 +202,12 @@ def sync_units(conn, fresh_units: List[Dict], existing: Dict[int, Dict]):
 
     with conn.cursor() as cur:
 
-        # 1. وحدات جديدة أو متغيرة
         for unit in fresh_units:
             did = unit.get("detail_id")
             if not did:
                 continue
 
             if did not in existing:
-                # ─── INSERT ───────────────────────────────────────────────
                 cur.execute("""
                     INSERT INTO units (
                         city_name, compound_name, compound_id, developer_name, developer_id,
@@ -249,7 +232,6 @@ def sync_units(conn, fresh_units: List[Dict], existing: Dict[int, Dict]):
                 new_count += 1
 
             else:
-                # ─── CHECK FOR CHANGES ────────────────────────────────────
                 old = existing[did]
                 changed = any(
                     str(unit.get(f)) != str(old.get(f))
@@ -279,13 +261,11 @@ def sync_units(conn, fresh_units: List[Dict], existing: Dict[int, Dict]):
                     """, {**unit, "last_seen": now})
                     updated_count += 1
                 else:
-                    # بس حدث last_seen
                     cur.execute(
                         "UPDATE units SET last_seen = %s WHERE detail_id = %s",
                         (now, did)
                     )
 
-        # 2. وحدات اختفت من الموقع = اتباعت
         sold_ids = set(existing.keys()) - fresh_ids
         for did in sold_ids:
             if not existing[did].get("is_sold"):
@@ -298,8 +278,6 @@ def sync_units(conn, fresh_units: List[Dict], existing: Dict[int, Dict]):
     conn.commit()
     return new_count, updated_count, sold_count
 
-
-# ─── Main Job ─────────────────────────────────────────────────────────────────
 def sync_job():
     log.info("=" * 55)
     log.info(f"🔄 Sync started at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -366,12 +344,10 @@ def sync_job():
         traceback.print_exc()
 
 
-# ─── Entry Point ──────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     log.info("🚀 Master V Scheduler starting...")
     log.info("⏰ Will sync every 1 hour")
 
-    # شغّل مرة فورًا
     sync_job()
 
     schedule.every(1).hours.do(sync_job)
