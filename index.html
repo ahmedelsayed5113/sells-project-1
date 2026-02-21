@@ -800,20 +800,8 @@ async function loadData() {
       throw new Error(data.error);
     }
     
-    // Filter out invalid data
-    allData = data.filter(u => 
-      u.total_price_egp && 
-      u.total_price_egp > 0 && 
-      u.total_price_egp < 1e10 && // Remove unrealistic prices
-      u.built_up_area_sqm && 
-      u.built_up_area_sqm > 0 &&
-      u.built_up_area_sqm < 10000 && // Remove unrealistic areas
-      u.price_per_sqm_egp &&
-      u.price_per_sqm_egp > 0 &&
-      u.price_per_sqm_egp < 1e6 // Remove unrealistic PSM
-    );
-    
-    console.log(`✅ Loaded ${allData.length} valid units from API (filtered from ${data.length} total)`);
+    allData = data;
+    console.log(`✅ Loaded ${allData.length} units from API`);
     
   } catch(e) {
     console.error('❌ Failed to load from API:', e);
@@ -844,10 +832,15 @@ function initPage() {
     return;
   }
 
-  // Calculate ACTUAL ranges from the data
-  const prices = allData.map(d => d.total_price_egp).filter(Boolean);
-  const areas  = allData.map(d => d.built_up_area_sqm).filter(Boolean);
-  const psms   = allData.map(d => d.price_per_sqm_egp).filter(Boolean);
+  // Calculate ACTUAL ranges from the data, filtering out invalid values
+  const prices = allData.map(d => d.total_price_egp).filter(v => v && v > 0 && v < 1e10);
+  const areas  = allData.map(d => d.built_up_area_sqm).filter(v => v && v > 0 && v < 10000);
+  const psms   = allData.map(d => d.price_per_sqm_egp).filter(v => v && v > 0 && v < 1e6);
+
+  if (prices.length === 0 || areas.length === 0 || psms.length === 0) {
+    console.error('❌ Invalid data ranges');
+    return;
+  }
 
   ranges.price = { 
     min: Math.floor(Math.min(...prices) / 100000) * 100000, // Round down to nearest 100k
