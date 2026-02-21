@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PropFinder — Sales Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: #2a2a3a;
+    --accent: #7c6dff;
+    --accent2: #ff6d9e;
+    --accent3: #6dffcb;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --card: #16161f;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Ambient background */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -200px; left: -200px;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(124,109,255,0.08) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  body::after {
+    content: '';
+    position: fixed;
+    bottom: -200px; right: -200px;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(255,109,158,0.06) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    grid-template-rows: auto 1fr;
+    min-height: 100vh;
+  }
+
+  /* ─── HEADER ─────────────────────────────────── */
+  header {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(10,10,15,0.8);
+    backdrop-filter: blur(20px);
+    position: sticky; top: 0; z-index: 100;
+  }
+
+  .logo {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .logo-text {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 20px;
+    letter-spacing: -0.5px;
+  }
+  .logo-text span { color: var(--accent); }
+
+  .header-stats {
+    display: flex; gap: 32px;
+  }
+  .stat {
+    text-align: center;
+  }
+  .stat-value {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 20px;
+    color: var(--accent3);
+  }
+  .stat-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+
+  .search-bar {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 16px;
+    width: 260px;
+    transition: border-color 0.2s;
+  }
+  .search-bar:focus-within { border-color: var(--accent); }
+  .search-bar input {
+    background: none; border: none; outline: none;
+    color: var(--text); font-family: 'DM Sans', sans-serif;
+    font-size: 14px; width: 100%;
+  }
+  .search-bar input::placeholder { color: var(--muted); }
+
+  /* ─── SIDEBAR ─────────────────────────────────── */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    padding: 24px;
+    overflow-y: auto;
+    max-height: calc(100vh - 77px);
+    position: sticky; top: 77px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .sidebar-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    margin-bottom: 20px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .sidebar-title::after {
+    content: ''; flex: 1;
+    height: 1px; background: var(--border);
+  }
+
+  .filter-section {
+    margin-bottom: 28px;
+  }
+
+  .filter-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 10px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+
+  /* Range Slider */
+  .range-wrapper {
+    background: var(--surface2);
+    border-radius: 12px;
+    padding: 14px;
+    border: 1px solid var(--border);
+  }
+  .range-display {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px;
+  }
+  .range-val {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent3);
+  }
+  .range-sep { color: var(--muted); font-size: 12px; }
+
+  .dual-range {
+    position: relative; height: 28px;
+  }
+  .dual-range input[type=range] {
+    position: absolute;
+    width: 100%; height: 4px;
+    background: transparent;
+    pointer-events: none;
+    -webkit-appearance: none;
+    top: 50%; transform: translateY(-50%);
+  }
+  .dual-range input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 3px solid var(--bg);
+    cursor: pointer;
+    pointer-events: all;
+    box-shadow: 0 0 0 2px var(--accent);
+    transition: transform 0.15s;
+  }
+  .dual-range input[type=range]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+  }
+  .range-track {
+    position: absolute;
+    top: 50%; transform: translateY(-50%);
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    width: 100%;
+  }
+  .range-fill {
+    position: absolute;
+    height: 4px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+  }
+
+  /* Checkbox Pills */
+  .pill-group {
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  .pill {
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+    white-space: nowrap;
+  }
+  .pill:hover { border-color: var(--accent); color: var(--text); }
+  .pill.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .pill.active-green {
+    background: var(--accent3);
+    border-color: var(--accent3);
+    color: #000;
+  }
+
+  /* Select */
+  .styled-select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    padding: 10px 12px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b6b80' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+  }
+  .styled-select:focus { border-color: var(--accent); }
+
+  /* Number input */
+  .number-inputs {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+  .number-input-wrap {
+    position: relative;
+  }
+  .number-input-wrap input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    padding: 10px 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .number-input-wrap input:focus { border-color: var(--accent); }
+  .number-input-wrap label {
+    position: absolute;
+    top: -8px; left: 10px;
+    font-size: 10px; color: var(--muted);
+    background: var(--bg); padding: 0 4px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+
+  /* Reset button */
+  .btn-reset {
+    width: 100%;
+    padding: 12px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+  }
+  .btn-reset:hover {
+    border-color: var(--accent2);
+    color: var(--accent2);
+  }
+
+  /* ─── MAIN CONTENT ─────────────────────────────── */
+  .main {
+    padding: 24px;
+    overflow-y: auto;
+    max-height: calc(100vh - 77px);
+  }
+
+  .results-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .results-count {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+  }
+  .results-count span { color: var(--accent); }
+
+  .sort-controls {
+    display: flex; gap: 8px; align-items: center;
+  }
+  .sort-btn {
+    padding: 8px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .sort-btn.active, .sort-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* Active Filters Tags */
+  .active-filters {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-bottom: 16px;
+    min-height: 0;
+  }
+  .filter-tag {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(124,109,255,0.15);
+    border: 1px solid rgba(124,109,255,0.3);
+    border-radius: 20px;
+    padding: 4px 10px 4px 12px;
+    font-size: 12px;
+    color: var(--accent);
+    animation: tagIn 0.2s ease;
+  }
+  @keyframes tagIn {
+    from { opacity: 0; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .filter-tag button {
+    background: none; border: none; cursor: pointer;
+    color: var(--accent); font-size: 14px; line-height: 1;
+    opacity: 0.7; transition: opacity 0.2s;
+    padding: 0;
+  }
+  .filter-tag button:hover { opacity: 1; }
+
+  /* Cards Grid */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+  }
+
+  .unit-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    transition: all 0.25s;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    animation: cardIn 0.3s ease both;
+  }
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .unit-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    opacity: 0;
+    transition: opacity 0.25s;
+  }
+  .unit-card:hover {
+    border-color: rgba(124,109,255,0.4);
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+  }
+  .unit-card:hover::before { opacity: 1; }
+
+  .card-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 14px;
+  }
+  .compound-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.3;
+    flex: 1;
+  }
+  .unit-type-badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+    background: rgba(109,255,203,0.12);
+    color: var(--accent3);
+    border: 1px solid rgba(109,255,203,0.2);
+    white-space: nowrap;
+    margin-left: 8px;
+  }
+
+  .card-meta {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-bottom: 16px;
+  }
+  .meta-chip {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 12px; color: var(--muted);
+    background: var(--surface2);
+    border-radius: 6px;
+    padding: 4px 8px;
+  }
+  .meta-chip strong { color: var(--text); font-weight: 500; }
+
+  .card-price {
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+    display: flex; justify-content: space-between; align-items: flex-end;
+  }
+  .price-main {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .price-main small {
+    font-size: 11px; font-weight: 400;
+    color: var(--muted); font-family: 'DM Sans', sans-serif;
+    display: block;
+  }
+  .price-psm {
+    font-size: 12px;
+    color: var(--accent);
+    text-align: right;
+  }
+  .price-psm small { color: var(--muted); font-size: 10px; display: block; }
+
+  .card-footer {
+    display: flex; gap: 8px; margin-top: 12px;
+  }
+  .card-detail {
+    flex: 1; font-size: 11px; color: var(--muted);
+    background: var(--surface2); border-radius: 6px;
+    padding: 6px 8px; text-align: center;
+  }
+  .card-detail strong {
+    display: block; color: var(--text);
+    font-size: 12px; margin-bottom: 1px;
+  }
+
+  /* Sold badge */
+  .sold-badge {
+    position: absolute; top: 12px; right: 12px;
+    background: var(--accent2);
+    color: #fff; font-size: 10px; font-weight: 600;
+    padding: 3px 8px; border-radius: 20px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+
+  /* Empty state */
+  .empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--muted);
+  }
+  .empty-state .empty-icon { font-size: 48px; margin-bottom: 16px; }
+  .empty-state h3 { font-family: 'Syne', sans-serif; font-size: 20px; color: var(--text); margin-bottom: 8px; }
+
+  /* Loading */
+  .loading {
+    grid-column: 1 / -1;
+    text-align: center; padding: 60px;
+    color: var(--muted);
+  }
+  .spinner {
+    width: 32px; height: 32px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* Toggle switch */
+  .toggle-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 0;
+  }
+  .toggle-label { font-size: 13px; color: var(--text); }
+  .toggle {
+    position: relative; width: 40px; height: 22px;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute; inset: 0;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 22px; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .toggle-slider::after {
+    content: '';
+    position: absolute;
+    left: 3px; top: 50%; transform: translateY(-50%);
+    width: 14px; height: 14px;
+    background: var(--muted);
+    border-radius: 50%;
+    transition: all 0.2s;
+  }
+  .toggle input:checked + .toggle-slider { background: var(--accent); border-color: var(--accent); }
+  .toggle input:checked + .toggle-slider::after { left: 21px; background: #fff; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🏙️</div>
+      <div class="logo-text">Prop<span>Finder</span></div>
+    </div>
+
+    <div class="header-stats">
+      <div class="stat">
+        <div class="stat-value" id="totalCount">—</div>
+        <div class="stat-label">Total Units</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="filteredCount">—</div>
+        <div class="stat-label">Matching</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="avgPrice">—</div>
+        <div class="stat-label">Avg Price</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="compoundCount">—</div>
+        <div class="stat-label">Compounds</div>
+      </div>
+    </div>
+
+    <div class="search-bar">
+      <span>🔍</span>
+      <input type="text" id="searchInput" placeholder="Search compound, developer...">
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-title">Filters</div>
+
+    <!-- City -->
+    <div class="filter-section">
+      <div class="filter-label">City</div>
+      <div class="pill-group" id="cityFilter"></div>
+    </div>
+
+    <!-- Unit Type -->
+    <div class="filter-section">
+      <div class="filter-label">Unit Type</div>
+      <div class="pill-group" id="unitTypeFilter"></div>
+    </div>
+
+    <!-- Bedrooms -->
+    <div class="filter-section">
+      <div class="filter-label">Bedrooms</div>
+      <div class="pill-group" id="bedroomsFilter">
+        <div class="pill active-green" data-bed="any" onclick="filterBed(this,'any')">Any</div>
+        <div class="pill" data-bed="1" onclick="filterBed(this,1)">1 BR</div>
+        <div class="pill" data-bed="2" onclick="filterBed(this,2)">2 BR</div>
+        <div class="pill" data-bed="3" onclick="filterBed(this,3)">3 BR</div>
+        <div class="pill" data-bed="4" onclick="filterBed(this,4)">4 BR</div>
+        <div class="pill" data-bed="5" onclick="filterBed(this,5)">5+ BR</div>
+      </div>
+    </div>
+
+    <!-- Price Range -->
+    <div class="filter-section">
+      <div class="filter-label">
+        Total Price <span style="color:var(--accent3);font-size:10px">EGP</span>
+      </div>
+      <div class="range-wrapper">
+        <div class="range-display">
+          <div class="range-val" id="priceMin">0</div>
+          <div class="range-sep">to</div>
+          <div class="range-val" id="priceMax">0</div>
+        </div>
+        <div class="dual-range">
+          <div class="range-track"><div class="range-fill" id="priceFill"></div></div>
+          <input type="range" id="priceRangeMin" min="0" max="100" value="0" oninput="updateRange('price')">
+          <input type="range" id="priceRangeMax" min="0" max="100" value="100" oninput="updateRange('price')">
+        </div>
+      </div>
+    </div>
+
+    <!-- Area Range -->
+    <div class="filter-section">
+      <div class="filter-label">
+        Built-Up Area <span style="color:var(--accent3);font-size:10px">SQM</span>
+      </div>
+      <div class="range-wrapper">
+        <div class="range-display">
+          <div class="range-val" id="areaMin">0</div>
+          <div class="range-sep">to</div>
+          <div class="range-val" id="areaMax">0</div>
+        </div>
+        <div class="dual-range">
+          <div class="range-track"><div class="range-fill" id="areaFill"></div></div>
+          <input type="range" id="areaRangeMin" min="0" max="100" value="0" oninput="updateRange('area')">
+          <input type="range" id="areaRangeMax" min="0" max="100" value="100" oninput="updateRange('area')">
+        </div>
+      </div>
+    </div>
+
+    <!-- Price per SQM -->
+    <div class="filter-section">
+      <div class="filter-label">
+        Price / SQM <span style="color:var(--accent3);font-size:10px">EGP</span>
+      </div>
+      <div class="range-wrapper">
+        <div class="range-display">
+          <div class="range-val" id="psmMin">0</div>
+          <div class="range-sep">to</div>
+          <div class="range-val" id="psmMax">0</div>
+        </div>
+        <div class="dual-range">
+          <div class="range-track"><div class="range-fill" id="psmFill"></div></div>
+          <input type="range" id="psmRangeMin" min="0" max="100" value="0" oninput="updateRange('psm')">
+          <input type="range" id="psmRangeMax" min="0" max="100" value="100" oninput="updateRange('psm')">
+        </div>
+      </div>
+    </div>
+
+    <!-- Delivery -->
+    <div class="filter-section">
+      <div class="filter-label">Delivery (months)</div>
+      <div class="number-inputs">
+        <div class="number-input-wrap">
+          <label>From</label>
+          <input type="number" id="deliveryFrom" placeholder="e.g. 6" oninput="applyFilters()">
+        </div>
+        <div class="number-input-wrap">
+          <label>To</label>
+          <input type="number" id="deliveryTo" placeholder="e.g. 24" oninput="applyFilters()">
+        </div>
+      </div>
+    </div>
+
+    <!-- Developer -->
+    <div class="filter-section">
+      <div class="filter-label">Developer</div>
+      <select class="styled-select" id="developerFilter" onchange="applyFilters()">
+        <option value="">All Developers</option>
+      </select>
+    </div>
+
+    <!-- Finishing -->
+    <div class="filter-section">
+      <div class="filter-label">Finishing Type</div>
+      <div class="pill-group" id="finishingFilter"></div>
+    </div>
+
+    <!-- Cash Discount -->
+    <div class="filter-section">
+      <div class="filter-label">Min Cash Discount %</div>
+      <div class="range-wrapper">
+        <div class="range-display">
+          <div class="range-val" id="discountVal">0%</div>
+          <div class="range-sep">minimum</div>
+        </div>
+        <input type="range" id="discountSlider" min="0" max="40" value="0"
+          style="width:100%;accent-color:var(--accent2)"
+          oninput="document.getElementById('discountVal').textContent=this.value+'%';applyFilters()">
+      </div>
+    </div>
+
+    <!-- Toggles -->
+    <div class="filter-section">
+      <div class="filter-label">Options</div>
+      <div class="toggle-row">
+        <span class="toggle-label">Free Club Fees</span>
+        <label class="toggle">
+          <input type="checkbox" id="freeClub" onchange="applyFilters()">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-label">Free Parking</span>
+        <label class="toggle">
+          <input type="checkbox" id="freeParking" onchange="applyFilters()">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-label">Hide Sold Units</span>
+        <label class="toggle">
+          <input type="checkbox" id="hideSold" onchange="applyFilters()" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <button class="btn-reset" onclick="resetFilters()">↺ Reset All Filters</button>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="results-header">
+      <div class="results-count">
+        <span id="resultNum">—</span> units found
+      </div>
+      <div class="sort-controls">
+        <span style="font-size:12px;color:var(--muted)">Sort:</span>
+        <button class="sort-btn active" onclick="setSort('price_asc',this)">Price ↑</button>
+        <button class="sort-btn" onclick="setSort('price_desc',this)">Price ↓</button>
+        <button class="sort-btn" onclick="setSort('area_desc',this)">Area ↓</button>
+        <button class="sort-btn" onclick="setSort('psm_asc',this)">PSM ↑</button>
+      </div>
+    </div>
+
+    <div class="active-filters" id="activeTags"></div>
+
+    <div class="cards-grid" id="cardsGrid">
+      <div class="loading">
+        <div class="spinner"></div>
+        Loading units data...
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+// ─── DATA & STATE ──────────────────────────────────────────────────────────────
+let allData = [];
+let filteredData = [];
+let sortMode = 'price_asc';
+
+// Range metadata
+const ranges = {
+  price: { min: 0, max: 0, step: 500000 },
+  area:  { min: 0, max: 0, step: 5 },
+  psm:   { min: 0, max: 0, step: 1000 },
+};
+
+const activeFilters = {
+  cities: new Set(),
+  unitTypes: new Set(),
+  bedrooms: 'any',
+  finishing: new Set(),
+};
+
+// ─── DB CONNECTION ─────────────────────────────────────────────────────────────
+// We'll embed the data inline since we're fetching from Railway PostgreSQL
+// The page connects to Railway DB via a backend proxy OR uses embedded CSV data
+
+async function loadData() {
+  // Try to load from embedded JSON or fallback to sample
+  // In production: fetch('/api/units') from your Railway backend
+  // For now we embed data via a fetch to a local endpoint or hardcode sample
+  
+  // Since this runs as standalone HTML, we'll use sample data structure
+  // Replace the URL below with your actual API endpoint when deployed
+  try {
+    const resp = await fetch('/api/units').catch(() => null);
+    if (resp && resp.ok) {
+      allData = await resp.json();
+    } else {
+      // Fallback: generate from embedded CSV-like structure
+      allData = getSampleData();
+    }
+  } catch(e) {
+    allData = getSampleData();
+  }
+  initPage();
+}
+
+function getSampleData() {
+  // Sample data representing your actual structure
+  return [
+    {city_name:"New Cairo",compound_name:"90 Avenue",compound_id:1,developer_name:"Afaaq",developer_id:2,phase_name:"Serenity Rtm",unit_type:"Ground Apartment",bedrooms:2,built_up_area_sqm:168,total_price_egp:18115000,price_per_sqm_egp:107827,cash_price_from_egp:13586250,delivery_from_months:12,delivery_to_months:12,payment_plan:"10.0% down, 60 months",maintenance:"8,000 LE/M",club_fees:"Free",parking_fees:"Free",finishing_type:"1",cash_discount_percent:25,cash_price_to_egp:13586250,status:1,sub_type:"Ground Apartment",total_price_to_egp:18115000,detail_id:2722587,outdoor_area:"61 M",is_sold:false},
+    {city_name:"New Cairo",compound_name:"90 Avenue",compound_id:1,developer_name:"Afaaq",developer_id:2,phase_name:"Serenity Rtm",unit_type:"Typical Apartment",bedrooms:2,built_up_area_sqm:139,total_price_egp:14995000,price_per_sqm_egp:107877,cash_price_from_egp:11246250,delivery_from_months:12,delivery_to_months:12,payment_plan:"10.0% down, 60 months",maintenance:"8,000 LE/M",club_fees:"Free",parking_fees:"Free",finishing_type:"1",cash_discount_percent:25,cash_price_to_egp:11246250,status:1,sub_type:"Typical Apartment",total_price_to_egp:14995000,detail_id:2722848,outdoor_area:"0",is_sold:false},
+    {city_name:"New Cairo",compound_name:"90 Avenue",compound_id:1,developer_name:"Afaaq",developer_id:2,phase_name:"Serenity Rtm",unit_type:"Typical Apartment",bedrooms:3,built_up_area_sqm:182,total_price_egp:19510000,price_per_sqm_egp:107197,cash_price_from_egp:14632500,delivery_from_months:12,delivery_to_months:12,payment_plan:"10.0% down, 60 months",maintenance:"8,000 LE/M",club_fees:"Free",parking_fees:"Free",finishing_type:"1",cash_discount_percent:25,cash_price_to_egp:14632500,status:1,sub_type:"Typical Apartment",total_price_to_egp:19510000,detail_id:2723013,outdoor_area:"0",is_sold:false},
+    {city_name:"New Capital",compound_name:"Scenario",compound_id:5,developer_name:"Misr Italia",developer_id:8,phase_name:"Phase 1",unit_type:"Apartment",bedrooms:2,built_up_area_sqm:130,total_price_egp:8500000,price_per_sqm_egp:65384,cash_price_from_egp:7225000,delivery_from_months:18,delivery_to_months:24,payment_plan:"5% down, 72 months",maintenance:"Free",club_fees:"Free",parking_fees:"25,000",finishing_type:"Semi-finished",cash_discount_percent:15,cash_price_to_egp:7225000,status:1,sub_type:"Apartment",total_price_to_egp:8500000,detail_id:1000001,outdoor_area:"0",is_sold:false},
+    {city_name:"New Capital",compound_name:"Scenario",compound_id:5,developer_name:"Misr Italia",developer_id:8,phase_name:"Phase 1",unit_type:"Apartment",bedrooms:3,built_up_area_sqm:175,total_price_egp:12000000,price_per_sqm_egp:68571,cash_price_from_egp:10200000,delivery_from_months:18,delivery_to_months:24,payment_plan:"5% down, 72 months",maintenance:"Free",club_fees:"Free",parking_fees:"25,000",finishing_type:"Semi-finished",cash_discount_percent:15,cash_price_to_egp:10200000,status:1,sub_type:"Apartment",total_price_to_egp:12000000,detail_id:1000002,outdoor_area:"0",is_sold:false},
+    {city_name:"6th October",compound_name:"Zed West",compound_id:10,developer_name:"ORA",developer_id:15,phase_name:"Zone A",unit_type:"Villa",bedrooms:4,built_up_area_sqm:350,total_price_egp:35000000,price_per_sqm_egp:100000,cash_price_from_egp:29750000,delivery_from_months:24,delivery_to_months:36,payment_plan:"15% down, 84 months",maintenance:"12,000 LE/M",club_fees:"Free",parking_fees:"Free",finishing_type:"Fully finished",cash_discount_percent:15,cash_price_to_egp:29750000,status:1,sub_type:"Villa",total_price_to_egp:35000000,detail_id:1000003,outdoor_area:"200 M",is_sold:false},
+    {city_name:"North Coast",compound_name:"Hacienda Bay",compound_id:20,developer_name:"Palm Hills",developer_id:25,phase_name:"Phase 4",unit_type:"Chalet",bedrooms:2,built_up_area_sqm:95,total_price_egp:6800000,price_per_sqm_egp:71578,cash_price_from_egp:5780000,delivery_from_months:6,delivery_to_months:12,payment_plan:"10% down, 48 months",maintenance:"5,000 LE/M",club_fees:"25,000",parking_fees:"Free",finishing_type:"Fully finished",cash_discount_percent:15,cash_price_to_egp:5780000,status:0,sub_type:"Chalet",total_price_to_egp:6800000,detail_id:1000004,outdoor_area:"30 M",is_sold:true},
+    {city_name:"Ain Sokhna",compound_name:"Mountain View Sokhna",compound_id:30,developer_name:"Mountain View",developer_id:35,phase_name:"Phase 2",unit_type:"Chalet",bedrooms:2,built_up_area_sqm:110,total_price_egp:5200000,price_per_sqm_egp:47272,cash_price_from_egp:4420000,delivery_from_months:12,delivery_to_months:18,payment_plan:"10% down, 60 months",maintenance:"4,000 LE/M",club_fees:"Free",parking_fees:"Free",finishing_type:"Core & Shell",cash_discount_percent:15,cash_price_to_egp:4420000,status:1,sub_type:"Chalet",total_price_to_egp:5200000,detail_id:1000005,outdoor_area:"40 M",is_sold:false},
+  ];
+}
+
+// ─── INIT ──────────────────────────────────────────────────────────────────────
+function initPage() {
+  // Compute ranges
+  const prices = allData.map(d => d.total_price_egp).filter(Boolean);
+  const areas  = allData.map(d => d.built_up_area_sqm).filter(Boolean);
+  const psms   = allData.map(d => d.price_per_sqm_egp).filter(Boolean);
+
+  ranges.price = { min: Math.min(...prices), max: Math.max(...prices) };
+  ranges.area  = { min: Math.min(...areas),  max: Math.max(...areas)  };
+  ranges.psm   = { min: Math.min(...psms),   max: Math.max(...psms)   };
+
+  updateRangeDisplay('price');
+  updateRangeDisplay('area');
+  updateRangeDisplay('psm');
+
+  // Build filter options
+  buildPills('cityFilter',    [...new Set(allData.map(d => d.city_name))].sort(),    'city');
+  buildPills('unitTypeFilter',[...new Set(allData.map(d => d.unit_type))].sort(),    'type');
+  buildPills('finishingFilter',[...new Set(allData.map(d => d.finishing_type).filter(Boolean))].sort(),'finishing');
+
+  const devSelect = document.getElementById('developerFilter');
+  [...new Set(allData.map(d => d.developer_name))].sort().forEach(dev => {
+    const opt = document.createElement('option');
+    opt.value = dev; opt.textContent = dev;
+    devSelect.appendChild(opt);
+  });
+
+  document.getElementById('totalCount').textContent = fmtNum(allData.length);
+  document.getElementById('compoundCount').textContent = new Set(allData.map(d => d.compound_name)).size;
+
+  applyFilters();
+}
+
+function buildPills(containerId, values, type) {
+  const el = document.getElementById(containerId);
+  const anyPill = document.createElement('div');
+  anyPill.className = 'pill active-green';
+  anyPill.textContent = 'All';
+  anyPill.onclick = () => {
+    if (type === 'city') { activeFilters.cities.clear(); }
+    else if (type === 'type') { activeFilters.unitTypes.clear(); }
+    else if (type === 'finishing') { activeFilters.finishing.clear(); }
+    el.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+    anyPill.classList.add('active-green');
+    applyFilters();
+  };
+  el.appendChild(anyPill);
+
+  values.forEach(val => {
+    const pill = document.createElement('div');
+    pill.className = 'pill';
+    pill.textContent = val;
+    pill.onclick = () => {
+      anyPill.classList.remove('active-green');
+      const set = type === 'city' ? activeFilters.cities : type === 'type' ? activeFilters.unitTypes : activeFilters.finishing;
+      if (set.has(val)) { set.delete(val); pill.classList.remove('active'); }
+      else { set.add(val); pill.classList.add('active'); }
+      if (set.size === 0) anyPill.classList.add('active-green');
+      applyFilters();
+    };
+    el.appendChild(pill);
+  });
+}
+
+// ─── RANGE ────────────────────────────────────────────────────────────────────
+function updateRangeDisplay(type) {
+  const r = ranges[type];
+  const minSlider = document.getElementById(`${type}RangeMin`);
+  const maxSlider = document.getElementById(`${type}RangeMax`);
+  if (!minSlider) return;
+  const minPct = parseInt(minSlider.value) / 100;
+  const maxPct = parseInt(maxSlider.value) / 100;
+  const minVal = r.min + minPct * (r.max - r.min);
+  const maxVal = r.min + maxPct * (r.max - r.min);
+
+  document.getElementById(`${type}Min`).textContent = type === 'price' ? fmtMillion(minVal) : fmtNum(Math.round(minVal));
+  document.getElementById(`${type}Max`).textContent = type === 'price' ? fmtMillion(maxVal) : fmtNum(Math.round(maxVal));
+
+  const fill = document.getElementById(`${type}Fill`);
+  if (fill) {
+    fill.style.left  = minSlider.value + '%';
+    fill.style.width = (maxSlider.value - minSlider.value) + '%';
+  }
+}
+
+function updateRange(type) {
+  const minSlider = document.getElementById(`${type}RangeMin`);
+  const maxSlider = document.getElementById(`${type}RangeMax`);
+  if (parseInt(minSlider.value) > parseInt(maxSlider.value)) {
+    minSlider.value = maxSlider.value;
+  }
+  updateRangeDisplay(type);
+  applyFilters();
+}
+
+function getRangeVal(type) {
+  const r = ranges[type];
+  const minPct = parseInt(document.getElementById(`${type}RangeMin`).value) / 100;
+  const maxPct = parseInt(document.getElementById(`${type}RangeMax`).value) / 100;
+  return {
+    min: r.min + minPct * (r.max - r.min),
+    max: r.min + maxPct * (r.max - r.min),
+  };
+}
+
+// ─── BEDROOMS ────────────────────────────────────────────────────────────────
+function filterBed(el, val) {
+  document.querySelectorAll('#bedroomsFilter .pill').forEach(p => {
+    p.classList.remove('active', 'active-green');
+  });
+  el.classList.add(val === 'any' ? 'active-green' : 'active');
+  activeFilters.bedrooms = val;
+  applyFilters();
+}
+
+// ─── SORT ────────────────────────────────────────────────────────────────────
+function setSort(mode, el) {
+  sortMode = mode;
+  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  applyFilters();
+}
+
+// ─── FILTER ──────────────────────────────────────────────────────────────────
+function applyFilters() {
+  const search    = document.getElementById('searchInput').value.toLowerCase();
+  const priceR    = getRangeVal('price');
+  const areaR     = getRangeVal('area');
+  const psmR      = getRangeVal('psm');
+  const delivFrom = parseInt(document.getElementById('deliveryFrom').value) || 0;
+  const delivTo   = parseInt(document.getElementById('deliveryTo').value)   || 9999;
+  const devFilter = document.getElementById('developerFilter').value;
+  const discount  = parseInt(document.getElementById('discountSlider').value) || 0;
+  const freeClub  = document.getElementById('freeClub').checked;
+  const freePark  = document.getElementById('freeParking').checked;
+  const hideSold  = document.getElementById('hideSold').checked;
+
+  filteredData = allData.filter(u => {
+    if (hideSold && (u.is_sold || u.status === 0)) return false;
+    if (activeFilters.cities.size    && !activeFilters.cities.has(u.city_name))  return false;
+    if (activeFilters.unitTypes.size && !activeFilters.unitTypes.has(u.unit_type)) return false;
+    if (activeFilters.finishing.size && !activeFilters.finishing.has(u.finishing_type)) return false;
+    if (activeFilters.bedrooms !== 'any') {
+      const b = parseInt(activeFilters.bedrooms);
+      if (b === 5) { if (u.bedrooms < 5) return false; }
+      else { if (u.bedrooms !== b) return false; }
+    }
+    if (u.total_price_egp   < priceR.min || u.total_price_egp   > priceR.max) return false;
+    if (u.built_up_area_sqm < areaR.min  || u.built_up_area_sqm > areaR.max)  return false;
+    if (u.price_per_sqm_egp < psmR.min   || u.price_per_sqm_egp > psmR.max)   return false;
+    if (u.delivery_from_months < delivFrom || u.delivery_to_months > delivTo)   return false;
+    if (devFilter && u.developer_name !== devFilter) return false;
+    if (discount  && (u.cash_discount_percent || 0) < discount) return false;
+    if (freeClub  && u.club_fees?.toLowerCase()  !== 'free')    return false;
+    if (freePark  && u.parking_fees?.toLowerCase()!== 'free')   return false;
+    if (search) {
+      const haystack = `${u.compound_name} ${u.developer_name} ${u.city_name} ${u.unit_type}`.toLowerCase();
+      if (!haystack.includes(search)) return false;
+    }
+    return true;
+  });
+
+  // Sort
+  filteredData.sort((a, b) => {
+    if (sortMode === 'price_asc')  return a.total_price_egp - b.total_price_egp;
+    if (sortMode === 'price_desc') return b.total_price_egp - a.total_price_egp;
+    if (sortMode === 'area_desc')  return b.built_up_area_sqm - a.built_up_area_sqm;
+    if (sortMode === 'psm_asc')    return a.price_per_sqm_egp - b.price_per_sqm_egp;
+    return 0;
+  });
+
+  renderCards();
+  updateStats();
+  updateTags();
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+function renderCards() {
+  const grid = document.getElementById('cardsGrid');
+  document.getElementById('resultNum').textContent = fmtNum(filteredData.length);
+
+  if (filteredData.length === 0) {
+    grid.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🔍</div>
+        <h3>No units found</h3>
+        <p>Try adjusting your filters to see more results</p>
+      </div>`;
+    return;
+  }
+
+  const show = filteredData.slice(0, 60);
+  grid.innerHTML = show.map((u, i) => `
+    <div class="unit-card" style="animation-delay:${i * 0.02}s">
+      ${u.is_sold || u.status === 0 ? '<div class="sold-badge">Sold</div>' : ''}
+      <div class="card-header">
+        <div class="compound-name">${u.compound_name}</div>
+        <div class="unit-type-badge">${u.unit_type}</div>
+      </div>
+      <div class="card-meta">
+        <div class="meta-chip">📍 <strong>${u.city_name}</strong></div>
+        <div class="meta-chip">🏗️ <strong>${u.developer_name}</strong></div>
+        <div class="meta-chip">🏠 <strong>${u.bedrooms} BR</strong></div>
+        <div class="meta-chip">📐 <strong>${u.built_up_area_sqm} m²</strong></div>
+        ${u.outdoor_area && u.outdoor_area !== '0' ? `<div class="meta-chip">🌿 <strong>${u.outdoor_area}</strong></div>` : ''}
+      </div>
+      <div class="card-price">
+        <div class="price-main">
+          <small>Total Price</small>
+          ${fmtMillion(u.total_price_egp)} EGP
+        </div>
+        <div class="price-psm">
+          ${fmtNum(Math.round(u.price_per_sqm_egp))} EGP/m²
+          <small>per sqm</small>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="card-detail">
+          <strong>${u.cash_price_from_egp ? fmtMillion(u.cash_price_from_egp) : '—'}</strong>
+          Cash Price
+        </div>
+        <div class="card-detail">
+          <strong>${u.cash_discount_percent || 0}%</strong>
+          Discount
+        </div>
+        <div class="card-detail">
+          <strong>${u.delivery_from_months}–${u.delivery_to_months}mo</strong>
+          Delivery
+        </div>
+        <div class="card-detail">
+          <strong>${u.club_fees === 'Free' ? '✓' : u.club_fees || '—'}</strong>
+          Club
+        </div>
+      </div>
+      ${u.payment_plan ? `<div style="margin-top:10px;font-size:11px;color:var(--muted);border-top:1px solid var(--border);padding-top:8px">💳 ${u.payment_plan}</div>` : ''}
+    </div>
+  `).join('');
+
+  if (filteredData.length > 60) {
+    grid.innerHTML += `<div class="empty-state" style="background:var(--surface2);border-radius:16px;border:1px dashed var(--border)">
+      <div style="font-size:24px">📦</div>
+      <h3 style="font-size:16px">+${fmtNum(filteredData.length - 60)} more units</h3>
+      <p>Refine your filters to see specific results</p>
+    </div>`;
+  }
+}
+
+function updateStats() {
+  document.getElementById('filteredCount').textContent = fmtNum(filteredData.length);
+  const prices = filteredData.map(d => d.total_price_egp).filter(Boolean);
+  const avg = prices.length ? prices.reduce((a,b) => a+b, 0) / prices.length : 0;
+  document.getElementById('avgPrice').textContent = avg ? fmtMillion(avg) : '—';
+}
+
+function updateTags() {
+  const tags = [];
+  if (activeFilters.cities.size)    [...activeFilters.cities].forEach(c => tags.push({label: `City: ${c}`, clear: () => { activeFilters.cities.delete(c); applyFilters(); }}));
+  if (activeFilters.unitTypes.size) [...activeFilters.unitTypes].forEach(t => tags.push({label: `Type: ${t}`, clear: () => { activeFilters.unitTypes.delete(t); applyFilters(); }}));
+  if (activeFilters.bedrooms !== 'any') tags.push({label: `${activeFilters.bedrooms}+ BR`, clear: () => { activeFilters.bedrooms = 'any'; document.querySelectorAll('#bedroomsFilter .pill').forEach(p => p.classList.remove('active')); document.querySelector('#bedroomsFilter .pill').classList.add('active-green'); applyFilters(); }});
+  if (parseInt(document.getElementById('discountSlider').value) > 0) tags.push({label: `Min ${document.getElementById('discountSlider').value}% discount`, clear: () => { document.getElementById('discountSlider').value = 0; document.getElementById('discountVal').textContent = '0%'; applyFilters(); }});
+  if (document.getElementById('freeClub').checked)    tags.push({label: 'Free Club',    clear: () => { document.getElementById('freeClub').checked = false; applyFilters(); }});
+  if (document.getElementById('freeParking').checked) tags.push({label: 'Free Parking', clear: () => { document.getElementById('freeParking').checked = false; applyFilters(); }});
+  if (document.getElementById('developerFilter').value) tags.push({label: `Dev: ${document.getElementById('developerFilter').value}`, clear: () => { document.getElementById('developerFilter').value = ''; applyFilters(); }});
+
+  const container = document.getElementById('activeTags');
+  container.innerHTML = tags.map((t, i) => `
+    <div class="filter-tag" id="tag${i}">
+      ${t.label}
+      <button onclick="clearTag(${i})">×</button>
+    </div>
+  `).join('');
+  window._tagClears = tags.map(t => t.clear);
+}
+
+function clearTag(i) { window._tagClears[i](); }
+
+function resetFilters() {
+  activeFilters.cities.clear();
+  activeFilters.unitTypes.clear();
+  activeFilters.finishing.clear();
+  activeFilters.bedrooms = 'any';
+  ['priceRangeMin','priceRangeMax','areaRangeMin','areaRangeMax','psmRangeMin','psmRangeMax'].forEach(id => {
+    document.getElementById(id).value = id.includes('Min') ? 0 : 100;
+  });
+  ['price','area','psm'].forEach(t => updateRangeDisplay(t));
+  document.getElementById('discountSlider').value = 0;
+  document.getElementById('discountVal').textContent = '0%';
+  document.getElementById('deliveryFrom').value = '';
+  document.getElementById('deliveryTo').value = '';
+  document.getElementById('developerFilter').value = '';
+  document.getElementById('freeClub').checked = false;
+  document.getElementById('freeParking').checked = false;
+  document.getElementById('hideSold').checked = true;
+  document.getElementById('searchInput').value = '';
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.pill:first-child').forEach(p => p.classList.add('active-green'));
+  applyFilters();
+}
+
+// ─── FORMAT ───────────────────────────────────────────────────────────────────
+function fmtNum(n) { return n?.toLocaleString('en-US') ?? '0'; }
+function fmtMillion(n) {
+  if (!n) return '0';
+  if (n >= 1e9) return (n/1e9).toFixed(1) + 'B';
+  if (n >= 1e6) return (n/1e6).toFixed(2) + 'M';
+  return fmtNum(Math.round(n));
+}
+
+// ─── SEARCH (debounced) ───────────────────────────────────────────────────────
+let searchTimer;
+document.getElementById('searchInput').addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(applyFilters, 250);
+});
+
+// ─── START ────────────────────────────────────────────────────────────────────
+loadData();
+</script>
+</body>
+</html>
