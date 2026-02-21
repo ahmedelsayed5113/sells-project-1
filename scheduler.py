@@ -374,7 +374,6 @@ if __name__ == "__main__":
     # شغّل مرة فورًا
     sync_job()
 
-    # بعدين كل ساعة
     schedule.every(1).hours.do(sync_job)
 
     log.info("\n✅ Scheduler running... Press Ctrl+C to stop")
