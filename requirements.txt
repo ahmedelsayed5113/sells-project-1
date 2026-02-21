@@ -1,7 +1,5 @@
-requests==2.31.0
-psycopg2-binary==2.9.9
-pg8000
-schedule==1.2.1
-pandas
 flask
+psycopg2-binary
 gunicorn
+requests
+schedule

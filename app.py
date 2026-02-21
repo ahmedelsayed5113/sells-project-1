@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, send_file
+from flask import Flask, jsonify
 import psycopg2
 import psycopg2.extras
 import os
@@ -18,7 +18,8 @@ def get_conn():
 
 @app.route("/")
 def index():
-    return send_file("index.html")
+    with open(os.path.join(os.path.dirname(__file__), "index.html"), encoding="utf-8") as f:
+        return f.read()
 
 @app.route("/api/units")
 def get_units():
