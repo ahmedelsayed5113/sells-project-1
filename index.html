@@ -29,7 +29,6 @@
     overflow-x: hidden;
   }
 
-  /* Ambient background */
   body::before {
     content: '';
     position: fixed;
@@ -58,7 +57,6 @@
     min-height: 100vh;
   }
 
-  /* ─── HEADER ─────────────────────────────────── */
   header {
     grid-column: 1 / -1;
     display: flex;
@@ -125,7 +123,6 @@
   }
   .search-bar input::placeholder { color: var(--muted); }
 
-  /* ─── SIDEBAR ─────────────────────────────────── */
   .sidebar {
     border-right: 1px solid var(--border);
     padding: 24px;
@@ -165,7 +162,6 @@
     display: flex; align-items: center; justify-content: space-between;
   }
 
-  /* Range Slider */
   .range-wrapper {
     background: var(--surface2);
     border-radius: 12px;
@@ -224,7 +220,6 @@
     border-radius: 2px;
   }
 
-  /* Checkbox Pills */
   .pill-group {
     display: flex; flex-wrap: wrap; gap: 6px;
   }
@@ -253,7 +248,6 @@
     color: #000;
   }
 
-  /* Select */
   .styled-select {
     width: 100%;
     background: var(--surface2);
@@ -274,7 +268,6 @@
   }
   .styled-select:focus { border-color: var(--accent); }
 
-  /* Number input */
   .number-inputs {
     display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
   }
@@ -302,7 +295,6 @@
     text-transform: uppercase; letter-spacing: 0.5px;
   }
 
-  /* Reset button */
   .btn-reset {
     width: 100%;
     padding: 12px;
@@ -321,7 +313,6 @@
     color: var(--accent2);
   }
 
-  /* ─── MAIN CONTENT ─────────────────────────────── */
   .main {
     padding: 24px;
     overflow-y: auto;
@@ -359,7 +350,6 @@
     color: var(--accent);
   }
 
-  /* Active Filters Tags */
   .active-filters {
     display: flex; flex-wrap: wrap; gap: 6px;
     margin-bottom: 16px;
@@ -387,7 +377,6 @@
   }
   .filter-tag button:hover { opacity: 1; }
 
-  /* Cards Grid */
   .cards-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -497,7 +486,6 @@
     font-size: 12px; margin-bottom: 1px;
   }
 
-  /* Sold badge */
   .sold-badge {
     position: absolute; top: 12px; right: 12px;
     background: var(--accent2);
@@ -506,7 +494,6 @@
     text-transform: uppercase; letter-spacing: 0.5px;
   }
 
-  /* Empty state */
   .empty-state {
     grid-column: 1 / -1;
     text-align: center;
@@ -516,7 +503,6 @@
   .empty-state .empty-icon { font-size: 48px; margin-bottom: 16px; }
   .empty-state h3 { font-family: 'Syne', sans-serif; font-size: 20px; color: var(--text); margin-bottom: 8px; }
 
-  /* Loading */
   .loading {
     grid-column: 1 / -1;
     text-align: center; padding: 60px;
@@ -532,12 +518,10 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* Scrollbar */
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
-  /* Toggle switch */
   .toggle-row {
     display: flex; align-items: center; justify-content: space-between;
     padding: 8px 0;
@@ -571,7 +555,6 @@
 
 <div class="app">
 
-  <!-- HEADER -->
   <header>
     <div class="logo">
       <div class="logo-icon">🏙️</div>
@@ -603,23 +586,19 @@
     </div>
   </header>
 
-  <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="sidebar-title">Filters</div>
 
-    <!-- City -->
     <div class="filter-section">
       <div class="filter-label">City</div>
       <div class="pill-group" id="cityFilter"></div>
     </div>
 
-    <!-- Unit Type -->
     <div class="filter-section">
       <div class="filter-label">Unit Type</div>
       <div class="pill-group" id="unitTypeFilter"></div>
     </div>
 
-    <!-- Bedrooms -->
     <div class="filter-section">
       <div class="filter-label">Bedrooms</div>
       <div class="pill-group" id="bedroomsFilter">
@@ -632,7 +611,6 @@
       </div>
     </div>
 
-    <!-- Price Range -->
     <div class="filter-section">
       <div class="filter-label">
         Total Price <span style="color:var(--accent3);font-size:10px">EGP</span>
@@ -651,7 +629,6 @@
       </div>
     </div>
 
-    <!-- Area Range -->
     <div class="filter-section">
       <div class="filter-label">
         Built-Up Area <span style="color:var(--accent3);font-size:10px">SQM</span>
@@ -670,7 +647,6 @@
       </div>
     </div>
 
-    <!-- Price per SQM -->
     <div class="filter-section">
       <div class="filter-label">
         Price / SQM <span style="color:var(--accent3);font-size:10px">EGP</span>
@@ -689,7 +665,6 @@
       </div>
     </div>
 
-    <!-- Delivery -->
     <div class="filter-section">
       <div class="filter-label">Delivery (months)</div>
       <div class="number-inputs">
@@ -704,7 +679,6 @@
       </div>
     </div>
 
-    <!-- Developer -->
     <div class="filter-section">
       <div class="filter-label">Developer</div>
       <select class="styled-select" id="developerFilter" onchange="applyFilters()">
@@ -712,13 +686,11 @@
       </select>
     </div>
 
-    <!-- Finishing -->
     <div class="filter-section">
       <div class="filter-label">Finishing Type</div>
       <div class="pill-group" id="finishingFilter"></div>
     </div>
 
-    <!-- Cash Discount -->
     <div class="filter-section">
       <div class="filter-label">Min Cash Discount %</div>
       <div class="range-wrapper">
@@ -732,7 +704,6 @@
       </div>
     </div>
 
-    <!-- Toggles -->
     <div class="filter-section">
       <div class="filter-label">Options</div>
       <div class="toggle-row">
@@ -761,7 +732,6 @@
     <button class="btn-reset" onclick="resetFilters()">↺ Reset All Filters</button>
   </aside>
 
-  <!-- MAIN -->
   <main class="main">
     <div class="results-header">
       <div class="results-count">
@@ -793,7 +763,6 @@ let allData = [];
 let filteredData = [];
 let sortMode = 'price_asc';
 
-// Range metadata
 const ranges = {
   price: { min: 0, max: 0, step: 500000 },
   area:  { min: 0, max: 0, step: 5 },
@@ -808,47 +777,43 @@ const activeFilters = {
 };
 
 // ─── DB CONNECTION ─────────────────────────────────────────────────────────────
-// We'll embed the data inline since we're fetching from Railway PostgreSQL
-// The page connects to Railway DB via a backend proxy OR uses embedded CSV data
-
 async function loadData() {
-  // Try to load from embedded JSON or fallback to sample
-  // In production: fetch('/api/units') from your Railway backend
-  // For now we embed data via a fetch to a local endpoint or hardcode sample
-  
-  // Since this runs as standalone HTML, we'll use sample data structure
-  // Replace the URL below with your actual API endpoint when deployed
+  console.log('🔄 Loading data from API...');
   try {
-    const resp = await fetch('/api/units').catch(() => null);
-    if (resp && resp.ok) {
-      allData = await resp.json();
-    } else {
-      // Fallback: generate from embedded CSV-like structure
-      allData = getSampleData();
+    const resp = await fetch('/api/units');
+    if (!resp.ok) {
+      throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
     }
+    const data = await resp.json();
+    
+    if (data.error) {
+      throw new Error(data.error);
+    }
+    
+    allData = data;
+    console.log(`✅ Loaded ${allData.length} units from API`);
+    
   } catch(e) {
-    allData = getSampleData();
+    console.error('❌ Failed to load from API:', e);
+    alert(`Failed to load data: ${e.message}`);
+    allData = [];
   }
+  
   initPage();
-}
-
-function getSampleData() {
-  // Sample data representing your actual structure
-  return [
-    {city_name:"New Cairo",compound_name:"90 Avenue",compound_id:1,developer_name:"Afaaq",developer_id:2,phase_name:"Serenity Rtm",unit_type:"Ground Apartment",bedrooms:2,built_up_area_sqm:168,total_price_egp:18115000,price_per_sqm_egp:107827,cash_price_from_egp:13586250,delivery_from_months:12,delivery_to_months:12,payment_plan:"10.0% down, 60 months",maintenance:"8,000 LE/M",club_fees:"Free",parking_fees:"Free",finishing_type:"1",cash_discount_percent:25,cash_price_to_egp:13586250,status:1,sub_type:"Ground Apartment",total_price_to_egp:18115000,detail_id:2722587,outdoor_area:"61 M",is_sold:false},
-    {city_name:"New Cairo",compound_name:"90 Avenue",compound_id:1,developer_name:"Afaaq",developer_id:2,phase_name:"Serenity Rtm",unit_type:"Typical Apartment",bedrooms:2,built_up_area_sqm:139,total_price_egp:14995000,price_per_sqm_egp:107877,cash_price_from_egp:11246250,delivery_from_months:12,delivery_to_months:12,payment_plan:"10.0% down, 60 months",maintenance:"8,000 LE/M",club_fees:"Free",parking_fees:"Free",finishing_type:"1",cash_discount_percent:25,cash_price_to_egp:11246250,status:1,sub_type:"Typical Apartment",total_price_to_egp:14995000,detail_id:2722848,outdoor_area:"0",is_sold:false},
-    {city_name:"New Cairo",compound_name:"90 Avenue",compound_id:1,developer_name:"Afaaq",developer_id:2,phase_name:"Serenity Rtm",unit_type:"Typical Apartment",bedrooms:3,built_up_area_sqm:182,total_price_egp:19510000,price_per_sqm_egp:107197,cash_price_from_egp:14632500,delivery_from_months:12,delivery_to_months:12,payment_plan:"10.0% down, 60 months",maintenance:"8,000 LE/M",club_fees:"Free",parking_fees:"Free",finishing_type:"1",cash_discount_percent:25,cash_price_to_egp:14632500,status:1,sub_type:"Typical Apartment",total_price_to_egp:19510000,detail_id:2723013,outdoor_area:"0",is_sold:false},
-    {city_name:"New Capital",compound_name:"Scenario",compound_id:5,developer_name:"Misr Italia",developer_id:8,phase_name:"Phase 1",unit_type:"Apartment",bedrooms:2,built_up_area_sqm:130,total_price_egp:8500000,price_per_sqm_egp:65384,cash_price_from_egp:7225000,delivery_from_months:18,delivery_to_months:24,payment_plan:"5% down, 72 months",maintenance:"Free",club_fees:"Free",parking_fees:"25,000",finishing_type:"Semi-finished",cash_discount_percent:15,cash_price_to_egp:7225000,status:1,sub_type:"Apartment",total_price_to_egp:8500000,detail_id:1000001,outdoor_area:"0",is_sold:false},
-    {city_name:"New Capital",compound_name:"Scenario",compound_id:5,developer_name:"Misr Italia",developer_id:8,phase_name:"Phase 1",unit_type:"Apartment",bedrooms:3,built_up_area_sqm:175,total_price_egp:12000000,price_per_sqm_egp:68571,cash_price_from_egp:10200000,delivery_from_months:18,delivery_to_months:24,payment_plan:"5% down, 72 months",maintenance:"Free",club_fees:"Free",parking_fees:"25,000",finishing_type:"Semi-finished",cash_discount_percent:15,cash_price_to_egp:10200000,status:1,sub_type:"Apartment",total_price_to_egp:12000000,detail_id:1000002,outdoor_area:"0",is_sold:false},
-    {city_name:"6th October",compound_name:"Zed West",compound_id:10,developer_name:"ORA",developer_id:15,phase_name:"Zone A",unit_type:"Villa",bedrooms:4,built_up_area_sqm:350,total_price_egp:35000000,price_per_sqm_egp:100000,cash_price_from_egp:29750000,delivery_from_months:24,delivery_to_months:36,payment_plan:"15% down, 84 months",maintenance:"12,000 LE/M",club_fees:"Free",parking_fees:"Free",finishing_type:"Fully finished",cash_discount_percent:15,cash_price_to_egp:29750000,status:1,sub_type:"Villa",total_price_to_egp:35000000,detail_id:1000003,outdoor_area:"200 M",is_sold:false},
-    {city_name:"North Coast",compound_name:"Hacienda Bay",compound_id:20,developer_name:"Palm Hills",developer_id:25,phase_name:"Phase 4",unit_type:"Chalet",bedrooms:2,built_up_area_sqm:95,total_price_egp:6800000,price_per_sqm_egp:71578,cash_price_from_egp:5780000,delivery_from_months:6,delivery_to_months:12,payment_plan:"10% down, 48 months",maintenance:"5,000 LE/M",club_fees:"25,000",parking_fees:"Free",finishing_type:"Fully finished",cash_discount_percent:15,cash_price_to_egp:5780000,status:0,sub_type:"Chalet",total_price_to_egp:6800000,detail_id:1000004,outdoor_area:"30 M",is_sold:true},
-    {city_name:"Ain Sokhna",compound_name:"Mountain View Sokhna",compound_id:30,developer_name:"Mountain View",developer_id:35,phase_name:"Phase 2",unit_type:"Chalet",bedrooms:2,built_up_area_sqm:110,total_price_egp:5200000,price_per_sqm_egp:47272,cash_price_from_egp:4420000,delivery_from_months:12,delivery_to_months:18,payment_plan:"10% down, 60 months",maintenance:"4,000 LE/M",club_fees:"Free",parking_fees:"Free",finishing_type:"Core & Shell",cash_discount_percent:15,cash_price_to_egp:4420000,status:1,sub_type:"Chalet",total_price_to_egp:5200000,detail_id:1000005,outdoor_area:"40 M",is_sold:false},
-  ];
 }
 
 // ─── INIT ──────────────────────────────────────────────────────────────────────
 function initPage() {
-  // Compute ranges
+  if (allData.length === 0) {
+    document.getElementById('cardsGrid').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">⚠️</div>
+        <h3>No data available</h3>
+        <p>Check database connection or run sync job</p>
+      </div>`;
+    return;
+  }
+
   const prices = allData.map(d => d.total_price_egp).filter(Boolean);
   const areas  = allData.map(d => d.built_up_area_sqm).filter(Boolean);
   const psms   = allData.map(d => d.price_per_sqm_egp).filter(Boolean);
@@ -861,7 +826,6 @@ function initPage() {
   updateRangeDisplay('area');
   updateRangeDisplay('psm');
 
-  // Build filter options
   buildPills('cityFilter',    [...new Set(allData.map(d => d.city_name))].sort(),    'city');
   buildPills('unitTypeFilter',[...new Set(allData.map(d => d.unit_type))].sort(),    'type');
   buildPills('finishingFilter',[...new Set(allData.map(d => d.finishing_type).filter(Boolean))].sort(),'finishing');
@@ -1008,7 +972,6 @@ function applyFilters() {
     return true;
   });
 
-  // Sort
   filteredData.sort((a, b) => {
     if (sortMode === 'price_asc')  return a.total_price_egp - b.total_price_egp;
     if (sortMode === 'price_desc') return b.total_price_egp - a.total_price_egp;
@@ -1037,7 +1000,7 @@ function renderCards() {
     return;
   }
 
-  const show = filteredData.slice(0, 60);
+  const show = filteredData.slice(0, 100);
   grid.innerHTML = show.map((u, i) => `
     <div class="unit-card" style="animation-delay:${i * 0.02}s">
       ${u.is_sold || u.status === 0 ? '<div class="sold-badge">Sold</div>' : ''}
@@ -1084,10 +1047,10 @@ function renderCards() {
     </div>
   `).join('');
 
-  if (filteredData.length > 60) {
+  if (filteredData.length > 100) {
     grid.innerHTML += `<div class="empty-state" style="background:var(--surface2);border-radius:16px;border:1px dashed var(--border)">
       <div style="font-size:24px">📦</div>
-      <h3 style="font-size:16px">+${fmtNum(filteredData.length - 60)} more units</h3>
+      <h3 style="font-size:16px">+${fmtNum(filteredData.length - 100)} more units</h3>
       <p>Refine your filters to see specific results</p>
     </div>`;
   }
@@ -1145,7 +1108,6 @@ function resetFilters() {
   applyFilters();
 }
 
-// ─── FORMAT ───────────────────────────────────────────────────────────────────
 function fmtNum(n) { return n?.toLocaleString('en-US') ?? '0'; }
 function fmtMillion(n) {
   if (!n) return '0';
@@ -1154,7 +1116,6 @@ function fmtMillion(n) {
   return fmtNum(Math.round(n));
 }
 
-// ─── SEARCH (debounced) ───────────────────────────────────────────────────────
 let searchTimer;
 document.getElementById('searchInput').addEventListener('input', () => {
   clearTimeout(searchTimer);

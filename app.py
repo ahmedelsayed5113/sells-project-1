@@ -66,6 +66,7 @@ def get_units():
     try:
         conn = get_conn()
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            # Fixed query - handle empty strings and NULL values properly
             cur.execute("""
                 SELECT
                     city_name, compound_name, compound_id,
@@ -87,13 +88,16 @@ def get_units():
                     COALESCE(is_sold, false) AS is_sold
                 FROM units
                 WHERE total_price_egp IS NOT NULL
-                  AND total_price_egp != ''
+                  AND CAST(total_price_egp AS TEXT) != ''
+                  AND CAST(total_price_egp AS FLOAT) > 0
                 ORDER BY CAST(total_price_egp AS FLOAT) ASC
             """)
             rows = cur.fetchall()
         conn.close()
+        log.info(f"✅ Returned {len(rows)} units")
         return json_response([dict(r) for r in rows])
     except Exception as e:
+        log.error(f"❌ Error fetching units: {e}")
         return json_response({"error": str(e)}), 500
 
 @app.route("/api/stats")
@@ -110,7 +114,9 @@ def get_stats():
                     MAX(CAST(total_price_egp AS FLOAT))   AS max_price,
                     COUNT(DISTINCT compound_name)          AS compounds
                 FROM units
-                WHERE total_price_egp IS NOT NULL AND total_price_egp != ''
+                WHERE total_price_egp IS NOT NULL 
+                  AND CAST(total_price_egp AS TEXT) != ''
+                  AND CAST(total_price_egp AS FLOAT) > 0
             """)
             stats = dict(cur.fetchone())
         conn.close()
