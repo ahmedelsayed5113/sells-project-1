@@ -843,9 +843,10 @@ function initPage() {
   }
 
   ranges.price = { 
-    min: Math.floor(Math.min(...prices) / 100000) * 100000, // Round down to nearest 100k
-    max: Math.ceil(Math.max(...prices) / 100000) * 100000   // Round up to nearest 100k
-  };
+  min: 0,
+  max: 1000000000 
+};
+
   ranges.area = { 
     min: Math.floor(Math.min(...areas) / 10) * 10,  // Round down to nearest 10
     max: Math.ceil(Math.max(...areas) / 10) * 10    // Round up to nearest 10
@@ -855,11 +856,12 @@ function initPage() {
     max: Math.ceil(Math.max(...psms) / 1000) * 1000    // Round up to nearest 1k
   };
 
-  console.log('📊 Calculated ranges:', {
-    price: `${fmtMillion(ranges.price.min)} - ${fmtMillion(ranges.price.max)}`,
-    area: `${ranges.area.min} - ${ranges.area.max}`,
-    psm: `${fmtNum(ranges.psm.min)} - ${fmtNum(ranges.psm.max)}`
-  });
+  function fmtMillion(n) {
+  if (!n) return '0';
+  if (n >= 1e9) return (n/1e6).toFixed(0) + 'M'; 
+  if (n >= 1e6) return (n/1e6).toFixed(2) + 'M';
+  return fmtNum(Math.round(n));
+}
 
   updateRangeDisplay('price');
   updateRangeDisplay('area');
