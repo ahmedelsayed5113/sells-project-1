@@ -2,11 +2,13 @@ from flask import Flask, jsonify
 import psycopg2
 import psycopg2.extras
 import os
+import json
 import threading
 import schedule
 import time
 import logging
 import requests
+from decimal import Decimal
 from datetime import datetime
 from typing import List, Dict, Optional
 
@@ -19,7 +21,19 @@ log = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-# ─── DB ───────────────────────────────────────────────
+# ─── JSON SERIALIZER (handles Decimal from PostgreSQL) ─────────────────────────
+def json_serial(obj):
+    if isinstance(obj, Decimal):
+        return float(obj)
+    raise TypeError(f"Type {type(obj)} not serializable")
+
+def json_response(data):
+    return app.response_class(
+        json.dumps(data, default=json_serial),
+        mimetype='application/json'
+    )
+
+# ─── DB ────────────────────────────────────────────────────────────────────────
 def get_conn():
     database_url = os.environ.get("DATABASE_URL")
     if database_url:
@@ -32,7 +46,7 @@ def get_conn():
         password=os.environ.get("DB_PASSWORD", "AdPVLYioZHOYsrpSswoILIvpkHwIReTz")
     )
 
-# ─── FLASK ROUTES ─────────────────────────────────────
+# ─── FLASK ROUTES ──────────────────────────────────────────────────────────────
 @app.route("/")
 def index():
     with open(os.path.join(os.path.dirname(__file__), "index.html"), encoding="utf-8") as f:
@@ -58,28 +72,29 @@ def get_units():
                     developer_name, developer_id,
                     phase_name, phase_id, unit_type,
                     bedrooms,
-                    CAST(built_up_area_sqm AS FLOAT) as built_up_area_sqm,
-                    CAST(total_price_egp AS FLOAT) as total_price_egp,
-                    CAST(price_per_sqm_egp AS FLOAT) as price_per_sqm_egp,
-                    CAST(cash_price_from_egp AS FLOAT) as cash_price_from_egp,
-                    CAST(cash_price_to_egp AS FLOAT) as cash_price_to_egp,
+                    CAST(built_up_area_sqm AS FLOAT)      AS built_up_area_sqm,
+                    CAST(total_price_egp AS FLOAT)         AS total_price_egp,
+                    CAST(price_per_sqm_egp AS FLOAT)       AS price_per_sqm_egp,
+                    CAST(cash_price_from_egp AS FLOAT)     AS cash_price_from_egp,
+                    CAST(cash_price_to_egp AS FLOAT)       AS cash_price_to_egp,
                     delivery_from_months, delivery_to_months,
                     payment_plan, maintenance, club_fees,
                     parking_fees, finishing_type,
-                    CAST(cash_discount_percent AS FLOAT) as cash_discount_percent,
+                    CAST(cash_discount_percent AS FLOAT)   AS cash_discount_percent,
                     city_id, detail_id, outdoor_area, status, sub_type,
-                    CAST(total_price_to_egp AS FLOAT) as total_price_to_egp,
+                    CAST(total_price_to_egp AS FLOAT)      AS total_price_to_egp,
                     type_id,
-                    COALESCE(is_sold, false) as is_sold
+                    COALESCE(is_sold, false) AS is_sold
                 FROM units
-                WHERE total_price_egp IS NOT NULL AND total_price_egp != ''
+                WHERE total_price_egp IS NOT NULL
+                  AND total_price_egp != ''
                 ORDER BY CAST(total_price_egp AS FLOAT) ASC
             """)
             rows = cur.fetchall()
         conn.close()
-        return jsonify([dict(r) for r in rows])
+        return json_response([dict(r) for r in rows])
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return json_response({"error": str(e)}), 500
 
 @app.route("/api/stats")
 def get_stats():
@@ -88,21 +103,22 @@ def get_stats():
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute("""
                 SELECT
-                    COUNT(*) as total,
-                    COUNT(CASE WHEN is_sold = true OR status = 0 THEN 1 END) as sold,
-                    AVG(CAST(total_price_egp AS FLOAT)) as avg_price,
-                    MIN(CAST(total_price_egp AS FLOAT)) as min_price,
-                    MAX(CAST(total_price_egp AS FLOAT)) as max_price,
-                    COUNT(DISTINCT compound_name) as compounds
+                    COUNT(*) AS total,
+                    COUNT(CASE WHEN is_sold = true OR status = 0 THEN 1 END) AS sold,
+                    AVG(CAST(total_price_egp AS FLOAT))   AS avg_price,
+                    MIN(CAST(total_price_egp AS FLOAT))   AS min_price,
+                    MAX(CAST(total_price_egp AS FLOAT))   AS max_price,
+                    COUNT(DISTINCT compound_name)          AS compounds
                 FROM units
+                WHERE total_price_egp IS NOT NULL AND total_price_egp != ''
             """)
             stats = dict(cur.fetchone())
         conn.close()
-        return jsonify(stats)
+        return json_response(stats)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return json_response({"error": str(e)}), 500
 
-# ─── SYNC LOGIC ───────────────────────────────────────
+# ─── SYNC CONFIG ───────────────────────────────────────────────────────────────
 BASE_URL     = "https://newapi.masterv.net/api/v3/public"
 ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVc2VySWQiOjMyMTksIlVzZXJFbWFpbCI6Im1vaGFtZWRoYW16YTEzMDNAZ21haWwuY29tIiwiVXNlclBob25lTnVtYmVyIjoiMjAxMDk5MjQ5NDk5IiwiSXNDbGllbnQiOnRydWUsImlhdCI6MTc3MTQyNjgwOCwiZXhwIjoxNzc0MDE4ODA4fQ.S9I6GS6gk96R8BkZwyLP0JNUic7jwwVTzJtjTdt7nkI"
 HEADERS = {
@@ -111,16 +127,22 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0"
 }
 PLACES = {
-    "New Cairo": 1, "New Capital": 2, "Al-Mostakbal": 3,
-    "Al-Shorouk": 4, "6th October": 5, "North Coast": 6, "Ain Sokhna": 7
+    "New Cairo":    1,
+    "New Capital":  2,
+    "Al-Mostakbal": 3,
+    "Al-Shorouk":   4,
+    "6th October":  5,
+    "North Coast":  6,
+    "Ain Sokhna":   7,
 }
 TRACKED_FIELDS = [
     "total_price_egp", "total_price_to_egp", "cash_price_from_egp",
     "cash_price_to_egp", "price_per_sqm_egp", "status",
     "payment_plan", "delivery_from_months", "delivery_to_months",
-    "maintenance", "club_fees", "parking_fees", "finishing_type"
+    "maintenance", "club_fees", "parking_fees", "finishing_type",
 ]
 
+# ─── SYNC HELPERS ──────────────────────────────────────────────────────────────
 def ensure_columns_exist(conn):
     with conn.cursor() as cur:
         cur.execute("""
@@ -131,6 +153,7 @@ def ensure_columns_exist(conn):
                 ADD COLUMN IF NOT EXISTS sold_at    TIMESTAMP;
         """)
     conn.commit()
+    log.info("✅ Tracking columns ready")
 
 def get_existing_units(conn) -> Dict[int, Dict]:
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
@@ -140,8 +163,10 @@ def get_existing_units(conn) -> Dict[int, Dict]:
 
 def fetch_filters(city_id: int) -> Dict:
     try:
-        r = requests.get(f"{BASE_URL}/data/filter", headers=HEADERS,
-                         params={"SectionId": 1, "CityId": city_id}, timeout=30)
+        r = requests.get(
+            f"{BASE_URL}/data/filter", headers=HEADERS,
+            params={"SectionId": 1, "CityId": city_id}, timeout=30
+        )
         if r.status_code == 200:
             data = r.json()
             if not data.get("error"):
@@ -157,10 +182,12 @@ def find_developer(compound_id: int, developers: List[Dict], city_id: int) -> Op
             return None
         dev_id = dev.get("value")
         try:
-            r = requests.get(f"{BASE_URL}/data", headers=HEADERS,
-                             params={"CompoundId": compound_id, "DeveloperId": dev_id,
-                                     "SectionId": 1, "CityId": city_id, "Currency": 1, "ViewAll": "true"},
-                             timeout=1)
+            r = requests.get(
+                f"{BASE_URL}/data", headers=HEADERS,
+                params={"CompoundId": compound_id, "DeveloperId": dev_id,
+                        "SectionId": 1, "CityId": city_id, "Currency": 1, "ViewAll": "true"},
+                timeout=1
+            )
             if r.status_code == 200:
                 data = r.json()
                 if not data.get("error") and data.get("data"):
@@ -172,10 +199,12 @@ def find_developer(compound_id: int, developers: List[Dict], city_id: int) -> Op
 
 def fetch_compound_details(compound_id: int, developer_id: int, city_id: int) -> Dict:
     try:
-        r = requests.get(f"{BASE_URL}/data", headers=HEADERS,
-                         params={"CompoundId": compound_id, "DeveloperId": developer_id,
-                                 "SectionId": 1, "CityId": city_id, "Currency": 1, "ViewAll": "true"},
-                         timeout=30)
+        r = requests.get(
+            f"{BASE_URL}/data", headers=HEADERS,
+            params={"CompoundId": compound_id, "DeveloperId": developer_id,
+                    "SectionId": 1, "CityId": city_id, "Currency": 1, "ViewAll": "true"},
+            timeout=30
+        )
         if r.status_code == 200:
             data = r.json()
             if not data.get("error") and data.get("data"):
@@ -193,7 +222,7 @@ def flatten_compound(compound_info: Dict, compound_data: Dict, city_name: str) -
     payment_plan_text = ""
     if payment_plans:
         plan = payment_plans[0]
-        dp = plan.get("PayPlanDownPayment", 0) * 100
+        dp   = plan.get("PayPlanDownPayment", 0) * 100
         inst = plan.get("PayPlanInstalment", 0)
         payment_plan_text = f"{dp}% down, {inst} months"
     finishing_info = compound_data.get("DataFinishing", {})
@@ -203,28 +232,39 @@ def flatten_compound(compound_info: Dict, compound_data: Dict, city_name: str) -
             built_up = unit.get("DetailBuiltUpArea")
             price    = unit.get("DetailUnitTotalPrice")
             rows.append({
-                "city_name": city_name, "compound_name": compound_info["name"],
-                "compound_id": compound_info["id"], "developer_name": compound_info["developer_name"],
-                "developer_id": compound_info["developer_id"],
-                "phase_name": compound_data.get("DataPhas"), "phase_id": compound_data.get("DataPhasId"),
-                "unit_type": unit_type, "bedrooms": unit.get("DetailBedRooms"),
-                "built_up_area_sqm": built_up, "total_price_egp": price,
-                "price_per_sqm_egp": round(price / built_up, 2) if price and built_up else None,
-                "cash_price_from_egp": unit.get("DetailUnitTotalCashFrom"),
+                "city_name":            city_name,
+                "compound_name":        compound_info["name"],
+                "compound_id":          compound_info["id"],
+                "developer_name":       compound_info["developer_name"],
+                "developer_id":         compound_info["developer_id"],
+                "phase_name":           compound_data.get("DataPhas"),
+                "phase_id":             compound_data.get("DataPhasId"),
+                "unit_type":            unit_type,
+                "bedrooms":             unit.get("DetailBedRooms"),
+                "built_up_area_sqm":    built_up,
+                "total_price_egp":      price,
+                "price_per_sqm_egp":    round(price / built_up, 2) if price and built_up else None,
+                "cash_price_from_egp":  unit.get("DetailUnitTotalCashFrom"),
                 "delivery_from_months": compound_data.get("DataPhasDeliveryFrom"),
-                "delivery_to_months": compound_data.get("DataPhasDeliveryTo"),
-                "payment_plan": payment_plan_text,
-                "maintenance": compound_data.get("DataPhasMaintenance"),
-                "club_fees": compound_data.get("DataPhasClubFees"),
-                "parking_fees": compound_data.get("DataPhasParkingFees"),
-                "finishing_type": finishing_info.get(unit_type, "N/A"),
-                "cash_discount_percent": compound_data.get("DataPhasCashDiscount"),
-                "cash_price_to_egp": unit.get("DetailUnitTotalCashTo"),
-                "city_id": compound_data.get("DataCityId"), "detail_id": unit.get("DetailId"),
-                "outdoor_area": unit.get("DetailOutdoor"), "status": compound_data.get("DataStatus"),
-                "sub_type": unit.get("DetailSubType"), "total_price_to_egp": unit.get("DetailUnitTotalPriceTo"),
-                "type_id": unit.get("DetailTypeId"),
-                "last_seen": now, "first_seen": now, "is_sold": False, "sold_at": None,
+                "delivery_to_months":   compound_data.get("DataPhasDeliveryTo"),
+                "payment_plan":         payment_plan_text,
+                "maintenance":          compound_data.get("DataPhasMaintenance"),
+                "club_fees":            compound_data.get("DataPhasClubFees"),
+                "parking_fees":         compound_data.get("DataPhasParkingFees"),
+                "finishing_type":       finishing_info.get(unit_type, "N/A"),
+                "cash_discount_percent":compound_data.get("DataPhasCashDiscount"),
+                "cash_price_to_egp":    unit.get("DetailUnitTotalCashTo"),
+                "city_id":              compound_data.get("DataCityId"),
+                "detail_id":            unit.get("DetailId"),
+                "outdoor_area":         unit.get("DetailOutdoor"),
+                "status":               compound_data.get("DataStatus"),
+                "sub_type":             unit.get("DetailSubType"),
+                "total_price_to_egp":   unit.get("DetailUnitTotalPriceTo"),
+                "type_id":              unit.get("DetailTypeId"),
+                "last_seen":            now,
+                "first_seen":           now,
+                "is_sold":              False,
+                "sold_at":              None,
             })
     return rows
 
@@ -266,26 +306,41 @@ def sync_units(conn, fresh_units: List[Dict], existing: Dict[int, Dict]):
                 if changed:
                     cur.execute("""
                         UPDATE units SET
-                            total_price_egp=%(total_price_egp)s, total_price_to_egp=%(total_price_to_egp)s,
-                            cash_price_from_egp=%(cash_price_from_egp)s, cash_price_to_egp=%(cash_price_to_egp)s,
-                            price_per_sqm_egp=%(price_per_sqm_egp)s, status=%(status)s,
-                            payment_plan=%(payment_plan)s, delivery_from_months=%(delivery_from_months)s,
-                            delivery_to_months=%(delivery_to_months)s, maintenance=%(maintenance)s,
-                            club_fees=%(club_fees)s, parking_fees=%(parking_fees)s,
-                            finishing_type=%(finishing_type)s, last_seen=%(last_seen)s,
-                            is_sold=FALSE, sold_at=NULL
-                        WHERE detail_id=%(detail_id)s
+                            total_price_egp       = %(total_price_egp)s,
+                            total_price_to_egp    = %(total_price_to_egp)s,
+                            cash_price_from_egp   = %(cash_price_from_egp)s,
+                            cash_price_to_egp     = %(cash_price_to_egp)s,
+                            price_per_sqm_egp     = %(price_per_sqm_egp)s,
+                            status                = %(status)s,
+                            payment_plan          = %(payment_plan)s,
+                            delivery_from_months  = %(delivery_from_months)s,
+                            delivery_to_months    = %(delivery_to_months)s,
+                            maintenance           = %(maintenance)s,
+                            club_fees             = %(club_fees)s,
+                            parking_fees          = %(parking_fees)s,
+                            finishing_type        = %(finishing_type)s,
+                            last_seen             = %(last_seen)s,
+                            is_sold               = FALSE,
+                            sold_at               = NULL
+                        WHERE detail_id = %(detail_id)s
                     """, {**unit, "last_seen": now})
                     updated_count += 1
                 else:
-                    cur.execute("UPDATE units SET last_seen=%s WHERE detail_id=%s", (now, did))
+                    cur.execute(
+                        "UPDATE units SET last_seen = %s WHERE detail_id = %s",
+                        (now, did)
+                    )
         for did in set(existing.keys()) - fresh_ids:
             if not existing[did].get("is_sold"):
-                cur.execute("UPDATE units SET is_sold=TRUE, sold_at=%s WHERE detail_id=%s", (now, did))
+                cur.execute(
+                    "UPDATE units SET is_sold = TRUE, sold_at = %s WHERE detail_id = %s",
+                    (now, did)
+                )
                 sold_count += 1
     conn.commit()
     return new_count, updated_count, sold_count
 
+# ─── SYNC JOB ──────────────────────────────────────────────────────────────────
 def sync_job():
     log.info(f"🔄 Sync started at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     try:
@@ -300,25 +355,29 @@ def sync_job():
             compounds  = filters.get("Compound", [])
             developers = filters.get("Developer", [])
             if not compounds:
+                log.warning(f"  No compounds found for {city_name}")
                 continue
             dev_lookup = {d["value"]: d["label"] for d in developers}
             for i, compound in enumerate(compounds, 1):
-                cid   = compound.get("value")
-                cname = compound.get("label")
+                cid    = compound.get("value")
+                cname  = compound.get("label")
                 dev_id = find_developer(cid, developers, city_id)
                 if not dev_id:
                     continue
                 details = fetch_compound_details(cid, dev_id, city_id)
                 if not details:
                     continue
-                compound_info = {"id": cid, "name": cname, "developer_id": dev_id,
-                                 "developer_name": dev_lookup.get(dev_id, "Unknown")}
+                compound_info = {
+                    "id": cid, "name": cname,
+                    "developer_id": dev_id,
+                    "developer_name": dev_lookup.get(dev_id, "Unknown"),
+                }
                 rows = flatten_compound(compound_info, details, city_name)
                 all_fresh.extend(rows)
                 log.info(f"  [{i}/{len(compounds)}] {cname}: {len(rows)} units")
-        log.info(f"📊 Total fresh units: {len(all_fresh):,}")
+        log.info(f"📊 Total fresh units fetched: {len(all_fresh):,}")
         new, updated, sold = sync_units(conn, all_fresh, existing)
-        log.info(f"✅ Done — New: {new}, Updated: {updated}, Sold: {sold}")
+        log.info(f"✅ Sync complete — New: {new}, Updated: {updated}, Sold: {sold}")
         conn.close()
     except Exception as e:
         log.error(f"❌ Sync failed: {e}")
@@ -326,16 +385,17 @@ def sync_job():
 
 def run_scheduler():
     log.info("⏰ Scheduler thread started — syncing every 1 hour")
-    sync_job()  # run immediately on startup
+    sync_job()
     schedule.every(1).hours.do(sync_job)
     while True:
         schedule.run_pending()
         time.sleep(60)
 
-# Start scheduler in background thread when gunicorn loads the module
+# ─── START BACKGROUND SCHEDULER ────────────────────────────────────────────────
 scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
 scheduler_thread.start()
 
+# ─── ENTRYPOINT ────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
