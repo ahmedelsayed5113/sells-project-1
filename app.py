@@ -5,21 +5,32 @@ import os
 
 app = Flask(__name__)
 
-DB_CONFIG = {
-    "host":     os.environ.get("DB_HOST",     "postgres.railway.internal"),
-    "port":     int(os.environ.get("DB_PORT", 5432)),
-    "database": os.environ.get("DB_NAME",     "railway"),
-    "user":     os.environ.get("DB_USER",     "postgres"),
-    "password": os.environ.get("DB_PASSWORD", "AdPVLYioZHOYsrpSswoILIvpkHwIReTz")
-}
-
 def get_conn():
-    return psycopg2.connect(**DB_CONFIG)
+    database_url = os.environ.get("DATABASE_URL")
+    if database_url:
+        return psycopg2.connect(database_url)
+    # fallback
+    return psycopg2.connect(
+        host=os.environ.get("DB_HOST", "caboose.proxy.rlwy.net"),
+        port=int(os.environ.get("DB_PORT", 21778)),
+        database=os.environ.get("DB_NAME", "railway"),
+        user=os.environ.get("DB_USER", "postgres"),
+        password=os.environ.get("DB_PASSWORD", "AdPVLYioZHOYsrpSswoILIvpkHwIReTz")
+    )
 
 @app.route("/")
 def index():
     with open(os.path.join(os.path.dirname(__file__), "index.html"), encoding="utf-8") as f:
         return f.read()
+
+@app.route("/health")
+def health():
+    try:
+        conn = get_conn()
+        conn.close()
+        return "OK - DB connected"
+    except Exception as e:
+        return f"DB ERROR: {e}", 500
 
 @app.route("/api/units")
 def get_units():
