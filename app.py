@@ -467,7 +467,7 @@ def run_scheduler():
     log.info("🚀 Starting first sync now...")
     sync_job()
 
-    schedule.every(20).days.do(sync_job)
+    schedule.every(14).days.do(sync_job)
     while True:
         schedule.run_pending()
         time.sleep(60)
