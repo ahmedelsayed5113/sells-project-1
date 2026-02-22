@@ -354,6 +354,7 @@ def sync_units(conn, fresh_units: List[Dict], existing: Dict[int, Dict]):
                 if changed:
                     cur.execute("""
                         UPDATE units SET
+                            total_price_egp       = %(total_price_egp)s,
                             total_price_to_egp    = %(total_price_to_egp)s,
                             cash_price_from_egp   = %(cash_price_from_egp)s,
                             cash_price_to_egp     = %(cash_price_to_egp)s,
