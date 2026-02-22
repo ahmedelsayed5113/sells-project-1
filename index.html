@@ -601,13 +601,7 @@
     font-size: 11px; margin-bottom: 1px;
   }
 
-  .sold-badge {
-    position: absolute; top: 12px; right: 12px;
-    background: var(--accent2);
-    color: #fff; font-size: 10px; font-weight: 600;
-    padding: 3px 8px; border-radius: 20px;
-    text-transform: uppercase; letter-spacing: 0.5px;
-  }
+
 
   .empty-state {
     grid-column: 1 / -1;
@@ -1392,10 +1386,8 @@ function renderCards() {
 }
 
 function renderCard(u, i) {
-  const isSold = u.is_sold || u.status === 0;
   return `
     <div class="unit-card" style="animation-delay:${(i % 50) * 0.02}s">
-      ${isSold ? '<div class="sold-badge">Sold</div>' : ''}
       <div class="card-header">
         <div class="compound-name">${u.compound_name}</div>
         <div class="unit-type-badge">${u.unit_type}</div>
