@@ -48,7 +48,6 @@
     z-index: 0;
   }
 
-  /* ═══ DESKTOP LAYOUT ═══ */
   .app {
     position: relative;
     z-index: 1;
@@ -58,61 +57,51 @@
     min-height: 100vh;
   }
 
-  /* ═══ HEADER ═══ */
   header {
     grid-column: 1 / -1;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 24px;
+    padding: 20px 32px;
     border-bottom: 1px solid var(--border);
-    background: rgba(10,10,15,0.9);
+    background: rgba(10,10,15,0.8);
     backdrop-filter: blur(20px);
     position: sticky; top: 0; z-index: 100;
-    gap: 16px;
   }
 
   .logo {
-    display: flex; align-items: center; gap: 10px;
-    flex-shrink: 0;
+    display: flex; align-items: center; gap: 12px;
   }
   .logo-icon {
-    width: 34px; height: 34px;
+    width: 36px; height: 36px;
     background: linear-gradient(135deg, var(--accent), var(--accent2));
     border-radius: 10px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 17px;
+    font-size: 18px;
   }
   .logo-text {
     font-family: 'Syne', sans-serif;
     font-weight: 800;
-    font-size: 18px;
+    font-size: 20px;
     letter-spacing: -0.5px;
   }
   .logo-text span { color: var(--accent); }
 
   .header-stats {
-    display: flex; gap: 20px;
-    flex-shrink: 0;
+    display: flex; gap: 32px;
   }
   .stat { text-align: center; }
   .stat-value {
     font-family: 'Syne', sans-serif;
     font-weight: 700;
-    font-size: 18px;
+    font-size: 20px;
     color: var(--accent3);
   }
   .stat-label {
-    font-size: 10px;
+    font-size: 11px;
     color: var(--muted);
     text-transform: uppercase;
     letter-spacing: 0.8px;
-  }
-
-  .header-right {
-    display: flex; align-items: center; gap: 10px;
-    flex: 1;
-    justify-content: flex-end;
   }
 
   .header-search {
@@ -120,8 +109,8 @@
     background: var(--surface2);
     border: 1px solid var(--border);
     border-radius: 12px;
-    padding: 10px 14px;
-    width: 260px;
+    padding: 10px 16px;
+    width: 280px;
     transition: border-color 0.2s;
     position: relative;
   }
@@ -140,42 +129,13 @@
   }
   .search-clear.visible { opacity: 1; }
 
-  /* Mobile filter toggle button */
-  .mobile-filter-btn {
-    display: none;
-    align-items: center; gap: 8px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 10px 14px;
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-  .mobile-filter-btn:hover, .mobile-filter-btn.active {
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-  .mobile-filter-btn .filter-count {
-    background: var(--accent);
-    color: #fff;
-    border-radius: 10px;
-    font-size: 11px;
-    padding: 1px 7px;
-    font-weight: 700;
-  }
-
-  /* ═══ SIDEBAR ═══ */
+  /* ── SIDEBAR ── */
   .sidebar {
     border-right: 1px solid var(--border);
     padding: 20px;
     overflow-y: auto;
-    max-height: calc(100vh - 73px);
-    position: sticky; top: 73px;
+    max-height: calc(100vh - 77px);
+    position: sticky; top: 77px;
     scrollbar-width: thin;
     scrollbar-color: var(--border) transparent;
   }
@@ -195,27 +155,9 @@
     height: 1px; background: var(--border);
   }
 
-  /* Mobile sidebar close btn */
-  .sidebar-close-btn {
-    display: none;
-    width: 100%;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    color: var(--muted);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
-    padding: 12px;
-    cursor: pointer;
-    margin-bottom: 16px;
-    transition: all 0.2s;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
+  .filter-section {
+    margin-bottom: 22px;
   }
-  .sidebar-close-btn:hover { border-color: var(--accent2); color: var(--accent2); }
-
-  .filter-section { margin-bottom: 22px; }
 
   .filter-label {
     font-size: 11px;
@@ -226,24 +168,32 @@
     margin-bottom: 8px;
     display: flex; align-items: center; justify-content: space-between;
   }
+  .filter-label .badge {
+    background: rgba(124,109,255,0.2);
+    color: var(--accent);
+    border-radius: 10px;
+    padding: 1px 7px;
+    font-size: 10px;
+    font-weight: 700;
+  }
 
-  /* ── PRICE / AREA WIDGETS ── */
-  .price-widget, .area-widget {
+  /* ── PRICE RANGE WIDGET ── */
+  .price-widget {
     background: var(--surface2);
     border: 1px solid var(--border);
     border-radius: 14px;
     padding: 14px;
     transition: border-color 0.2s;
   }
-  .price-widget:focus-within,
-  .area-widget:focus-within { border-color: rgba(124,109,255,0.4); }
+  .price-widget:focus-within { border-color: rgba(124,109,255,0.4); }
 
+  /* Quick preset chips */
   .presets {
     display: flex; flex-wrap: wrap; gap: 4px;
     margin-bottom: 12px;
   }
   .preset-chip {
-    padding: 4px 10px;
+    padding: 3px 9px;
     border-radius: 16px;
     border: 1px solid var(--border);
     background: transparent;
@@ -260,14 +210,16 @@
     background: rgba(124,109,255,0.1);
   }
 
+  /* Min / Max manual inputs */
   .range-inputs {
     display: grid; grid-template-columns: 1fr auto 1fr; gap: 6px;
     align-items: center;
     margin-bottom: 12px;
   }
   .range-sep-arrow { color: var(--muted); font-size: 14px; text-align: center; }
-
-  .range-manual-input { position: relative; }
+  .range-manual-input {
+    position: relative;
+  }
   .range-manual-input label {
     position: absolute; top: -7px; left: 8px;
     font-size: 9px; color: var(--muted);
@@ -294,6 +246,7 @@
     text-align: center; margin-top: 2px;
   }
 
+  /* Slider track */
   .slider-wrap {
     position: relative; height: 28px;
     margin-top: 4px;
@@ -322,7 +275,7 @@
   }
   .slider-wrap input[type=range]::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 20px; height: 20px;
+    width: 18px; height: 18px;
     border-radius: 50%;
     background: var(--accent);
     border: 3px solid var(--bg);
@@ -335,13 +288,20 @@
     transform: scale(1.25);
     box-shadow: 0 0 0 4px rgba(124,109,255,0.3);
   }
+  .slider-wrap input[type=range]::-webkit-slider-thumb:active {
+    transform: scale(1.1);
+  }
 
+  /* Log scale markers */
   .scale-markers {
     display: flex; justify-content: space-between;
     margin-top: 4px;
   }
-  .scale-marker { font-size: 9px; color: var(--muted); }
+  .scale-marker {
+    font-size: 9px; color: var(--muted);
+  }
 
+  /* Simple single-range */
   .single-range-wrap {
     background: var(--surface2);
     border: 1px solid var(--border);
@@ -415,7 +375,9 @@
   .number-inputs {
     display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
   }
-  .number-input-wrap { position: relative; }
+  .number-input-wrap {
+    position: relative;
+  }
   .number-input-wrap input {
     width: 100%;
     background: var(--surface2);
@@ -460,7 +422,9 @@
     padding: 7px 0;
   }
   .toggle-label { font-size: 13px; color: var(--text); }
-  .toggle { position: relative; width: 40px; height: 22px; }
+  .toggle {
+    position: relative; width: 40px; height: 22px;
+  }
   .toggle input { opacity: 0; width: 0; height: 0; }
   .toggle-slider {
     position: absolute; inset: 0;
@@ -481,11 +445,11 @@
   .toggle input:checked + .toggle-slider { background: var(--accent); border-color: var(--accent); }
   .toggle input:checked + .toggle-slider::after { left: 21px; background: #fff; }
 
-  /* ═══ MAIN ═══ */
+  /* ── MAIN ── */
   .main {
     padding: 24px;
     overflow-y: auto;
-    max-height: calc(100vh - 73px);
+    max-height: calc(100vh - 77px);
   }
 
   .results-header {
@@ -496,7 +460,7 @@
 
   .results-count {
     font-family: 'Syne', sans-serif;
-    font-size: 20px;
+    font-size: 22px;
     font-weight: 700;
   }
   .results-count span { color: var(--accent); }
@@ -671,10 +635,7 @@
     color: var(--muted);
   }
   .empty-state .empty-icon { font-size: 48px; margin-bottom: 16px; }
-  .empty-state h3 {
-    font-family: 'Syne', sans-serif;
-    font-size: 20px; color: var(--text); margin-bottom: 8px;
-  }
+  .empty-state h3 { font-family: 'Syne', sans-serif; font-size: 20px; color: var(--text); margin-bottom: 8px; }
 
   .loading {
     grid-column: 1 / -1;
@@ -691,184 +652,25 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* Mobile overlay backdrop */
-  .sidebar-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.7);
-    z-index: 200;
-    backdrop-filter: blur(4px);
-    opacity: 0;
-    transition: opacity 0.3s;
-  }
-  .sidebar-overlay.open {
-    opacity: 1;
-  }
-
-  /* ═══════════════════════════════
-     MOBILE RESPONSIVE — ≤ 768px
-  ═══════════════════════════════ */
-  @media (max-width: 768px) {
-    /* Header goes single line mobile */
-    header {
-      padding: 12px 16px;
-      flex-wrap: nowrap;
-      gap: 10px;
-    }
-    .header-stats { display: none; }
-    .logo-text { font-size: 16px; }
-    .logo-icon { width: 30px; height: 30px; font-size: 15px; }
-    .header-right {
-      flex: 1;
-      gap: 8px;
-    }
-    .header-search {
-      flex: 1;
-      width: auto;
-      min-width: 0;
-      padding: 9px 12px;
-    }
-    .header-search input { font-size: 13px; }
-    .mobile-filter-btn { display: flex; }
-
-    /* App goes single column */
-    .app {
-      grid-template-columns: 1fr;
-      grid-template-rows: auto 1fr;
-    }
-
-    /* Sidebar becomes sliding drawer */
-    .sidebar {
-      position: fixed;
-      top: 0; left: 0;
-      width: min(340px, 90vw);
-      height: 100vh;
-      max-height: 100vh;
-      z-index: 300;
-      border-right: 1px solid var(--border);
-      background: var(--bg);
-      transform: translateX(-105%);
-      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-      border-radius: 0 20px 20px 0;
-      overflow-y: auto;
-      padding: 16px;
-      padding-top: 0;
-    }
-    .sidebar.open {
-      transform: translateX(0);
-    }
-    .sidebar-overlay { display: block; }
-
-    .sidebar-close-btn {
-      display: flex;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      background: var(--bg);
-      margin-bottom: 16px;
-      padding: 14px 12px;
-      margin-left: -16px;
-      margin-right: -16px;
-      border-radius: 0;
-      border-left: none;
-      border-right: none;
-      border-top: none;
-    }
-
-    /* Main takes full width */
-    .main {
-      max-height: none;
-      padding: 16px;
-      overflow-y: visible;
-    }
-
-    /* Results header stacks */
-    .results-header {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 8px;
-    }
-    .results-count { font-size: 17px; }
-
-    /* Sort buttons become scrollable row */
-    .sort-controls {
-      overflow-x: auto;
-      flex-wrap: nowrap;
-      padding-bottom: 4px;
-      width: 100%;
-      scrollbar-width: none;
-    }
-    .sort-controls::-webkit-scrollbar { display: none; }
-    .sort-btn { flex-shrink: 0; }
-
-    /* Cards full width on small screens */
-    .cards-grid {
-      grid-template-columns: 1fr;
-      gap: 12px;
-    }
-
-    /* Active filter tags scrollable */
-    .active-filters {
-      overflow-x: auto;
-      flex-wrap: nowrap;
-      padding-bottom: 4px;
-      scrollbar-width: none;
-    }
-    .active-filters::-webkit-scrollbar { display: none; }
-
-    /* Mobile stat bar below header */
-    .mobile-stats-bar {
-      display: flex;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 10px 16px;
-      gap: 0;
-      overflow-x: auto;
-      scrollbar-width: none;
-    }
-    .mobile-stats-bar .stat {
-      flex: 1;
-      min-width: 70px;
-      border-right: 1px solid var(--border);
-      padding: 0 8px;
-      text-align: center;
-    }
-    .mobile-stats-bar .stat:last-child { border-right: none; }
-    .mobile-stats-bar .stat-value { font-size: 16px; }
-    .mobile-stats-bar .stat-label { font-size: 9px; }
-
-    /* Card footer wrap on mobile */
-    .card-footer { flex-wrap: wrap; }
-    .card-detail { min-width: calc(50% - 3px); flex: none; }
-  }
-
-  /* Small phones ≤ 380px */
-  @media (max-width: 380px) {
-    .card-footer { flex-direction: column; }
-    .card-detail { flex: none; min-width: 100%; }
-  }
-
-  /* Medium screens - 2 columns for cards */
-  @media (min-width: 769px) and (max-width: 1100px) {
-    .cards-grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  }
-
-  /* Hide mobile stats bar on desktop */
-  .mobile-stats-bar { display: none; }
-
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ── AREA input style same as price ── */
+  .area-widget {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    transition: border-color 0.2s;
+  }
+  .area-widget:focus-within { border-color: rgba(124,109,255,0.4); }
 </style>
 </head>
 <body>
 
 <div class="app">
 
-  <!-- ═══ HEADER ═══ -->
   <header>
     <div class="logo">
       <div class="logo-icon">🏙️</div>
@@ -894,55 +696,19 @@
       </div>
     </div>
 
-    <div class="header-right">
-      <div class="header-search">
-        <span>🔍</span>
-        <input type="text" id="searchInput" placeholder="Compound, developer, area..." autocomplete="off">
-        <button class="search-clear" id="searchClear" onclick="clearSearch()">×</button>
-      </div>
-      <button class="mobile-filter-btn" id="mobileFilterBtn" onclick="toggleSidebar()">
-        ⚙️ Filters
-        <span class="filter-count" id="filterCount" style="display:none">0</span>
-      </button>
+    <div class="header-search">
+      <span>🔍</span>
+      <input type="text" id="searchInput" placeholder="Compound, developer, area..." autocomplete="off">
+      <button class="search-clear" id="searchClear" onclick="clearSearch()">×</button>
     </div>
   </header>
 
-  <!-- Mobile stats bar (shown only on mobile) -->
-  <div class="mobile-stats-bar">
-    <div class="stat">
-      <div class="stat-value" id="totalCountMobile">—</div>
-      <div class="stat-label">Total</div>
-    </div>
-    <div class="stat">
-      <div class="stat-value" id="filteredCountMobile">—</div>
-      <div class="stat-label">Found</div>
-    </div>
-    <div class="stat">
-      <div class="stat-value" id="avgPriceMobile">—</div>
-      <div class="stat-label">Avg</div>
-    </div>
-    <div class="stat">
-      <div class="stat-value" id="compoundCountMobile">—</div>
-      <div class="stat-label">Compounds</div>
-    </div>
-  </div>
-
-  <!-- Sidebar overlay (mobile) -->
-  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
-
-  <!-- ═══ SIDEBAR ═══ -->
-  <aside class="sidebar" id="sidebar">
-
-    <!-- Mobile close button -->
-    <button class="sidebar-close-btn" onclick="closeSidebar()">
-      ← Close Filters
-    </button>
-
+  <aside class="sidebar">
     <div class="sidebar-title">Filters</div>
 
     <!-- CITY -->
     <div class="filter-section">
-      <div class="filter-label">City</div>
+      <div class="filter-label">City <span class="badge" id="cityBadge" style="display:none"></span></div>
       <div class="pill-group" id="cityFilter"></div>
     </div>
 
@@ -956,59 +722,62 @@
     <div class="filter-section">
       <div class="filter-label">Bedrooms</div>
       <div class="pill-group" id="bedroomsFilter">
-        <div class="pill active-green" onclick="filterBed(this,'any')">Any</div>
-        <div class="pill" onclick="filterBed(this,1)">1 BR</div>
-        <div class="pill" onclick="filterBed(this,2)">2 BR</div>
-        <div class="pill" onclick="filterBed(this,3)">3 BR</div>
-        <div class="pill" onclick="filterBed(this,4)">4 BR</div>
-        <div class="pill" onclick="filterBed(this,5)">5+ BR</div>
+        <div class="pill active-green" data-bed="any" onclick="filterBed(this,'any')">Any</div>
+        <div class="pill" data-bed="1" onclick="filterBed(this,1)">Studio</div>
+        <div class="pill" data-bed="1" onclick="filterBed(this,1)">1 BR</div>
+        <div class="pill" data-bed="2" onclick="filterBed(this,2)">2 BR</div>
+        <div class="pill" data-bed="3" onclick="filterBed(this,3)">3 BR</div>
+        <div class="pill" data-bed="4" onclick="filterBed(this,4)">4 BR</div>
+        <div class="pill" data-bed="5" onclick="filterBed(this,5)">5+ BR</div>
       </div>
     </div>
 
-    <!-- TOTAL PRICE -->
+    <!-- PRICE (new smart widget) -->
     <div class="filter-section">
       <div class="filter-label">
         Total Price <span style="color:var(--accent3);font-size:9px;font-weight:400">EGP</span>
+        <span id="priceActiveTag" style="display:none;font-size:9px;color:var(--accent);text-transform:none;letter-spacing:0;font-weight:400"></span>
       </div>
       <div class="price-widget">
+        <!-- Quick presets -->
         <div class="presets" id="pricePresets">
           <button class="preset-chip" onclick="setPricePreset(0,5e6,'Under 5M')">Under 5M</button>
           <button class="preset-chip" onclick="setPricePreset(5e6,10e6,'5M–10M')">5M–10M</button>
           <button class="preset-chip" onclick="setPricePreset(10e6,20e6,'10M–20M')">10M–20M</button>
           <button class="preset-chip" onclick="setPricePreset(20e6,50e6,'20M–50M')">20M–50M</button>
-          <button class="preset-chip" onclick="setPricePreset(50e6,100e6,'50M–100M')">50M–100M</button>
-          <button class="preset-chip" onclick="setPricePreset(100e6,500e6,'100M–500M')">100M–500M</button>
-          <button class="preset-chip" onclick="setPricePreset(500e6,999e12,'500M+')">500M+</button>
+          <button class="preset-chip" onclick="setPricePreset(50e6,999e9,'50M+')">50M+</button>
         </div>
+
+        <!-- Min / Max typed inputs -->
         <div class="range-inputs">
           <div class="range-manual-input">
             <label>Min</label>
-            <input type="number" id="priceMinInput" placeholder="e.g. 3M" min="0" step="500000"
+            <input type="number" id="priceMinInput" placeholder="e.g. 3000000" min="0" step="500000"
               oninput="onPriceInputChange()">
             <div class="unit-hint" id="priceMinHint">—</div>
           </div>
           <div class="range-sep-arrow">→</div>
           <div class="range-manual-input">
             <label>Max</label>
-            <input type="number" id="priceMaxInput" placeholder="e.g. 15M" min="0" step="500000"
+            <input type="number" id="priceMaxInput" placeholder="e.g. 15000000" min="0" step="500000"
               oninput="onPriceInputChange()">
             <div class="unit-hint" id="priceMaxHint">—</div>
           </div>
         </div>
-        <div class="slider-wrap">
-          <div class="range-track-bg">
-            <div class="range-fill" id="priceFill"
-              style="background:linear-gradient(90deg,var(--accent),var(--accent2))"></div>
-          </div>
+
+        <!-- Logarithmic dual slider -->
+        <div class="slider-wrap" id="priceSliderWrap">
+          <div class="range-track-bg"><div class="range-fill" id="priceFill" style="background:linear-gradient(90deg,var(--accent),var(--accent2))"></div></div>
           <input type="range" id="priceSliderMin" min="0" max="1000" value="0"   oninput="onPriceSliderChange()">
           <input type="range" id="priceSliderMax" min="0" max="1000" value="1000" oninput="onPriceSliderChange()">
         </div>
+        <!-- Log scale reference marks -->
         <div class="scale-markers">
           <span class="scale-marker">1M</span>
           <span class="scale-marker">5M</span>
-          <span class="scale-marker">20M</span>
-          <span class="scale-marker">100M</span>
-          <span class="scale-marker">500M+</span>
+          <span class="scale-marker">15M</span>
+          <span class="scale-marker">50M</span>
+          <span class="scale-marker">200M+</span>
         </div>
       </div>
     </div>
@@ -1019,11 +788,12 @@
         Built-Up Area <span style="color:var(--accent3);font-size:9px;font-weight:400">m²</span>
       </div>
       <div class="area-widget">
+        <!-- Area presets -->
         <div class="presets">
-          <button class="preset-chip" onclick="setAreaPreset(0,80)">Under 80</button>
-          <button class="preset-chip" onclick="setAreaPreset(80,150)">80–150</button>
-          <button class="preset-chip" onclick="setAreaPreset(150,250)">150–250</button>
-          <button class="preset-chip" onclick="setAreaPreset(250,9999)">250+</button>
+          <button class="preset-chip" onclick="setAreaPreset(0,80,'Under 80')">Under 80</button>
+          <button class="preset-chip" onclick="setAreaPreset(80,150,'80–150')">80–150</button>
+          <button class="preset-chip" onclick="setAreaPreset(150,250,'150–250')">150–250</button>
+          <button class="preset-chip" onclick="setAreaPreset(250,9999,'250+')">250+</button>
         </div>
         <div class="range-inputs">
           <div class="range-manual-input">
@@ -1039,11 +809,8 @@
           </div>
         </div>
         <div class="slider-wrap">
-          <div class="range-track-bg">
-            <div class="range-fill" id="areaFill"
-              style="background:linear-gradient(90deg,var(--accent3),var(--accent))"></div>
-          </div>
-          <input type="range" id="areaSliderMin" min="0" max="1000" value="0"    oninput="onAreaSliderChange()">
+          <div class="range-track-bg"><div class="range-fill" id="areaFill" style="background:linear-gradient(90deg,var(--accent3),var(--accent))"></div></div>
+          <input type="range" id="areaSliderMin" min="0" max="1000" value="0"   oninput="onAreaSliderChange()">
           <input type="range" id="areaSliderMax" min="0" max="1000" value="1000" oninput="onAreaSliderChange()">
         </div>
       </div>
@@ -1056,10 +823,10 @@
       </div>
       <div class="area-widget">
         <div class="presets">
-          <button class="preset-chip" onclick="setPsmPreset(0,50000)">Under 50K</button>
-          <button class="preset-chip" onclick="setPsmPreset(50000,100000)">50K–100K</button>
-          <button class="preset-chip" onclick="setPsmPreset(100000,200000)">100K–200K</button>
-          <button class="preset-chip" onclick="setPsmPreset(200000,9999999)">200K+</button>
+          <button class="preset-chip" onclick="setPsmPreset(0,50000,'Under 50K')">Under 50K</button>
+          <button class="preset-chip" onclick="setPsmPreset(50000,100000,'50K–100K')">50K–100K</button>
+          <button class="preset-chip" onclick="setPsmPreset(100000,200000,'100K–200K')">100K–200K</button>
+          <button class="preset-chip" onclick="setPsmPreset(200000,9999999,'200K+')">200K+</button>
         </div>
         <div class="range-inputs">
           <div class="range-manual-input">
@@ -1075,11 +842,8 @@
           </div>
         </div>
         <div class="slider-wrap">
-          <div class="range-track-bg">
-            <div class="range-fill" id="psmFill"
-              style="background:linear-gradient(90deg,var(--accent2),var(--accent))"></div>
-          </div>
-          <input type="range" id="psmSliderMin" min="0" max="1000" value="0"    oninput="onPsmSliderChange()">
+          <div class="range-track-bg"><div class="range-fill" id="psmFill" style="background:linear-gradient(90deg,var(--accent2),var(--accent))"></div></div>
+          <input type="range" id="psmSliderMin" min="0" max="1000" value="0"   oninput="onPsmSliderChange()">
           <input type="range" id="psmSliderMax" min="0" max="1000" value="1000" oninput="onPsmSliderChange()">
         </div>
       </div>
@@ -1088,22 +852,20 @@
     <!-- DELIVERY -->
     <div class="filter-section">
       <div class="filter-label">Delivery (months from now)</div>
-      <div class="presets" id="deliveryPresets" style="margin-bottom:8px">
-        <button class="preset-chip" onclick="setDelivery(this,0,6)">Ready</button>
-        <button class="preset-chip" onclick="setDelivery(this,0,12)">Within 1yr</button>
-        <button class="preset-chip" onclick="setDelivery(this,0,24)">Within 2yr</button>
-        <button class="preset-chip" onclick="setDelivery(this,0,36)">Within 3yr</button>
+      <div class="presets" style="margin-bottom:8px">
+        <button class="preset-chip" onclick="setDelivery(0,6,'Ready Now')">Ready</button>
+        <button class="preset-chip" onclick="setDelivery(0,12,'Within 1yr')">Within 1yr</button>
+        <button class="preset-chip" onclick="setDelivery(0,24,'Within 2yr')">Within 2yr</button>
+        <button class="preset-chip" onclick="setDelivery(0,36,'Within 3yr')">Within 3yr</button>
       </div>
       <div class="number-inputs">
         <div class="number-input-wrap">
           <label>From</label>
-          <input type="number" id="deliveryFrom" placeholder="e.g. 6"
-            oninput="clearDeliveryPresets();applyFilters()">
+          <input type="number" id="deliveryFrom" placeholder="e.g. 6" oninput="clearDeliveryPresets();applyFilters()">
         </div>
         <div class="number-input-wrap">
           <label>To</label>
-          <input type="number" id="deliveryTo" placeholder="e.g. 24"
-            oninput="clearDeliveryPresets();applyFilters()">
+          <input type="number" id="deliveryTo" placeholder="e.g. 24" oninput="clearDeliveryPresets();applyFilters()">
         </div>
       </div>
     </div>
@@ -1162,23 +924,15 @@
     </div>
 
     <button class="btn-reset" onclick="resetFilters()">↺ Reset All Filters</button>
-
-    <!-- Mobile apply button -->
-    <button class="btn-reset" onclick="closeSidebar()"
-      style="margin-top:8px;border-color:var(--accent);color:var(--accent);display:none"
-      id="mobileApplyBtn">
-      ✓ Apply & View Results
-    </button>
   </aside>
 
-  <!-- ═══ MAIN ═══ -->
   <main class="main">
     <div class="results-header">
       <div class="results-count">
         <span id="resultNum">—</span> units found
       </div>
       <div class="sort-controls">
-        <span style="font-size:12px;color:var(--muted);flex-shrink:0">Sort:</span>
+        <span style="font-size:12px;color:var(--muted)">Sort:</span>
         <button class="sort-btn active" onclick="setSort('price_asc',this)">Price ↑</button>
         <button class="sort-btn" onclick="setSort('price_desc',this)">Price ↓</button>
         <button class="sort-btn" onclick="setSort('area_desc',this)">Area ↓</button>
@@ -1200,64 +954,22 @@
 </div>
 
 <script>
-// ═══════════════════════════════════════════════════════════════════════════════
-// MOBILE SIDEBAR TOGGLE
-// ═══════════════════════════════════════════════════════════════════════════════
-function toggleSidebar() {
-  const sidebar  = document.getElementById('sidebar');
-  const overlay  = document.getElementById('sidebarOverlay');
-  const applyBtn = document.getElementById('mobileApplyBtn');
-  const isMobile = window.innerWidth <= 768;
+// ─── CONSTANTS ────────────────────────────────────────────────────────────────
+// Logarithmic scale for price (slider 0-1000 → actual EGP)
+const PRICE_LOG_MIN = 6;    // 10^6 = 1M
+const PRICE_LOG_MAX = 9;    // 10^9 = 1B
 
-  if (!isMobile) return;
+const AREA_LINEAR_MAX = 1000;  // sqm
+const PSM_LOG_MIN = 4;         // 10^4 = 10k
+const PSM_LOG_MAX = 6.5;       // ~3M
 
-  sidebar.classList.toggle('open');
-  overlay.classList.toggle('open');
-  applyBtn.style.display = sidebar.classList.contains('open') ? 'block' : 'none';
-  document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
-}
-
-function closeSidebar() {
-  const sidebar  = document.getElementById('sidebar');
-  const overlay  = document.getElementById('sidebarOverlay');
-  sidebar.classList.remove('open');
-  overlay.classList.remove('open');
-  document.getElementById('mobileApplyBtn').style.display = 'none';
-  document.body.style.overflow = '';
-}
-
-// Handle resize - close mobile sidebar if resized to desktop
-window.addEventListener('resize', () => {
-  if (window.innerWidth > 768) closeSidebar();
-});
-
-// Show/hide mobile-specific elements
-function updateMobileVisibility() {
-  const isMobile = window.innerWidth <= 768;
-  const mobileStats = document.querySelector('.mobile-stats-bar');
-  if (mobileStats) mobileStats.style.display = isMobile ? 'flex' : 'none';
-}
-window.addEventListener('resize', updateMobileVisibility);
-updateMobileVisibility();
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// SCALE CONFIG
-// ═══════════════════════════════════════════════════════════════════════════════
-const PRICE_LOG_MIN = 6;
-const PRICE_LOG_MAX = 8.699;
-const AREA_LINEAR_MAX = 1000;
-const PSM_LOG_MIN = 4;
-const PSM_LOG_MAX = 6.3;
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// STATE
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─── STATE ────────────────────────────────────────────────────────────────────
 let allData = [];
 let filteredData = [];
 let sortMode = 'price_asc';
 let currentBatchEnd = 50;
-let activeFilterCount = 0;
 
+// Current active ranges (actual values, null = no filter)
 const rangeState = {
   priceMin: null, priceMax: null,
   areaMin:  null, areaMax:  null,
@@ -1271,219 +983,249 @@ const activeFilters = {
   finishing: new Set(),
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// LOG SCALE HELPERS
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─── LOG SCALE HELPERS ────────────────────────────────────────────────────────
 function sliderToPrice(v) {
+  // v is 0-1000 slider value → EGP on log scale
   const t = v / 1000;
   return Math.round(Math.pow(10, PRICE_LOG_MIN + t * (PRICE_LOG_MAX - PRICE_LOG_MIN)));
 }
 function priceToSlider(p) {
   if (!p || p <= 0) return 0;
-  const t = (Math.log10(p) - PRICE_LOG_MIN) / (PRICE_LOG_MAX - PRICE_LOG_MIN);
+  const log = Math.log10(p);
+  const t = (log - PRICE_LOG_MIN) / (PRICE_LOG_MAX - PRICE_LOG_MIN);
   return Math.round(Math.max(0, Math.min(1000, t * 1000)));
 }
+
 function sliderToPsm(v) {
   const t = v / 1000;
   return Math.round(Math.pow(10, PSM_LOG_MIN + t * (PSM_LOG_MAX - PSM_LOG_MIN)));
 }
 function psmToSlider(p) {
   if (!p || p <= 0) return 0;
-  const t = (Math.log10(p) - PSM_LOG_MIN) / (PSM_LOG_MAX - PSM_LOG_MIN);
+  const log = Math.log10(p);
+  const t = (log - PSM_LOG_MIN) / (PSM_LOG_MAX - PSM_LOG_MIN);
   return Math.round(Math.max(0, Math.min(1000, t * 1000)));
 }
-function sliderToArea(v) { return Math.round((v / 1000) * AREA_LINEAR_MAX); }
-function areaToSlider(a) { return Math.round((a / AREA_LINEAR_MAX) * 1000); }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// FORMAT HELPERS
-// ═══════════════════════════════════════════════════════════════════════════════
+function sliderToArea(v) {
+  return Math.round((v / 1000) * AREA_LINEAR_MAX);
+}
+function areaToSlider(a) {
+  return Math.round((a / AREA_LINEAR_MAX) * 1000);
+}
+
+// ─── FORMAT HELPERS ───────────────────────────────────────────────────────────
 function fmtNum(n) { return n?.toLocaleString('en-US') ?? '0'; }
 function fmtMillion(n) {
   if (!n || n === 0) return '0';
-  if (n >= 1e9)  return (n / 1e9).toFixed(2).replace(/\.?0+$/, '') + 'B';
-  if (n >= 1e6)  return (n / 1e6).toFixed(2).replace(/\.?0+$/, '') + 'M';
-  if (n >= 1e3)  return (n / 1e3).toFixed(0) + 'K';
+  if (n >= 1e9)  return (n/1e9).toFixed(2).replace(/\.?0+$/, '') + 'B';
+  if (n >= 1e6)  return (n/1e6).toFixed(2).replace(/\.?0+$/, '') + 'M';
+  if (n >= 1e3)  return (n/1e3).toFixed(0) + 'K';
   return fmtNum(Math.round(n));
 }
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// SLIDER FILL
-// ═══════════════════════════════════════════════════════════════════════════════
-function syncFill(fillId, minId, maxId) {
-  const fill = document.getElementById(fillId);
-  const minS = document.getElementById(minId);
-  const maxS = document.getElementById(maxId);
-  if (!fill || !minS || !maxS) return;
-  fill.style.left  = (parseInt(minS.value) / 10) + '%';
-  fill.style.width = ((parseInt(maxS.value) - parseInt(minS.value)) / 10) + '%';
+function fmtPriceFriendly(n) {
+  // Shows readable hint under number input
+  if (!n || n <= 0) return '';
+  return fmtMillion(n) + ' EGP';
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PRICE HANDLERS
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─── SLIDER FILL SYNC ─────────────────────────────────────────────────────────
+function syncFill(fillId, minSliderId, maxSliderId) {
+  const minS = document.getElementById(minSliderId);
+  const maxS = document.getElementById(maxSliderId);
+  const fill = document.getElementById(fillId);
+  if (!fill || !minS || !maxS) return;
+  const left  = parseInt(minS.value) / 10;
+  const right = parseInt(maxS.value) / 10;
+  fill.style.left  = left + '%';
+  fill.style.width = (right - left) + '%';
+}
+
+// ─── PRICE SLIDER ─────────────────────────────────────────────────────────────
 function onPriceSliderChange() {
   const minS = document.getElementById('priceSliderMin');
   const maxS = document.getElementById('priceSliderMax');
   if (parseInt(minS.value) > parseInt(maxS.value)) minS.value = maxS.value;
+
   const minVal = sliderToPrice(parseInt(minS.value));
   const maxVal = sliderToPrice(parseInt(maxS.value));
+
   rangeState.priceMin = parseInt(minS.value) === 0    ? null : minVal;
   rangeState.priceMax = parseInt(maxS.value) === 1000 ? null : maxVal;
+
   document.getElementById('priceMinInput').value = rangeState.priceMin || '';
   document.getElementById('priceMaxInput').value = rangeState.priceMax || '';
   document.getElementById('priceMinHint').textContent = rangeState.priceMin ? fmtMillion(minVal) : '—';
   document.getElementById('priceMaxHint').textContent = rangeState.priceMax ? fmtMillion(maxVal) : '—';
-  clearPresets('pricePresets');
-  syncFill('priceFill', 'priceSliderMin', 'priceSliderMax');
+
+  clearPresetHighlight('pricePresets');
+  syncFill('priceFill','priceSliderMin','priceSliderMax');
   applyFilters();
 }
 
 function onPriceInputChange() {
   const minRaw = parseFloat(document.getElementById('priceMinInput').value);
   const maxRaw = parseFloat(document.getElementById('priceMaxInput').value);
+
   rangeState.priceMin = isNaN(minRaw) || minRaw <= 0 ? null : minRaw;
   rangeState.priceMax = isNaN(maxRaw) || maxRaw <= 0 ? null : maxRaw;
+
   document.getElementById('priceMinHint').textContent = rangeState.priceMin ? fmtMillion(rangeState.priceMin) : '—';
   document.getElementById('priceMaxHint').textContent = rangeState.priceMax ? fmtMillion(rangeState.priceMax) : '—';
+
+  // Sync sliders
   document.getElementById('priceSliderMin').value = rangeState.priceMin ? priceToSlider(rangeState.priceMin) : 0;
   document.getElementById('priceSliderMax').value = rangeState.priceMax ? priceToSlider(rangeState.priceMax) : 1000;
-  clearPresets('pricePresets');
-  syncFill('priceFill', 'priceSliderMin', 'priceSliderMax');
+
+  clearPresetHighlight('pricePresets');
+  syncFill('priceFill','priceSliderMin','priceSliderMax');
   applyFilters();
 }
 
 function setPricePreset(min, max, label) {
-  rangeState.priceMin = min > 0 ? min : null;
+  rangeState.priceMin = min || null;
   rangeState.priceMax = max >= 999e9 ? null : max;
-  document.getElementById('priceMinInput').value = min > 0 ? min : '';
+
+  document.getElementById('priceMinInput').value = min || '';
   document.getElementById('priceMaxInput').value = max >= 999e9 ? '' : max;
-  document.getElementById('priceMinHint').textContent = min > 0 ? fmtMillion(min) : '—';
+  document.getElementById('priceMinHint').textContent = min ? fmtMillion(min) : '—';
   document.getElementById('priceMaxHint').textContent = (max && max < 999e9) ? fmtMillion(max) : '—';
-  document.getElementById('priceSliderMin').value = min > 0 ? priceToSlider(min) : 0;
+  document.getElementById('priceSliderMin').value = min ? priceToSlider(min) : 0;
   document.getElementById('priceSliderMax').value = (max && max < 999e9) ? priceToSlider(max) : 1000;
-  syncFill('priceFill', 'priceSliderMin', 'priceSliderMax');
+
+  syncFill('priceFill','priceSliderMin','priceSliderMax');
   highlightPreset('pricePresets', label);
   applyFilters();
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// AREA HANDLERS
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─── AREA SLIDER ──────────────────────────────────────────────────────────────
 function onAreaSliderChange() {
   const minS = document.getElementById('areaSliderMin');
   const maxS = document.getElementById('areaSliderMax');
   if (parseInt(minS.value) > parseInt(maxS.value)) minS.value = maxS.value;
+
   const minVal = sliderToArea(parseInt(minS.value));
   const maxVal = sliderToArea(parseInt(maxS.value));
+
   rangeState.areaMin = parseInt(minS.value) === 0    ? null : minVal;
   rangeState.areaMax = parseInt(maxS.value) === 1000 ? null : maxVal;
+
   document.getElementById('areaMinInput').value = rangeState.areaMin || '';
   document.getElementById('areaMaxInput').value = rangeState.areaMax || '';
-  syncFill('areaFill', 'areaSliderMin', 'areaSliderMax');
+  syncFill('areaFill','areaSliderMin','areaSliderMax');
+  clearPresetHighlight('areaPresets');
   applyFilters();
 }
 
 function onAreaInputChange() {
   const minRaw = parseFloat(document.getElementById('areaMinInput').value);
   const maxRaw = parseFloat(document.getElementById('areaMaxInput').value);
+
   rangeState.areaMin = isNaN(minRaw) || minRaw <= 0 ? null : minRaw;
   rangeState.areaMax = isNaN(maxRaw) || maxRaw <= 0 ? null : maxRaw;
+
   document.getElementById('areaSliderMin').value = rangeState.areaMin ? areaToSlider(rangeState.areaMin) : 0;
   document.getElementById('areaSliderMax').value = rangeState.areaMax ? areaToSlider(rangeState.areaMax) : 1000;
-  syncFill('areaFill', 'areaSliderMin', 'areaSliderMax');
+
+  syncFill('areaFill','areaSliderMin','areaSliderMax');
   applyFilters();
 }
 
-function setAreaPreset(min, max) {
-  rangeState.areaMin = min > 0 ? min : null;
+function setAreaPreset(min, max, label) {
+  rangeState.areaMin = min || null;
   rangeState.areaMax = max >= 9999 ? null : max;
-  document.getElementById('areaMinInput').value = min > 0 ? min : '';
+  document.getElementById('areaMinInput').value = min || '';
   document.getElementById('areaMaxInput').value = max >= 9999 ? '' : max;
-  document.getElementById('areaSliderMin').value = min > 0 ? areaToSlider(min) : 0;
+  document.getElementById('areaSliderMin').value = min ? areaToSlider(min) : 0;
   document.getElementById('areaSliderMax').value = (max && max < 9999) ? areaToSlider(max) : 1000;
-  syncFill('areaFill', 'areaSliderMin', 'areaSliderMax');
+  syncFill('areaFill','areaSliderMin','areaSliderMax');
   applyFilters();
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PSM HANDLERS
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─── PSM SLIDER ───────────────────────────────────────────────────────────────
 function onPsmSliderChange() {
   const minS = document.getElementById('psmSliderMin');
   const maxS = document.getElementById('psmSliderMax');
   if (parseInt(minS.value) > parseInt(maxS.value)) minS.value = maxS.value;
+
   const minVal = sliderToPsm(parseInt(minS.value));
   const maxVal = sliderToPsm(parseInt(maxS.value));
+
   rangeState.psmMin = parseInt(minS.value) === 0    ? null : minVal;
   rangeState.psmMax = parseInt(maxS.value) === 1000 ? null : maxVal;
+
   document.getElementById('psmMinInput').value = rangeState.psmMin || '';
   document.getElementById('psmMaxInput').value = rangeState.psmMax || '';
-  syncFill('psmFill', 'psmSliderMin', 'psmSliderMax');
+  syncFill('psmFill','psmSliderMin','psmSliderMax');
   applyFilters();
 }
 
 function onPsmInputChange() {
   const minRaw = parseFloat(document.getElementById('psmMinInput').value);
   const maxRaw = parseFloat(document.getElementById('psmMaxInput').value);
+
   rangeState.psmMin = isNaN(minRaw) || minRaw <= 0 ? null : minRaw;
   rangeState.psmMax = isNaN(maxRaw) || maxRaw <= 0 ? null : maxRaw;
+
   document.getElementById('psmSliderMin').value = rangeState.psmMin ? psmToSlider(rangeState.psmMin) : 0;
   document.getElementById('psmSliderMax').value = rangeState.psmMax ? psmToSlider(rangeState.psmMax) : 1000;
-  syncFill('psmFill', 'psmSliderMin', 'psmSliderMax');
+
+  syncFill('psmFill','psmSliderMin','psmSliderMax');
   applyFilters();
 }
 
-function setPsmPreset(min, max) {
-  rangeState.psmMin = min > 0 ? min : null;
+function setPsmPreset(min, max, label) {
+  rangeState.psmMin = min || null;
   rangeState.psmMax = max >= 9999999 ? null : max;
-  document.getElementById('psmMinInput').value = min > 0 ? min : '';
+  document.getElementById('psmMinInput').value = min || '';
   document.getElementById('psmMaxInput').value = max >= 9999999 ? '' : max;
-  document.getElementById('psmSliderMin').value = min > 0 ? psmToSlider(min) : 0;
+  document.getElementById('psmSliderMin').value = min ? psmToSlider(min) : 0;
   document.getElementById('psmSliderMax').value = (max && max < 9999999) ? psmToSlider(max) : 1000;
-  syncFill('psmFill', 'psmSliderMin', 'psmSliderMax');
+  syncFill('psmFill','psmSliderMin','psmSliderMax');
   applyFilters();
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// DELIVERY HANDLERS
-// ═══════════════════════════════════════════════════════════════════════════════
-function setDelivery(el, from, to) {
+// ─── DELIVERY PRESETS ─────────────────────────────────────────────────────────
+function setDelivery(from, to, label) {
   document.getElementById('deliveryFrom').value = from;
   document.getElementById('deliveryTo').value = to;
-  document.querySelectorAll('#deliveryPresets .preset-chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
+  document.querySelectorAll('.filter-section .presets .preset-chip').forEach(c => c.classList.remove('active'));
+  // Find and highlight
+  event.target.classList.add('active');
   applyFilters();
 }
 function clearDeliveryPresets() {
-  document.querySelectorAll('#deliveryPresets .preset-chip').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.filter-section .presets .preset-chip').forEach(c => {
+    if (c.getAttribute('onclick') && c.getAttribute('onclick').includes('setDelivery'))
+      c.classList.remove('active');
+  });
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// PRESET HIGHLIGHT HELPERS
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─── PRESET HIGHLIGHT HELPERS ─────────────────────────────────────────────────
 function highlightPreset(containerId, label) {
-  document.querySelectorAll(`#${containerId} .preset-chip`).forEach(c => {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.querySelectorAll('.preset-chip').forEach(c => {
     c.classList.toggle('active', c.textContent.trim() === label);
   });
 }
-function clearPresets(containerId) {
-  document.querySelectorAll(`#${containerId} .preset-chip`).forEach(c => c.classList.remove('active'));
+function clearPresetHighlight(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active'));
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// BEDROOMS
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─── BEDROOMS ─────────────────────────────────────────────────────────────────
 function filterBed(el, val) {
-  document.querySelectorAll('#bedroomsFilter .pill').forEach(p => p.classList.remove('active', 'active-green'));
+  document.querySelectorAll('#bedroomsFilter .pill').forEach(p => {
+    p.classList.remove('active', 'active-green');
+  });
   el.classList.add(val === 'any' ? 'active-green' : 'active');
   activeFilters.bedrooms = val;
   applyFilters();
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SORT
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─── SORT ─────────────────────────────────────────────────────────────────────
 function setSort(mode, el) {
   sortMode = mode;
   document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
@@ -1491,18 +1233,14 @@ function setSort(mode, el) {
   applyFilters();
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SEARCH
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─── SEARCH ───────────────────────────────────────────────────────────────────
 function clearSearch() {
   document.getElementById('searchInput').value = '';
   document.getElementById('searchClear').classList.remove('visible');
   applyFilters();
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// DATA LOAD
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─── DATA LOAD ────────────────────────────────────────────────────────────────
 async function loadData() {
   const grid = document.getElementById('cardsGrid');
   grid.innerHTML = `<div class="loading"><div class="spinner"></div>Loading units data...</div>`;
@@ -1513,12 +1251,12 @@ async function loadData() {
     const data = await resp.json();
     if (data.error) throw new Error(data.error);
     allData = data;
-  } catch (e) {
+  } catch(e) {
     grid.innerHTML = `
       <div class="empty-state">
         <div class="empty-icon">⚠️</div>
         <h3>Failed to load data</h3>
-        <p style="margin-bottom:8px">${e.message}</p>
+        <p>${e.message}</p>
         <button class="btn-reset" onclick="loadData()" style="width:auto;margin-top:16px">🔄 Retry</button>
       </div>`;
     return;
@@ -1527,9 +1265,7 @@ async function loadData() {
   initPage();
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─── INIT ─────────────────────────────────────────────────────────────────────
 function initPage() {
   if (allData.length === 0) {
     document.getElementById('cardsGrid').innerHTML = `
@@ -1541,9 +1277,9 @@ function initPage() {
     return;
   }
 
-  buildPills('cityFilter',     [...new Set(allData.map(d => d.city_name))].sort(),                       'city');
-  buildPills('unitTypeFilter', [...new Set(allData.map(d => d.unit_type))].sort(),                      'type');
-  buildPills('finishingFilter',[...new Set(allData.map(d => d.finishing_type).filter(Boolean))].sort(), 'finishing');
+  buildPills('cityFilter',     [...new Set(allData.map(d => d.city_name))].sort(),                     'city');
+  buildPills('unitTypeFilter', [...new Set(allData.map(d => d.unit_type))].sort(),                    'type');
+  buildPills('finishingFilter',[...new Set(allData.map(d => d.finishing_type).filter(Boolean))].sort(),'finishing');
 
   const devSelect = document.getElementById('developerFilter');
   [...new Set(allData.map(d => d.developer_name))].sort().forEach(dev => {
@@ -1552,16 +1288,13 @@ function initPage() {
     devSelect.appendChild(opt);
   });
 
-  const totalStr = fmtNum(allData.length);
-  const compStr  = String(new Set(allData.map(d => d.compound_name)).size);
-  document.getElementById('totalCount').textContent    = totalStr;
-  document.getElementById('compoundCount').textContent = compStr;
-  document.getElementById('totalCountMobile').textContent    = totalStr;
-  document.getElementById('compoundCountMobile').textContent = compStr;
+  document.getElementById('totalCount').textContent    = fmtNum(allData.length);
+  document.getElementById('compoundCount').textContent = new Set(allData.map(d => d.compound_name)).size;
 
-  syncFill('priceFill', 'priceSliderMin', 'priceSliderMax');
-  syncFill('areaFill',  'areaSliderMin',  'areaSliderMax');
-  syncFill('psmFill',   'psmSliderMin',   'psmSliderMax');
+  // Init slider fills
+  syncFill('priceFill','priceSliderMin','priceSliderMax');
+  syncFill('areaFill','areaSliderMin','areaSliderMax');
+  syncFill('psmFill','psmSliderMin','psmSliderMax');
 
   applyFilters();
 }
@@ -1572,9 +1305,7 @@ function buildPills(containerId, values, type) {
   anyPill.className = 'pill active-green';
   anyPill.textContent = 'All';
   anyPill.onclick = () => {
-    const set = type === 'city' ? activeFilters.cities
-              : type === 'type' ? activeFilters.unitTypes
-              : activeFilters.finishing;
+    const set = type === 'city' ? activeFilters.cities : type === 'type' ? activeFilters.unitTypes : activeFilters.finishing;
     set.clear();
     el.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
     anyPill.classList.add('active-green');
@@ -1588,11 +1319,9 @@ function buildPills(containerId, values, type) {
     pill.textContent = val;
     pill.onclick = () => {
       anyPill.classList.remove('active-green');
-      const set = type === 'city' ? activeFilters.cities
-                : type === 'type' ? activeFilters.unitTypes
-                : activeFilters.finishing;
+      const set = type === 'city' ? activeFilters.cities : type === 'type' ? activeFilters.unitTypes : activeFilters.finishing;
       if (set.has(val)) { set.delete(val); pill.classList.remove('active'); }
-      else              { set.add(val);    pill.classList.add('active'); }
+      else { set.add(val); pill.classList.add('active'); }
       if (set.size === 0) anyPill.classList.add('active-green');
       applyFilters();
     };
@@ -1600,9 +1329,7 @@ function buildPills(containerId, values, type) {
   });
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// FILTER
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─── FILTER ───────────────────────────────────────────────────────────────────
 function applyFilters() {
   const search    = document.getElementById('searchInput').value.toLowerCase().trim();
   const delivFrom = parseFloat(document.getElementById('deliveryFrom').value) || 0;
@@ -1613,33 +1340,40 @@ function applyFilters() {
   const freePark  = document.getElementById('freeParking').checked;
   const hideSold  = document.getElementById('hideSold').checked;
 
+  // Show/hide search clear btn
   document.getElementById('searchClear').classList.toggle('visible', search.length > 0);
 
   filteredData = allData.filter(u => {
     if (hideSold && (u.is_sold || u.status === 0)) return false;
-    if (activeFilters.cities.size    && !activeFilters.cities.has(u.city_name))        return false;
-    if (activeFilters.unitTypes.size && !activeFilters.unitTypes.has(u.unit_type))     return false;
+
+    if (activeFilters.cities.size    && !activeFilters.cities.has(u.city_name))     return false;
+    if (activeFilters.unitTypes.size && !activeFilters.unitTypes.has(u.unit_type))  return false;
     if (activeFilters.finishing.size && !activeFilters.finishing.has(u.finishing_type)) return false;
+
     if (activeFilters.bedrooms !== 'any') {
       const b = parseInt(activeFilters.bedrooms);
       if (b === 5) { if (u.bedrooms < 5) return false; }
-      else         { if (u.bedrooms !== b) return false; }
+      else { if (u.bedrooms !== b) return false; }
     }
+
     if (rangeState.priceMin !== null && u.total_price_egp   < rangeState.priceMin) return false;
     if (rangeState.priceMax !== null && u.total_price_egp   > rangeState.priceMax) return false;
     if (rangeState.areaMin  !== null && u.built_up_area_sqm < rangeState.areaMin)  return false;
     if (rangeState.areaMax  !== null && u.built_up_area_sqm > rangeState.areaMax)  return false;
     if (rangeState.psmMin   !== null && u.price_per_sqm_egp < rangeState.psmMin)   return false;
     if (rangeState.psmMax   !== null && u.price_per_sqm_egp > rangeState.psmMax)   return false;
+
     if (u.delivery_from_months < delivFrom || u.delivery_to_months > delivTo) return false;
-    if (devFilter && u.developer_name !== devFilter)             return false;
-    if (discount  && (u.cash_discount_percent || 0) < discount)  return false;
-    if (freeClub  && u.club_fees?.toLowerCase()    !== 'free')   return false;
-    if (freePark  && u.parking_fees?.toLowerCase() !== 'free')   return false;
+    if (devFilter  && u.developer_name !== devFilter)               return false;
+    if (discount   && (u.cash_discount_percent || 0) < discount)    return false;
+    if (freeClub   && u.club_fees?.toLowerCase()   !== 'free')      return false;
+    if (freePark   && u.parking_fees?.toLowerCase() !== 'free')     return false;
+
     if (search) {
-      const hay = `${u.compound_name} ${u.developer_name} ${u.city_name} ${u.unit_type} ${u.finishing_type || ''}`.toLowerCase();
-      if (!hay.includes(search)) return false;
+      const haystack = `${u.compound_name} ${u.developer_name} ${u.city_name} ${u.unit_type} ${u.finishing_type || ''}`.toLowerCase();
+      if (!haystack.includes(search)) return false;
     }
+
     return true;
   });
 
@@ -1648,7 +1382,7 @@ function applyFilters() {
     if (sortMode === 'price_desc')    return b.total_price_egp - a.total_price_egp;
     if (sortMode === 'area_desc')     return b.built_up_area_sqm - a.built_up_area_sqm;
     if (sortMode === 'psm_asc')       return a.price_per_sqm_egp - b.price_per_sqm_egp;
-    if (sortMode === 'discount_desc') return (b.cash_discount_percent || 0) - (a.cash_discount_percent || 0);
+    if (sortMode === 'discount_desc') return (b.cash_discount_percent||0) - (a.cash_discount_percent||0);
     if (sortMode === 'delivery_asc')  return a.delivery_from_months - b.delivery_from_months;
     return 0;
   });
@@ -1657,40 +1391,9 @@ function applyFilters() {
   renderCards();
   updateStats();
   updateTags();
-  updateFilterCount();
 }
 
-// Update mobile filter badge count
-function updateFilterCount() {
-  let count = 0;
-  if (activeFilters.cities.size)    count++;
-  if (activeFilters.unitTypes.size) count++;
-  if (activeFilters.finishing.size) count++;
-  if (activeFilters.bedrooms !== 'any') count++;
-  if (rangeState.priceMin || rangeState.priceMax) count++;
-  if (rangeState.areaMin  || rangeState.areaMax)  count++;
-  if (rangeState.psmMin   || rangeState.psmMax)   count++;
-  if (parseInt(document.getElementById('discountSlider').value) > 0) count++;
-  if (document.getElementById('freeClub').checked)    count++;
-  if (document.getElementById('freeParking').checked) count++;
-  if (document.getElementById('developerFilter').value) count++;
-  if (document.getElementById('deliveryFrom').value || document.getElementById('deliveryTo').value) count++;
-
-  const badge = document.getElementById('filterCount');
-  const btn   = document.getElementById('mobileFilterBtn');
-  if (count > 0) {
-    badge.textContent = count;
-    badge.style.display = 'inline';
-    btn.classList.add('active');
-  } else {
-    badge.style.display = 'none';
-    btn.classList.remove('active');
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// RENDER
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─── RENDER ───────────────────────────────────────────────────────────────────
 function renderCards() {
   const grid = document.getElementById('cardsGrid');
   document.getElementById('resultNum').textContent = fmtNum(filteredData.length);
@@ -1706,25 +1409,24 @@ function renderCards() {
     return;
   }
 
-  grid.innerHTML = filteredData.slice(0, 50).map((u, i) => renderCard(u, i)).join('');
+  const firstBatch = filteredData.slice(0, 50);
+  grid.innerHTML = firstBatch.map((u, i) => renderCard(u, i)).join('');
 
   if (filteredData.length > 50) {
-    const rem = filteredData.length - 50;
+    const remaining = filteredData.length - 50;
     grid.innerHTML += `
-      <div class="empty-state" id="loadMoreCard"
-        style="background:var(--surface2);border-radius:16px;border:1px dashed var(--border)">
+      <div class="empty-state" style="background:var(--surface2);border-radius:16px;border:1px dashed var(--border)" id="loadMoreCard">
         <div style="font-size:24px">📦</div>
-        <h3 style="font-size:16px">${fmtNum(rem)} more units</h3>
+        <h3 style="font-size:16px">${fmtNum(remaining)} more units</h3>
         <button class="btn-reset" onclick="loadMoreUnits()" style="width:auto;margin-top:12px">Show More</button>
       </div>`;
   }
 }
 
 function renderCard(u, i) {
-  const isSold = u.is_sold || u.status === 0;
   return `
     <div class="unit-card" style="animation-delay:${(i % 50) * 0.02}s">
-      ${isSold ? '<div class="sold-badge">Sold</div>' : ''}
+      ${u.is_sold || u.status === 0 ? '<div class="sold-badge">Sold</div>' : ''}
       <div class="card-header">
         <div class="compound-name">${u.compound_name}</div>
         <div class="unit-type-badge">${u.unit_type}</div>
@@ -1765,134 +1467,82 @@ function renderCard(u, i) {
           Club
         </div>
       </div>
-      ${u.payment_plan
-        ? `<div style="margin-top:10px;font-size:11px;color:var(--muted);border-top:1px solid var(--border);padding-top:8px">💳 ${u.payment_plan}</div>`
-        : ''}
-    </div>`;
+      ${u.payment_plan ? `<div style="margin-top:10px;font-size:11px;color:var(--muted);border-top:1px solid var(--border);padding-top:8px">💳 ${u.payment_plan}</div>` : ''}
+    </div>
+  `;
 }
 
 function loadMoreUnits() {
   const grid = document.getElementById('cardsGrid');
-  document.getElementById('loadMoreCard')?.remove();
-  filteredData.slice(currentBatchEnd, currentBatchEnd + 50).forEach((u, i) => {
+  const loadMoreCard = document.getElementById('loadMoreCard');
+  if (loadMoreCard) loadMoreCard.remove();
+  const nextBatch = filteredData.slice(currentBatchEnd, currentBatchEnd + 50);
+  currentBatchEnd += 50;
+  nextBatch.forEach((u, i) => {
     grid.insertAdjacentHTML('beforeend', renderCard(u, i));
   });
-  currentBatchEnd += 50;
   if (currentBatchEnd < filteredData.length) {
-    const rem = filteredData.length - currentBatchEnd;
+    const remaining = filteredData.length - currentBatchEnd;
     grid.insertAdjacentHTML('beforeend', `
-      <div class="empty-state" id="loadMoreCard"
-        style="background:var(--surface2);border-radius:16px;border:1px dashed var(--border)">
+      <div class="empty-state" style="background:var(--surface2);border-radius:16px;border:1px dashed var(--border)" id="loadMoreCard">
         <div style="font-size:24px">📦</div>
-        <h3 style="font-size:16px">${fmtNum(rem)} more units</h3>
+        <h3 style="font-size:16px">${fmtNum(remaining)} more units</h3>
         <button class="btn-reset" onclick="loadMoreUnits()" style="width:auto;margin-top:12px">Show More</button>
       </div>`);
   }
 }
 
 function updateStats() {
+  document.getElementById('filteredCount').textContent = fmtNum(filteredData.length);
   const prices = filteredData.map(d => d.total_price_egp).filter(Boolean);
-  const avg = prices.length ? prices.reduce((a, b) => a + b, 0) / prices.length : 0;
-  const filtStr = fmtNum(filteredData.length);
-  const avgStr  = avg ? fmtMillion(avg) : '—';
-
-  document.getElementById('filteredCount').textContent    = filtStr;
-  document.getElementById('avgPrice').textContent         = avgStr;
-  document.getElementById('filteredCountMobile').textContent = filtStr;
-  document.getElementById('avgPriceMobile').textContent      = avgStr;
+  const avg = prices.length ? prices.reduce((a,b) => a+b,0) / prices.length : 0;
+  document.getElementById('avgPrice').textContent = avg ? fmtMillion(avg) : '—';
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ACTIVE FILTER TAGS
-// ═══════════════════════════════════════════════════════════════════════════════
 function updateTags() {
   const tags = [];
 
-  [...activeFilters.cities].forEach(c =>
-    tags.push({ label: `📍 ${c}`, clear: () => { activeFilters.cities.delete(c); applyFilters(); }}));
-  [...activeFilters.unitTypes].forEach(t =>
-    tags.push({ label: `🏠 ${t}`, clear: () => { activeFilters.unitTypes.delete(t); applyFilters(); }}));
-  [...activeFilters.finishing].forEach(f =>
-    tags.push({ label: `🎨 ${f}`, clear: () => { activeFilters.finishing.delete(f); applyFilters(); }}));
-
+  if (activeFilters.cities.size)
+    [...activeFilters.cities].forEach(c => tags.push({ label: `📍 ${c}`, clear: () => { activeFilters.cities.delete(c); applyFilters(); }}));
+  if (activeFilters.unitTypes.size)
+    [...activeFilters.unitTypes].forEach(t => tags.push({ label: `🏠 ${t}`, clear: () => { activeFilters.unitTypes.delete(t); applyFilters(); }}));
   if (activeFilters.bedrooms !== 'any')
-    tags.push({ label: `🛏️ ${activeFilters.bedrooms}+ BR`, clear: () => {
-      activeFilters.bedrooms = 'any';
-      document.querySelectorAll('#bedroomsFilter .pill').forEach(p => p.classList.remove('active'));
-      document.querySelector('#bedroomsFilter .pill').classList.add('active-green');
-      applyFilters();
-    }});
-
-  if (rangeState.priceMin !== null || rangeState.priceMax !== null)
-    tags.push({ label: `💰 ${rangeState.priceMin ? fmtMillion(rangeState.priceMin) : '0'} → ${rangeState.priceMax ? fmtMillion(rangeState.priceMax) : '∞'}`,
-      clear: () => {
-        rangeState.priceMin = null; rangeState.priceMax = null;
-        ['priceMinInput','priceMaxInput'].forEach(id => document.getElementById(id).value = '');
-        document.getElementById('priceMinHint').textContent = '—';
-        document.getElementById('priceMaxHint').textContent = '—';
-        document.getElementById('priceSliderMin').value = 0;
-        document.getElementById('priceSliderMax').value = 1000;
-        syncFill('priceFill','priceSliderMin','priceSliderMax');
-        clearPresets('pricePresets');
-        applyFilters();
-      }});
-
-  if (rangeState.areaMin !== null || rangeState.areaMax !== null)
-    tags.push({ label: `📐 ${rangeState.areaMin || 0}m² → ${rangeState.areaMax ? rangeState.areaMax + 'm²' : '∞'}`,
-      clear: () => {
-        rangeState.areaMin = null; rangeState.areaMax = null;
-        ['areaMinInput','areaMaxInput'].forEach(id => document.getElementById(id).value = '');
-        document.getElementById('areaSliderMin').value = 0;
-        document.getElementById('areaSliderMax').value = 1000;
-        syncFill('areaFill','areaSliderMin','areaSliderMax');
-        applyFilters();
-      }});
-
-  if (rangeState.psmMin !== null || rangeState.psmMax !== null)
-    tags.push({ label: `📊 ${rangeState.psmMin ? fmtMillion(rangeState.psmMin) : '0'}/m² → ${rangeState.psmMax ? fmtMillion(rangeState.psmMax) + '/m²' : '∞'}`,
-      clear: () => {
-        rangeState.psmMin = null; rangeState.psmMax = null;
-        ['psmMinInput','psmMaxInput'].forEach(id => document.getElementById(id).value = '');
-        document.getElementById('psmSliderMin').value = 0;
-        document.getElementById('psmSliderMax').value = 1000;
-        syncFill('psmFill','psmSliderMin','psmSliderMax');
-        applyFilters();
-      }});
-
+    tags.push({ label: `🛏️ ${activeFilters.bedrooms}+ BR`, clear: () => { activeFilters.bedrooms = 'any'; document.querySelectorAll('#bedroomsFilter .pill').forEach(p => p.classList.remove('active')); document.querySelector('#bedroomsFilter .pill').classList.add('active-green'); applyFilters(); }});
+  if (rangeState.priceMin !== null || rangeState.priceMax !== null) {
+    const label = `💰 ${rangeState.priceMin ? fmtMillion(rangeState.priceMin) : '0'} → ${rangeState.priceMax ? fmtMillion(rangeState.priceMax) : '∞'}`;
+    tags.push({ label, clear: () => { rangeState.priceMin = null; rangeState.priceMax = null; document.getElementById('priceMinInput').value=''; document.getElementById('priceMaxInput').value=''; document.getElementById('priceMinHint').textContent='—'; document.getElementById('priceMaxHint').textContent='—'; document.getElementById('priceSliderMin').value=0; document.getElementById('priceSliderMax').value=1000; syncFill('priceFill','priceSliderMin','priceSliderMax'); clearPresetHighlight('pricePresets'); applyFilters(); }});
+  }
+  if (rangeState.areaMin !== null || rangeState.areaMax !== null) {
+    const label = `📐 ${rangeState.areaMin || 0}m² → ${rangeState.areaMax ? rangeState.areaMax+'m²' : '∞'}`;
+    tags.push({ label, clear: () => { rangeState.areaMin = null; rangeState.areaMax = null; document.getElementById('areaMinInput').value=''; document.getElementById('areaMaxInput').value=''; document.getElementById('areaSliderMin').value=0; document.getElementById('areaSliderMax').value=1000; syncFill('areaFill','areaSliderMin','areaSliderMax'); applyFilters(); }});
+  }
+  if (rangeState.psmMin !== null || rangeState.psmMax !== null) {
+    const label = `📊 ${rangeState.psmMin ? fmtMillion(rangeState.psmMin) : '0'}/m² → ${rangeState.psmMax ? fmtMillion(rangeState.psmMax)+'/m²' : '∞'}`;
+    tags.push({ label, clear: () => { rangeState.psmMin = null; rangeState.psmMax = null; document.getElementById('psmMinInput').value=''; document.getElementById('psmMaxInput').value=''; document.getElementById('psmSliderMin').value=0; document.getElementById('psmSliderMax').value=1000; syncFill('psmFill','psmSliderMin','psmSliderMax'); applyFilters(); }});
+  }
   if (parseInt(document.getElementById('discountSlider').value) > 0)
-    tags.push({ label: `🎯 Min ${document.getElementById('discountSlider').value}% off`,
-      clear: () => { document.getElementById('discountSlider').value = 0; document.getElementById('discountVal').textContent = '0%'; applyFilters(); }});
-
+    tags.push({ label: `🎯 Min ${document.getElementById('discountSlider').value}% off`, clear: () => { document.getElementById('discountSlider').value=0; document.getElementById('discountVal').textContent='0%'; applyFilters(); }});
   if (document.getElementById('freeClub').checked)
-    tags.push({ label: '🏊 Free Club', clear: () => { document.getElementById('freeClub').checked = false; applyFilters(); }});
-
+    tags.push({ label: '🏊 Free Club', clear: () => { document.getElementById('freeClub').checked=false; applyFilters(); }});
   if (document.getElementById('freeParking').checked)
-    tags.push({ label: '🚗 Free Parking', clear: () => { document.getElementById('freeParking').checked = false; applyFilters(); }});
-
+    tags.push({ label: '🚗 Free Parking', clear: () => { document.getElementById('freeParking').checked=false; applyFilters(); }});
   if (document.getElementById('developerFilter').value)
-    tags.push({ label: `🏗️ ${document.getElementById('developerFilter').value}`,
-      clear: () => { document.getElementById('developerFilter').value = ''; applyFilters(); }});
-
-  const dFrom = document.getElementById('deliveryFrom').value;
-  const dTo   = document.getElementById('deliveryTo').value;
-  if (dFrom || dTo)
-    tags.push({ label: `📅 Delivery ${dFrom || 0}–${dTo || '∞'} mo`,
-      clear: () => { document.getElementById('deliveryFrom').value = ''; document.getElementById('deliveryTo').value = ''; clearDeliveryPresets(); applyFilters(); }});
+    tags.push({ label: `🏗️ ${document.getElementById('developerFilter').value}`, clear: () => { document.getElementById('developerFilter').value=''; applyFilters(); }});
+  if (document.getElementById('deliveryFrom').value || document.getElementById('deliveryTo').value)
+    tags.push({ label: `📅 Delivery ${document.getElementById('deliveryFrom').value||0}–${document.getElementById('deliveryTo').value||'∞'} mo`, clear: () => { document.getElementById('deliveryFrom').value=''; document.getElementById('deliveryTo').value=''; applyFilters(); }});
 
   const container = document.getElementById('activeTags');
   container.innerHTML = tags.map((t, i) => `
     <div class="filter-tag">
       ${t.label}
       <button onclick="clearTag(${i})">×</button>
-    </div>`).join('');
+    </div>
+  `).join('');
   window._tagClears = tags.map(t => t.clear);
 }
 
 function clearTag(i) { window._tagClears[i](); }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// RESET
-// ═══════════════════════════════════════════════════════════════════════════════
 function resetFilters() {
   activeFilters.cities.clear();
   activeFilters.unitTypes.clear();
@@ -1900,28 +1550,25 @@ function resetFilters() {
   activeFilters.bedrooms = 'any';
 
   Object.assign(rangeState, { priceMin:null, priceMax:null, areaMin:null, areaMax:null, psmMin:null, psmMax:null });
-
-  ['priceMinInput','priceMaxInput','areaMinInput','areaMaxInput','psmMinInput','psmMaxInput']
-    .forEach(id => document.getElementById(id).value = '');
-  ['priceMinHint','priceMaxHint']
-    .forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '—'; });
-  ['priceSliderMin','priceSliderMax','areaSliderMin','areaSliderMax','psmSliderMin','psmSliderMax']
-    .forEach(id => document.getElementById(id).value = id.includes('Min') ? 0 : 1000);
-
+  ['priceMinInput','priceMaxInput','areaMinInput','areaMaxInput','psmMinInput','psmMaxInput'].forEach(id => { document.getElementById(id).value=''; });
+  ['priceMinHint','priceMaxHint'].forEach(id => { const el = document.getElementById(id); if(el) el.textContent='—'; });
+  ['priceSliderMin','priceSliderMax','areaSliderMin','areaSliderMax','psmSliderMin','psmSliderMax'].forEach(id => {
+    document.getElementById(id).value = id.includes('Min') ? 0 : 1000;
+  });
   syncFill('priceFill','priceSliderMin','priceSliderMax');
-  syncFill('areaFill', 'areaSliderMin', 'areaSliderMax');
-  syncFill('psmFill',  'psmSliderMin',  'psmSliderMax');
-
+  syncFill('areaFill','areaSliderMin','areaSliderMax');
+  syncFill('psmFill','psmSliderMin','psmSliderMax');
   document.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active'));
+
   document.getElementById('discountSlider').value = 0;
   document.getElementById('discountVal').textContent = '0%';
   document.getElementById('deliveryFrom').value = '';
-  document.getElementById('deliveryTo').value   = '';
+  document.getElementById('deliveryTo').value = '';
   document.getElementById('developerFilter').value = '';
-  document.getElementById('freeClub').checked    = false;
+  document.getElementById('freeClub').checked = false;
   document.getElementById('freeParking').checked = false;
-  document.getElementById('hideSold').checked    = true;
-  document.getElementById('searchInput').value   = '';
+  document.getElementById('hideSold').checked = true;
+  document.getElementById('searchInput').value = '';
   document.getElementById('searchClear').classList.remove('visible');
 
   document.querySelectorAll('.pill').forEach(p => p.classList.remove('active','active-green'));
@@ -1930,18 +1577,14 @@ function resetFilters() {
   applyFilters();
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SEARCH DEBOUNCE
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─── SEARCH DEBOUNCE ──────────────────────────────────────────────────────────
 let searchTimer;
 document.getElementById('searchInput').addEventListener('input', () => {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(applyFilters, 200);
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// START
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─── START ────────────────────────────────────────────────────────────────────
 loadData();
 </script>
 </body>
