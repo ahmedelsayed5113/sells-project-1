@@ -21,12 +21,11 @@ log = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-# ─── JSON SERIALIZER (handles Decimal from PostgreSQL) ─────────────────────────
+# ─── JSON SERIALIZER ───────────────────────────────────────────────────────────
 def json_serial(obj):
     if isinstance(obj, Decimal):
         val = float(obj)
-        # Check for NaN
-        if val != val:  # NaN check
+        if val != val:  # NaN
             return None
         return val
     raise TypeError(f"Type {type(obj)} not serializable")
@@ -41,14 +40,23 @@ def json_response(data):
 def get_conn():
     database_url = os.environ.get("DATABASE_URL")
     if database_url:
-        return psycopg2.connect(database_url)
+        return psycopg2.connect(database_url, connect_timeout=10)
     return psycopg2.connect(
         host=os.environ.get("DB_HOST", "caboose.proxy.rlwy.net"),
         port=int(os.environ.get("DB_PORT", 21778)),
         database=os.environ.get("DB_NAME", "railway"),
         user=os.environ.get("DB_USER", "postgres"),
-        password=os.environ.get("DB_PASSWORD", "AdPVLYioZHOYsrpSswoILIvpkHwIReTz")
+        password=os.environ.get("DB_PASSWORD", "AdPVLYioZHOYsrpSswoILIvpkHwIReTz"),
+        connect_timeout=10
     )
+
+# ─── SYNC STATE ────────────────────────────────────────────────────────────────
+sync_status = {
+    "running": False,
+    "last_run": None,
+    "last_result": None,
+    "error": None,
+}
 
 # ─── FLASK ROUTES ──────────────────────────────────────────────────────────────
 @app.route("/")
@@ -58,19 +66,16 @@ def index():
 
 @app.route("/health")
 def health():
-    try:
-        conn = get_conn()
-        conn.close()
-        return "OK - DB connected"
-    except Exception as e:
-        return f"DB ERROR: {e}", 500
+    return json_response({
+        "status": "ok",
+        "sync": sync_status
+    })
 
 @app.route("/api/units")
 def get_units():
     try:
         conn = get_conn()
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            # Return ALL valid units - let frontend handle display logic
             cur.execute("""
                 SELECT
                     city_name, compound_name, compound_id,
@@ -95,17 +100,16 @@ def get_units():
             """)
             rows = cur.fetchall()
         conn.close()
-        
-        # Clean up any remaining NaN/None values
+
         cleaned_rows = []
         for row in rows:
             cleaned_row = dict(row)
             for key, val in cleaned_row.items():
-                if val is None or (isinstance(val, float) and (val != val)):  # NaN check
+                if isinstance(val, float) and val != val:  # NaN
                     cleaned_row[key] = None
             cleaned_rows.append(cleaned_row)
-        
-        log.info(f"✅ Returned {len(cleaned_rows)} total units from database")
+
+        log.info(f"✅ Returned {len(cleaned_rows)} units")
         return json_response(cleaned_rows)
     except Exception as e:
         log.error(f"❌ Error fetching units: {e}")
@@ -131,6 +135,19 @@ def get_stats():
         return json_response(stats)
     except Exception as e:
         return json_response({"error": str(e)}), 500
+
+@app.route("/api/sync/status")
+def sync_status_route():
+    return json_response(sync_status)
+
+@app.route("/api/sync/trigger", methods=["POST"])
+def trigger_sync():
+    """Manual sync trigger endpoint"""
+    if sync_status["running"]:
+        return json_response({"message": "Sync already running"}), 409
+    t = threading.Thread(target=sync_job, daemon=True)
+    t.start()
+    return json_response({"message": "Sync triggered"})
 
 # ─── SYNC CONFIG ───────────────────────────────────────────────────────────────
 BASE_URL     = "https://newapi.masterv.net/api/v3/public"
@@ -167,7 +184,6 @@ def ensure_columns_exist(conn):
                 ADD COLUMN IF NOT EXISTS sold_at    TIMESTAMP;
         """)
     conn.commit()
-    log.info("✅ Tracking columns ready")
 
 def get_existing_units(conn) -> Dict[int, Dict]:
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
@@ -192,7 +208,7 @@ def fetch_filters(city_id: int) -> Dict:
 def find_developer(compound_id: int, developers: List[Dict], city_id: int) -> Optional[int]:
     start = time.time()
     for dev in developers:
-        if time.time() - start > 3:
+        if time.time() - start > 5:
             return None
         dev_id = dev.get("value")
         try:
@@ -200,7 +216,7 @@ def find_developer(compound_id: int, developers: List[Dict], city_id: int) -> Op
                 f"{BASE_URL}/data", headers=HEADERS,
                 params={"CompoundId": compound_id, "DeveloperId": dev_id,
                         "SectionId": 1, "CityId": city_id, "Currency": 1, "ViewAll": "true"},
-                timeout=1
+                timeout=5
             )
             if r.status_code == 200:
                 data = r.json()
@@ -356,15 +372,24 @@ def sync_units(conn, fresh_units: List[Dict], existing: Dict[int, Dict]):
 
 # ─── SYNC JOB ──────────────────────────────────────────────────────────────────
 def sync_job():
-    log.info(f"🔄 Sync started at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    if sync_status["running"]:
+        log.info("⏭️  Sync already running, skipping")
+        return
+
+    sync_status["running"] = True
+    sync_status["error"] = None
+    start_time = datetime.now()
+    log.info(f"🔄 Sync started at {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
+
     try:
         conn = get_conn()
         ensure_columns_exist(conn)
         existing = get_existing_units(conn)
         log.info(f"📦 Existing units in DB: {len(existing):,}")
+
         all_fresh = []
         for city_name, city_id in PLACES.items():
-            log.info(f"🏙️  {city_name}...")
+            log.info(f"🏙️  Processing {city_name}...")
             filters    = fetch_filters(city_id)
             compounds  = filters.get("Compound", [])
             developers = filters.get("Developer", [])
@@ -389,23 +414,40 @@ def sync_job():
                 rows = flatten_compound(compound_info, details, city_name)
                 all_fresh.extend(rows)
                 log.info(f"  [{i}/{len(compounds)}] {cname}: {len(rows)} units")
-        log.info(f"📊 Total fresh units fetched: {len(all_fresh):,}")
+
+        log.info(f"📊 Total fresh units: {len(all_fresh):,}")
         new, updated, sold = sync_units(conn, all_fresh, existing)
-        log.info(f"✅ Sync complete — New: {new}, Updated: {updated}, Sold: {sold}")
         conn.close()
+
+        elapsed = (datetime.now() - start_time).seconds
+        result = f"New: {new}, Updated: {updated}, Sold: {sold}, Time: {elapsed}s"
+        sync_status["last_result"] = result
+        sync_status["last_run"] = datetime.now().isoformat()
+        log.info(f"✅ Sync complete — {result}")
+
     except Exception as e:
         log.error(f"❌ Sync failed: {e}")
         import traceback; traceback.print_exc()
+        sync_status["error"] = str(e)
+    finally:
+        sync_status["running"] = False
 
+# ─── BACKGROUND SCHEDULER ──────────────────────────────────────────────────────
+# ⚠️  IMPORTANT: We delay the first sync by 15 seconds so gunicorn can
+#     finish booting and start serving requests before the heavy work begins.
 def run_scheduler():
-    log.info("⏰ Scheduler thread started — syncing every 1 hour")
+    log.info("⏰ Scheduler thread started")
+    log.info("⏳ Waiting 15s before first sync to let gunicorn fully boot...")
+    time.sleep(15)   # ← THE FIX: give gunicorn time to boot first
+
+    log.info("🚀 Starting first sync now...")
     sync_job()
+
     schedule.every(1).hours.do(sync_job)
     while True:
         schedule.run_pending()
         time.sleep(60)
 
-# ─── START BACKGROUND SCHEDULER ────────────────────────────────────────────────
 scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
 scheduler_thread.start()
 
