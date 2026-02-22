@@ -21,7 +21,6 @@ log = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-# ─── JSON SERIALIZER ───────────────────────────────────────────────────────────
 def json_serial(obj):
     if isinstance(obj, Decimal):
         val = float(obj)
@@ -36,7 +35,6 @@ def json_response(data):
         mimetype='application/json'
     )
 
-# ─── DB ────────────────────────────────────────────────────────────────────────
 def get_conn():
     database_url = os.environ.get("DATABASE_URL")
     if database_url:
@@ -50,7 +48,6 @@ def get_conn():
         connect_timeout=10
     )
 
-# ─── SYNC STATE ────────────────────────────────────────────────────────────────
 sync_status = {
     "running": False,
     "last_run": None,
@@ -58,7 +55,6 @@ sync_status = {
     "error": None,
 }
 
-# ─── FLASK ROUTES ──────────────────────────────────────────────────────────────
 @app.route("/")
 def index():
     with open(os.path.join(os.path.dirname(__file__), "index.html"), encoding="utf-8") as f:
@@ -149,7 +145,6 @@ def trigger_sync():
     t.start()
     return json_response({"message": "Sync triggered"})
 
-# ─── SYNC CONFIG ───────────────────────────────────────────────────────────────
 BASE_URL     = "https://newapi.masterv.net/api/v3/public"
 ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVc2VySWQiOjMyMTksIlVzZXJFbWFpbCI6Im1vaGFtZWRoYW16YTEzMDNAZ21haWwuY29tIiwiVXNlclBob25lTnVtYmVyIjoiMjAxMDk5MjQ5NDk5IiwiSXNDbGllbnQiOnRydWUsImlhdCI6MTc3MTQyNjgwOCwiZXhwIjoxNzc0MDE4ODA4fQ.S9I6GS6gk96R8BkZwyLP0JNUic7jwwVTzJtjTdt7nkI"
 HEADERS = {
@@ -370,7 +365,6 @@ def sync_units(conn, fresh_units: List[Dict], existing: Dict[int, Dict]):
     conn.commit()
     return new_count, updated_count, sold_count
 
-# ─── SYNC JOB ──────────────────────────────────────────────────────────────────
 def sync_job():
     if sync_status["running"]:
         log.info("⏭️  Sync already running, skipping")
@@ -432,13 +426,10 @@ def sync_job():
     finally:
         sync_status["running"] = False
 
-# ─── BACKGROUND SCHEDULER ──────────────────────────────────────────────────────
-# ⚠️  IMPORTANT: We delay the first sync by 15 seconds so gunicorn can
-#     finish booting and start serving requests before the heavy work begins.
 def run_scheduler():
     log.info("⏰ Scheduler thread started")
     log.info("⏳ Waiting 15s before first sync to let gunicorn fully boot...")
-    time.sleep(15)   # ← THE FIX: give gunicorn time to boot first
+    time.sleep(15)
 
     log.info("🚀 Starting first sync now...")
     sync_job()
@@ -448,10 +439,12 @@ def run_scheduler():
         schedule.run_pending()
         time.sleep(60)
 
-scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
-scheduler_thread.start()
+if os.environ.get("DISABLE_SYNC", "false").lower() != "true":
+    scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
+    scheduler_thread.start()
+else:
+    log.info("⏸️  Sync scheduler DISABLED via DISABLE_SYNC env var")
 
-# ─── ENTRYPOINT ────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
