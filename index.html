@@ -57,6 +57,7 @@
     min-height: 100vh;
   }
 
+  /* ── HEADER ── */
   header {
     grid-column: 1 / -1;
     display: flex;
@@ -67,10 +68,12 @@
     background: rgba(10,10,15,0.8);
     backdrop-filter: blur(20px);
     position: sticky; top: 0; z-index: 100;
+    gap: 16px;
   }
 
   .logo {
     display: flex; align-items: center; gap: 12px;
+    flex-shrink: 0;
   }
   .logo-icon {
     width: 36px; height: 36px;
@@ -128,6 +131,48 @@
     padding: 0;
   }
   .search-clear.visible { opacity: 1; }
+
+  /* ── HAMBURGER BUTTON (mobile only) ── */
+  .hamburger-btn {
+    display: none;
+    align-items: center; justify-content: center;
+    width: 40px; height: 40px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: border-color 0.2s;
+    flex-direction: column;
+    gap: 5px;
+    padding: 10px;
+  }
+  .hamburger-btn:hover { border-color: var(--accent); }
+  .hamburger-btn span {
+    display: block;
+    width: 18px; height: 2px;
+    background: var(--text);
+    border-radius: 2px;
+    transition: all 0.3s;
+  }
+  .hamburger-btn.open span:nth-child(1) { transform: rotate(45deg) translate(5px, 5px); }
+  .hamburger-btn.open span:nth-child(2) { opacity: 0; }
+  .hamburger-btn.open span:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
+
+  /* ── SIDEBAR OVERLAY (mobile) ── */
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 199;
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .sidebar-overlay.visible {
+    opacity: 1;
+  }
 
   /* ── SIDEBAR ── */
   .sidebar {
@@ -264,7 +309,7 @@
   }
   .slider-wrap input[type=range]::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 18px; height: 18px;
+    width: 22px; height: 22px;
     border-radius: 50%;
     background: var(--accent);
     border: 3px solid var(--bg);
@@ -324,6 +369,9 @@
     transition: all 0.18s;
     user-select: none;
     white-space: nowrap;
+    /* Mobile touch target */
+    min-height: 32px;
+    display: flex; align-items: center;
   }
   .pill:hover { border-color: var(--accent); color: var(--text); }
   .pill.active {
@@ -354,6 +402,7 @@
     background-repeat: no-repeat;
     background-position: right 12px center;
     padding-right: 32px;
+    min-height: 44px;
   }
   .styled-select:focus { border-color: var(--accent); }
 
@@ -372,6 +421,7 @@
     padding: 10px 12px;
     outline: none;
     transition: border-color 0.2s;
+    min-height: 44px;
   }
   .number-input-wrap input:focus { border-color: var(--accent); }
   .number-input-wrap label {
@@ -394,6 +444,7 @@
     cursor: pointer;
     transition: all 0.2s;
     margin-top: 4px;
+    min-height: 44px;
   }
   .btn-reset:hover {
     border-color: var(--accent2);
@@ -402,29 +453,30 @@
 
   .toggle-row {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 7px 0;
+    padding: 10px 0;
+    min-height: 44px;
   }
   .toggle-label { font-size: 13px; color: var(--text); }
-  .toggle { position: relative; width: 40px; height: 22px; }
+  .toggle { position: relative; width: 44px; height: 26px; flex-shrink: 0; }
   .toggle input { opacity: 0; width: 0; height: 0; }
   .toggle-slider {
     position: absolute; inset: 0;
     background: var(--surface2);
     border: 1px solid var(--border);
-    border-radius: 22px; cursor: pointer;
+    border-radius: 26px; cursor: pointer;
     transition: all 0.2s;
   }
   .toggle-slider::after {
     content: '';
     position: absolute;
     left: 3px; top: 50%; transform: translateY(-50%);
-    width: 14px; height: 14px;
+    width: 18px; height: 18px;
     background: var(--muted);
     border-radius: 50%;
     transition: all 0.2s;
   }
   .toggle input:checked + .toggle-slider { background: var(--accent); border-color: var(--accent); }
-  .toggle input:checked + .toggle-slider::after { left: 21px; background: #fff; }
+  .toggle input:checked + .toggle-slider::after { left: 23px; background: #fff; }
 
   /* ── MAIN ── */
   .main {
@@ -459,6 +511,7 @@
     cursor: pointer;
     transition: all 0.2s;
     font-family: 'DM Sans', sans-serif;
+    min-height: 36px;
   }
   .sort-btn.active, .sort-btn:hover {
     border-color: var(--accent);
@@ -489,6 +542,8 @@
     color: var(--accent); font-size: 14px; line-height: 1;
     opacity: 0.7; transition: opacity 0.2s;
     padding: 0;
+    min-width: 24px; min-height: 24px;
+    display: flex; align-items: center; justify-content: center;
   }
   .filter-tag button:hover { opacity: 1; }
 
@@ -601,8 +656,6 @@
     font-size: 11px; margin-bottom: 1px;
   }
 
-
-
   .empty-state {
     grid-column: 1 / -1;
     text-align: center;
@@ -633,9 +686,242 @@
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ══════════════════════════════════════════════════════════
+     MOBILE RESPONSIVE — بيأثر على الموبايل بس (≤ 768px)
+     ══════════════════════════════════════════════════════════ */
+  @media (max-width: 768px) {
+
+    /* Grid: full width single column */
+    .app {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto 1fr;
+    }
+
+    /* Header: compact */
+    header {
+      padding: 12px 16px;
+      gap: 10px;
+      flex-wrap: nowrap;
+    }
+
+    .logo-text { font-size: 16px; }
+    .logo-icon { width: 30px; height: 30px; font-size: 15px; }
+
+    /* Hide desktop stats & search in header */
+    .header-stats { display: none; }
+    .header-search { display: none; }
+
+    /* Show hamburger */
+    .hamburger-btn { display: flex; }
+
+    /* Show overlay when active */
+    .sidebar-overlay { display: block; }
+
+    /* Sidebar: slide in from left as drawer */
+    .sidebar {
+      position: fixed;
+      top: 0; left: 0;
+      width: 320px;
+      max-width: 88vw;
+      height: 100vh;
+      max-height: 100vh;
+      z-index: 200;
+      border-right: 1px solid var(--border);
+      background: var(--bg);
+      transform: translateX(-100%);
+      transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+      padding-top: 20px;
+    }
+    .sidebar.open {
+      transform: translateX(0);
+    }
+
+    /* Main takes full width */
+    .main {
+      padding: 16px;
+      max-height: none;
+      overflow-y: visible;
+    }
+
+    /* Mobile search bar below header */
+    .mobile-search {
+      display: flex;
+    }
+
+    /* Results header stacks */
+    .results-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .results-count { font-size: 18px; }
+
+    /* Sort buttons: horizontal scroll */
+    .sort-controls {
+      width: 100%;
+      overflow-x: auto;
+      flex-wrap: nowrap;
+      padding-bottom: 4px;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .sort-controls::-webkit-scrollbar { display: none; }
+    .sort-btn {
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* Cards: single column on small, 2 cols if wide enough */
+    .cards-grid {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    /* Bigger touch targets for pills */
+    .pill {
+      padding: 7px 13px;
+      font-size: 13px;
+      min-height: 36px;
+    }
+
+    /* Preset chips slightly bigger */
+    .preset-chip {
+      padding: 5px 10px;
+      font-size: 12px;
+      min-height: 30px;
+    }
+
+    /* Range inputs: stack nicely */
+    .range-inputs {
+      grid-template-columns: 1fr auto 1fr;
+      gap: 4px;
+    }
+    .range-manual-input input {
+      font-size: 13px;
+      padding: 9px 8px;
+    }
+
+    /* Slider thumbs: bigger for touch */
+    .slider-wrap input[type=range]::-webkit-slider-thumb {
+      width: 26px; height: 26px;
+    }
+
+    /* Filter tag remove button: bigger */
+    .filter-tag button {
+      min-width: 28px; min-height: 28px;
+      font-size: 16px;
+    }
+
+    /* number inputs */
+    .number-input-wrap input {
+      font-size: 14px;
+      padding: 11px 12px;
+    }
+
+    /* Close button inside sidebar */
+    .sidebar-close-row {
+      display: flex !important;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* Card footer: smaller font on mobile is fine */
+    .card-footer { gap: 5px; }
+    .card-detail { font-size: 9px; padding: 4px 4px; }
+    .card-detail strong { font-size: 10px; }
+  }
+
+  @media (min-width: 480px) and (max-width: 768px) {
+    .cards-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  /* ── Mobile Search Bar (shown below header on mobile) ── */
+  .mobile-search {
+    display: none;
+    align-items: center; gap: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 16px;
+    margin: 0 16px 16px;
+    transition: border-color 0.2s;
+  }
+  .mobile-search:focus-within { border-color: var(--accent); }
+  .mobile-search input {
+    background: none; border: none; outline: none;
+    color: var(--text); font-family: 'DM Sans', sans-serif;
+    font-size: 14px; flex: 1;
+  }
+  .mobile-search input::placeholder { color: var(--muted); }
+
+  /* ── Mobile Stats Bar (shown on mobile below header) ── */
+  .mobile-stats {
+    display: none;
+    gap: 0;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .mobile-stats::-webkit-scrollbar { display: none; }
+  .mobile-stats .stat {
+    flex: 1;
+    min-width: 80px;
+    padding: 10px 12px;
+    border-right: 1px solid var(--border);
+    text-align: center;
+  }
+  .mobile-stats .stat:last-child { border-right: none; }
+  .mobile-stats .stat-value { font-size: 15px; }
+  .mobile-stats .stat-label { font-size: 9px; }
+
+  @media (max-width: 768px) {
+    .mobile-stats { display: flex; }
+    .mobile-search { display: flex; }
+  }
+
+  /* ── Sidebar close row (hidden on desktop) ── */
+  .sidebar-close-row {
+    display: none;
+  }
+  .sidebar-close-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 18px;
+    cursor: pointer;
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    transition: border-color 0.2s;
+  }
+  .sidebar-close-btn:hover { border-color: var(--accent2); }
+
+  .filter-count-badge {
+    background: var(--accent);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 10px;
+    padding: 1px 6px;
+    margin-left: 4px;
+    display: none;
+  }
+  .filter-count-badge.visible { display: inline; }
 </style>
 </head>
 <body>
+
+<!-- Sidebar overlay (mobile) -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
 <div class="app">
 
@@ -646,6 +932,7 @@
       <div class="logo-text">Prop<span>Finder</span></div>
     </div>
 
+    <!-- Desktop stats -->
     <div class="header-stats">
       <div class="stat">
         <div class="stat-value" id="totalCount">—</div>
@@ -665,15 +952,56 @@
       </div>
     </div>
 
+    <!-- Desktop search -->
     <div class="header-search">
       <span>🔍</span>
       <input type="text" id="searchInput" placeholder="Compound, developer, area..." autocomplete="off">
       <button class="search-clear" id="searchClear" onclick="clearSearch()">×</button>
     </div>
+
+    <!-- Hamburger (mobile only) -->
+    <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="Toggle filters">
+      <span></span><span></span><span></span>
+      <span class="filter-count-badge" id="filterBadge">0</span>
+    </button>
   </header>
 
+  <!-- Mobile stats bar -->
+  <div class="mobile-stats">
+    <div class="stat">
+      <div class="stat-value" id="totalCountMobile">—</div>
+      <div class="stat-label">Total</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="filteredCountMobile">—</div>
+      <div class="stat-label">Matching</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="avgPriceMobile">—</div>
+      <div class="stat-label">Avg Price</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="compoundCountMobile">—</div>
+      <div class="stat-label">Compounds</div>
+    </div>
+  </div>
+
+  <!-- Mobile search bar -->
+  <div class="mobile-search">
+    <span>🔍</span>
+    <input type="text" id="searchInputMobile" placeholder="Compound, developer, area..." autocomplete="off">
+    <button class="search-clear" id="searchClearMobile" onclick="clearSearchMobile()" style="opacity:0">×</button>
+  </div>
+
   <!-- ═══ SIDEBAR ═══ -->
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
+
+    <!-- Mobile close row -->
+    <div class="sidebar-close-row">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px;">Filters</div>
+      <button class="sidebar-close-btn" onclick="closeSidebar()">×</button>
+    </div>
+
     <div class="sidebar-title">Filters</div>
 
     <!-- CITY -->
@@ -888,7 +1216,6 @@
           <span class="toggle-slider"></span>
         </label>
       </div>
-      <!-- ✅ FIX: hideSold is OFF by default so all units show -->
       <div class="toggle-row">
         <span class="toggle-label">Hide Sold Units</span>
         <label class="toggle">
@@ -899,6 +1226,8 @@
     </div>
 
     <button class="btn-reset" onclick="resetFilters()">↺ Reset All Filters</button>
+    <!-- Extra padding at bottom for mobile scroll -->
+    <div style="height: 40px;"></div>
   </aside>
 
   <!-- ═══ MAIN ═══ -->
@@ -908,7 +1237,7 @@
         <span id="resultNum">—</span> units found
       </div>
       <div class="sort-controls">
-        <span style="font-size:12px;color:var(--muted)">Sort:</span>
+        <span style="font-size:12px;color:var(--muted);white-space:nowrap">Sort:</span>
         <button class="sort-btn active" onclick="setSort('price_asc',this)">Price ↑</button>
         <button class="sort-btn" onclick="setSort('price_desc',this)">Price ↓</button>
         <button class="sort-btn" onclick="setSort('area_desc',this)">Area ↓</button>
@@ -930,6 +1259,68 @@
 </div>
 
 <script>
+// ═══════════════════════════════════════════════════════════════════════════════
+// MOBILE SIDEBAR CONTROLS
+// ═══════════════════════════════════════════════════════════════════════════════
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  const btn = document.getElementById('hamburgerBtn');
+  const isOpen = sidebar.classList.contains('open');
+  if (isOpen) { closeSidebar(); } else { openSidebar(); }
+}
+
+function openSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  const btn = document.getElementById('hamburgerBtn');
+  sidebar.classList.add('open');
+  overlay.classList.add('visible');
+  btn.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  const btn = document.getElementById('hamburgerBtn');
+  sidebar.classList.remove('open');
+  overlay.classList.remove('visible');
+  btn.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Close on resize to desktop
+window.addEventListener('resize', () => {
+  if (window.innerWidth > 768) { closeSidebar(); }
+});
+
+// Count active filters for badge
+function updateFilterBadge() {
+  let count = 0;
+  if (activeFilters.cities.size)    count += activeFilters.cities.size;
+  if (activeFilters.unitTypes.size) count += activeFilters.unitTypes.size;
+  if (activeFilters.finishing.size) count += activeFilters.finishing.size;
+  if (activeFilters.bedrooms !== 'any') count++;
+  if (rangeState.priceMin !== null || rangeState.priceMax !== null) count++;
+  if (rangeState.areaMin !== null || rangeState.areaMax !== null)   count++;
+  if (rangeState.psmMin !== null || rangeState.psmMax !== null)     count++;
+  if (parseInt(document.getElementById('discountSlider').value) > 0) count++;
+  if (document.getElementById('freeClub').checked)    count++;
+  if (document.getElementById('freeParking').checked) count++;
+  if (document.getElementById('hideSold').checked)    count++;
+  if (document.getElementById('developerFilter').value) count++;
+  if (document.getElementById('deliveryFrom').value || document.getElementById('deliveryTo').value) count++;
+
+  const badge = document.getElementById('filterBadge');
+  if (count > 0) {
+    badge.textContent = count;
+    badge.classList.add('visible');
+  } else {
+    badge.classList.remove('visible');
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // SCALE CONFIG
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1189,6 +1580,12 @@ function clearSearch() {
   applyFilters();
 }
 
+function clearSearchMobile() {
+  document.getElementById('searchInputMobile').value = '';
+  document.getElementById('searchClearMobile').style.opacity = '0';
+  applyFilters();
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // DATA LOAD
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1243,8 +1640,12 @@ function initPage() {
     devSelect.appendChild(opt);
   });
 
-  document.getElementById('totalCount').textContent    = fmtNum(allData.length);
-  document.getElementById('compoundCount').textContent = new Set(allData.map(d => d.compound_name)).size;
+  const total = fmtNum(allData.length);
+  const compounds = new Set(allData.map(d => d.compound_name)).size;
+  document.getElementById('totalCount').textContent      = total;
+  document.getElementById('compoundCount').textContent   = compounds;
+  document.getElementById('totalCountMobile').textContent    = total;
+  document.getElementById('compoundCountMobile').textContent = compounds;
 
   syncFill('priceFill', 'priceSliderMin', 'priceSliderMax');
   syncFill('areaFill',  'areaSliderMin',  'areaSliderMax');
@@ -1291,7 +1692,11 @@ function buildPills(containerId, values, type) {
 // FILTER
 // ═══════════════════════════════════════════════════════════════════════════════
 function applyFilters() {
-  const search    = document.getElementById('searchInput').value.toLowerCase().trim();
+  // Use whichever search is active (desktop or mobile)
+  const desktopSearch = document.getElementById('searchInput').value.toLowerCase().trim();
+  const mobileSearch  = document.getElementById('searchInputMobile').value.toLowerCase().trim();
+  const search = desktopSearch || mobileSearch;
+
   const delivFrom = parseFloat(document.getElementById('deliveryFrom').value) || 0;
   const delivTo   = parseFloat(document.getElementById('deliveryTo').value)   || 9999;
   const devFilter = document.getElementById('developerFilter').value;
@@ -1300,12 +1705,12 @@ function applyFilters() {
   const freePark  = document.getElementById('freeParking').checked;
   const hideSold  = document.getElementById('hideSold').checked;
 
-  document.getElementById('searchClear').classList.toggle('visible', search.length > 0);
+  // sync search clears
+  document.getElementById('searchClear').classList.toggle('visible', desktopSearch.length > 0);
+  document.getElementById('searchClearMobile').style.opacity = mobileSearch.length > 0 ? '1' : '0';
 
   filteredData = allData.filter(u => {
-    // ✅ Only hide sold if toggle is ON
     if (hideSold && (u.is_sold || u.status === 0)) return false;
-
     if (activeFilters.cities.size    && !activeFilters.cities.has(u.city_name))        return false;
     if (activeFilters.unitTypes.size && !activeFilters.unitTypes.has(u.unit_type))     return false;
     if (activeFilters.finishing.size && !activeFilters.finishing.has(u.finishing_type)) return false;
@@ -1351,6 +1756,7 @@ function applyFilters() {
   renderCards();
   updateStats();
   updateTags();
+  updateFilterBadge();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1454,10 +1860,15 @@ function loadMoreUnits() {
 }
 
 function updateStats() {
-  document.getElementById('filteredCount').textContent = fmtNum(filteredData.length);
   const prices = filteredData.map(d => d.total_price_egp).filter(Boolean);
   const avg = prices.length ? prices.reduce((a, b) => a + b, 0) / prices.length : 0;
-  document.getElementById('avgPrice').textContent = avg ? fmtMillion(avg) : '—';
+  const filtered = fmtNum(filteredData.length);
+  const avgFmt = avg ? fmtMillion(avg) : '—';
+
+  document.getElementById('filteredCount').textContent      = filtered;
+  document.getElementById('avgPrice').textContent           = avgFmt;
+  document.getElementById('filteredCountMobile').textContent = filtered;
+  document.getElementById('avgPriceMobile').textContent      = avgFmt;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1537,7 +1948,6 @@ function updateTags() {
     tags.push({ label: `📅 Delivery ${dFrom || 0}–${dTo || '∞'} mo`,
       clear: () => { document.getElementById('deliveryFrom').value = ''; document.getElementById('deliveryTo').value = ''; clearDeliveryPresets(); applyFilters(); }});
 
-  // Show tag if hideSold is ON
   if (document.getElementById('hideSold').checked)
     tags.push({ label: '🚫 Hiding Sold', clear: () => { document.getElementById('hideSold').checked = false; applyFilters(); }});
 
@@ -1582,10 +1992,11 @@ function resetFilters() {
   document.getElementById('developerFilter').value = '';
   document.getElementById('freeClub').checked    = false;
   document.getElementById('freeParking').checked = false;
-  // ✅ Reset hideSold to OFF (unchecked)
   document.getElementById('hideSold').checked    = false;
   document.getElementById('searchInput').value   = '';
+  document.getElementById('searchInputMobile').value = '';
   document.getElementById('searchClear').classList.remove('visible');
+  document.getElementById('searchClearMobile').style.opacity = '0';
 
   document.querySelectorAll('.pill').forEach(p => p.classList.remove('active','active-green'));
   document.querySelectorAll('.pill-group .pill:first-child').forEach(p => p.classList.add('active-green'));
@@ -1598,6 +2009,10 @@ function resetFilters() {
 // ═══════════════════════════════════════════════════════════════════════════════
 let searchTimer;
 document.getElementById('searchInput').addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(applyFilters, 200);
+});
+document.getElementById('searchInputMobile').addEventListener('input', () => {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(applyFilters, 200);
 });
