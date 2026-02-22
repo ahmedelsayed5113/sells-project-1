@@ -170,10 +170,12 @@
     z-index: 199;
     backdrop-filter: blur(4px);
     opacity: 0;
+    pointer-events: none;
     transition: opacity 0.3s;
   }
   .sidebar-overlay.visible {
     opacity: 1;
+    pointer-events: all;
   }
 
   /* ── SIDEBAR ── */
@@ -727,8 +729,8 @@
     /* Show hamburger */
     .hamburger-btn { display: flex; }
 
-    /* Show overlay when active */
-    .sidebar-overlay { display: block; }
+    /* Show overlay when active - use display:block only via JS class */
+    .sidebar-overlay { display: block; pointer-events: none; }
 
     /* Sidebar: slide in from left as drawer */
     .sidebar {
