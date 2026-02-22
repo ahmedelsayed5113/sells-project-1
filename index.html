@@ -36,7 +36,7 @@
     width: 600px; height: 600px;
     background: radial-gradient(circle, rgba(124,109,255,0.08) 0%, transparent 70%);
     pointer-events: none;
-    z-index: 0;
+    z-index: -1;
   }
   body::after {
     content: '';
@@ -45,7 +45,7 @@
     width: 600px; height: 600px;
     background: radial-gradient(circle, rgba(255,109,158,0.06) 0%, transparent 70%);
     pointer-events: none;
-    z-index: 0;
+    z-index: -1;
   }
 
   .app {
@@ -146,6 +146,8 @@
     flex-direction: column;
     gap: 5px;
     padding: 10px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
   .hamburger-btn:hover { border-color: var(--accent); }
   .hamburger-btn span {
@@ -240,6 +242,8 @@
     font-family: 'DM Sans', sans-serif;
     transition: all 0.15s;
     white-space: nowrap;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
   .preset-chip:hover, .preset-chip.active {
     border-color: var(--accent);
@@ -372,6 +376,8 @@
     /* Mobile touch target */
     min-height: 32px;
     display: flex; align-items: center;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
   .pill:hover { border-color: var(--accent); color: var(--text); }
   .pill.active {
@@ -445,6 +451,8 @@
     transition: all 0.2s;
     margin-top: 4px;
     min-height: 44px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
   .btn-reset:hover {
     border-color: var(--accent2);
@@ -465,6 +473,8 @@
     border: 1px solid var(--border);
     border-radius: 26px; cursor: pointer;
     transition: all 0.2s;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
   .toggle-slider::after {
     content: '';
@@ -512,6 +522,8 @@
     transition: all 0.2s;
     font-family: 'DM Sans', sans-serif;
     min-height: 36px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
   .sort-btn.active, .sort-btn:hover {
     border-color: var(--accent);
@@ -921,7 +933,7 @@
 <body>
 
 <!-- Sidebar overlay (mobile) -->
-<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
 
 <div class="app">
 
@@ -956,11 +968,11 @@
     <div class="header-search">
       <span>🔍</span>
       <input type="text" id="searchInput" placeholder="Compound, developer, area..." autocomplete="off">
-      <button class="search-clear" id="searchClear" onclick="clearSearch()">×</button>
+      <button class="search-clear" id="searchClear">×</button>
     </div>
 
     <!-- Hamburger (mobile only) -->
-    <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="Toggle filters">
+    <button class="hamburger-btn" id="hamburgerBtn" aria-label="Toggle filters">
       <span></span><span></span><span></span>
       <span class="filter-count-badge" id="filterBadge">0</span>
     </button>
@@ -990,7 +1002,7 @@
   <div class="mobile-search">
     <span>🔍</span>
     <input type="text" id="searchInputMobile" placeholder="Compound, developer, area..." autocomplete="off">
-    <button class="search-clear" id="searchClearMobile" onclick="clearSearchMobile()" style="opacity:0">×</button>
+    <button class="search-clear" id="searchClearMobile" style="opacity:0">×</button>
   </div>
 
   <!-- ═══ SIDEBAR ═══ -->
@@ -999,7 +1011,7 @@
     <!-- Mobile close row -->
     <div class="sidebar-close-row">
       <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px;">Filters</div>
-      <button class="sidebar-close-btn" onclick="closeSidebar()">×</button>
+      <button class="sidebar-close-btn" id="sidebarCloseBtn">×</button>
     </div>
 
     <div class="sidebar-title">Filters</div>
@@ -1020,12 +1032,12 @@
     <div class="filter-section">
       <div class="filter-label">Bedrooms</div>
       <div class="pill-group" id="bedroomsFilter">
-        <div class="pill active-green" onclick="filterBed(this,'any')">Any</div>
-        <div class="pill" onclick="filterBed(this,1)">1 BR</div>
-        <div class="pill" onclick="filterBed(this,2)">2 BR</div>
-        <div class="pill" onclick="filterBed(this,3)">3 BR</div>
-        <div class="pill" onclick="filterBed(this,4)">4 BR</div>
-        <div class="pill" onclick="filterBed(this,5)">5+ BR</div>
+        <div class="pill active-green" data-bed="any">Any</div>
+        <div class="pill" data-bed="1">1 BR</div>
+        <div class="pill" data-bed="2">2 BR</div>
+        <div class="pill" data-bed="3">3 BR</div>
+        <div class="pill" data-bed="4">4 BR</div>
+        <div class="pill" data-bed="5">5+ BR</div>
       </div>
     </div>
 
@@ -1036,26 +1048,24 @@
       </div>
       <div class="price-widget">
         <div class="presets" id="pricePresets">
-          <button class="preset-chip" onclick="setPricePreset(0,5e6,'Under 5M')">Under 5M</button>
-          <button class="preset-chip" onclick="setPricePreset(5e6,10e6,'5M–10M')">5M–10M</button>
-          <button class="preset-chip" onclick="setPricePreset(10e6,20e6,'10M–20M')">10M–20M</button>
-          <button class="preset-chip" onclick="setPricePreset(20e6,50e6,'20M–50M')">20M–50M</button>
-          <button class="preset-chip" onclick="setPricePreset(50e6,100e6,'50M–100M')">50M–100M</button>
-          <button class="preset-chip" onclick="setPricePreset(100e6,500e6,'100M–500M')">100M–500M</button>
-          <button class="preset-chip" onclick="setPricePreset(500e6,999e12,'500M+')">500M+</button>
+          <button class="preset-chip" data-price-min="0" data-price-max="5000000" data-label="Under 5M">Under 5M</button>
+          <button class="preset-chip" data-price-min="5000000" data-price-max="10000000" data-label="5M–10M">5M–10M</button>
+          <button class="preset-chip" data-price-min="10000000" data-price-max="20000000" data-label="10M–20M">10M–20M</button>
+          <button class="preset-chip" data-price-min="20000000" data-price-max="50000000" data-label="20M–50M">20M–50M</button>
+          <button class="preset-chip" data-price-min="50000000" data-price-max="100000000" data-label="50M–100M">50M–100M</button>
+          <button class="preset-chip" data-price-min="100000000" data-price-max="500000000" data-label="100M–500M">100M–500M</button>
+          <button class="preset-chip" data-price-min="500000000" data-price-max="999000000000000" data-label="500M+">500M+</button>
         </div>
         <div class="range-inputs">
           <div class="range-manual-input">
             <label>Min</label>
-            <input type="number" id="priceMinInput" placeholder="e.g. 3000000" min="0" step="500000"
-              oninput="onPriceInputChange()">
+            <input type="number" id="priceMinInput" placeholder="e.g. 3000000" min="0" step="500000">
             <div class="unit-hint" id="priceMinHint">—</div>
           </div>
           <div class="range-sep-arrow">→</div>
           <div class="range-manual-input">
             <label>Max</label>
-            <input type="number" id="priceMaxInput" placeholder="e.g. 15000000" min="0" step="500000"
-              oninput="onPriceInputChange()">
+            <input type="number" id="priceMaxInput" placeholder="e.g. 15000000" min="0" step="500000">
             <div class="unit-hint" id="priceMaxHint">—</div>
           </div>
         </div>
@@ -1064,8 +1074,8 @@
             <div class="range-fill" id="priceFill"
               style="background:linear-gradient(90deg,var(--accent),var(--accent2))"></div>
           </div>
-          <input type="range" id="priceSliderMin" min="0" max="1000" value="0"   oninput="onPriceSliderChange()">
-          <input type="range" id="priceSliderMax" min="0" max="1000" value="1000" oninput="onPriceSliderChange()">
+          <input type="range" id="priceSliderMin" min="0" max="1000" value="0">
+          <input type="range" id="priceSliderMax" min="0" max="1000" value="1000">
         </div>
         <div class="scale-markers">
           <span class="scale-marker">1M</span>
@@ -1084,22 +1094,20 @@
       </div>
       <div class="area-widget">
         <div class="presets">
-          <button class="preset-chip" onclick="setAreaPreset(0,80)">Under 80</button>
-          <button class="preset-chip" onclick="setAreaPreset(80,150)">80–150</button>
-          <button class="preset-chip" onclick="setAreaPreset(150,250)">150–250</button>
-          <button class="preset-chip" onclick="setAreaPreset(250,9999)">250+</button>
+          <button class="preset-chip area-preset" data-min="0" data-max="80">Under 80</button>
+          <button class="preset-chip area-preset" data-min="80" data-max="150">80–150</button>
+          <button class="preset-chip area-preset" data-min="150" data-max="250">150–250</button>
+          <button class="preset-chip area-preset" data-min="250" data-max="9999">250+</button>
         </div>
         <div class="range-inputs">
           <div class="range-manual-input">
             <label>Min m²</label>
-            <input type="number" id="areaMinInput" placeholder="e.g. 100" min="0" step="5"
-              oninput="onAreaInputChange()">
+            <input type="number" id="areaMinInput" placeholder="e.g. 100" min="0" step="5">
           </div>
           <div class="range-sep-arrow">→</div>
           <div class="range-manual-input">
             <label>Max m²</label>
-            <input type="number" id="areaMaxInput" placeholder="e.g. 300" min="0" step="5"
-              oninput="onAreaInputChange()">
+            <input type="number" id="areaMaxInput" placeholder="e.g. 300" min="0" step="5">
           </div>
         </div>
         <div class="slider-wrap">
@@ -1107,8 +1115,8 @@
             <div class="range-fill" id="areaFill"
               style="background:linear-gradient(90deg,var(--accent3),var(--accent))"></div>
           </div>
-          <input type="range" id="areaSliderMin" min="0" max="1000" value="0"    oninput="onAreaSliderChange()">
-          <input type="range" id="areaSliderMax" min="0" max="1000" value="1000" oninput="onAreaSliderChange()">
+          <input type="range" id="areaSliderMin" min="0" max="1000" value="0">
+          <input type="range" id="areaSliderMax" min="0" max="1000" value="1000">
         </div>
       </div>
     </div>
@@ -1120,22 +1128,20 @@
       </div>
       <div class="area-widget">
         <div class="presets">
-          <button class="preset-chip" onclick="setPsmPreset(0,50000)">Under 50K</button>
-          <button class="preset-chip" onclick="setPsmPreset(50000,100000)">50K–100K</button>
-          <button class="preset-chip" onclick="setPsmPreset(100000,200000)">100K–200K</button>
-          <button class="preset-chip" onclick="setPsmPreset(200000,9999999)">200K+</button>
+          <button class="preset-chip psm-preset" data-min="0" data-max="50000">Under 50K</button>
+          <button class="preset-chip psm-preset" data-min="50000" data-max="100000">50K–100K</button>
+          <button class="preset-chip psm-preset" data-min="100000" data-max="200000">100K–200K</button>
+          <button class="preset-chip psm-preset" data-min="200000" data-max="9999999">200K+</button>
         </div>
         <div class="range-inputs">
           <div class="range-manual-input">
             <label>Min EGP/m²</label>
-            <input type="number" id="psmMinInput" placeholder="e.g. 50000" min="0" step="5000"
-              oninput="onPsmInputChange()">
+            <input type="number" id="psmMinInput" placeholder="e.g. 50000" min="0" step="5000">
           </div>
           <div class="range-sep-arrow">→</div>
           <div class="range-manual-input">
             <label>Max EGP/m²</label>
-            <input type="number" id="psmMaxInput" placeholder="e.g. 200000" min="0" step="5000"
-              oninput="onPsmInputChange()">
+            <input type="number" id="psmMaxInput" placeholder="e.g. 200000" min="0" step="5000">
           </div>
         </div>
         <div class="slider-wrap">
@@ -1143,8 +1149,8 @@
             <div class="range-fill" id="psmFill"
               style="background:linear-gradient(90deg,var(--accent2),var(--accent))"></div>
           </div>
-          <input type="range" id="psmSliderMin" min="0" max="1000" value="0"    oninput="onPsmSliderChange()">
-          <input type="range" id="psmSliderMax" min="0" max="1000" value="1000" oninput="onPsmSliderChange()">
+          <input type="range" id="psmSliderMin" min="0" max="1000" value="0">
+          <input type="range" id="psmSliderMax" min="0" max="1000" value="1000">
         </div>
       </div>
     </div>
@@ -1153,21 +1159,19 @@
     <div class="filter-section">
       <div class="filter-label">Delivery (months from now)</div>
       <div class="presets" id="deliveryPresets" style="margin-bottom:8px">
-        <button class="preset-chip" onclick="setDelivery(this,0,6)">Ready</button>
-        <button class="preset-chip" onclick="setDelivery(this,0,12)">Within 1yr</button>
-        <button class="preset-chip" onclick="setDelivery(this,0,24)">Within 2yr</button>
-        <button class="preset-chip" onclick="setDelivery(this,0,36)">Within 3yr</button>
+        <button class="preset-chip delivery-preset" data-from="0" data-to="6">Ready</button>
+        <button class="preset-chip delivery-preset" data-from="0" data-to="12">Within 1yr</button>
+        <button class="preset-chip delivery-preset" data-from="0" data-to="24">Within 2yr</button>
+        <button class="preset-chip delivery-preset" data-from="0" data-to="36">Within 3yr</button>
       </div>
       <div class="number-inputs">
         <div class="number-input-wrap">
           <label>From</label>
-          <input type="number" id="deliveryFrom" placeholder="e.g. 6"
-            oninput="clearDeliveryPresets();applyFilters()">
+          <input type="number" id="deliveryFrom" placeholder="e.g. 6">
         </div>
         <div class="number-input-wrap">
           <label>To</label>
-          <input type="number" id="deliveryTo" placeholder="e.g. 24"
-            oninput="clearDeliveryPresets();applyFilters()">
+          <input type="number" id="deliveryTo" placeholder="e.g. 24">
         </div>
       </div>
     </div>
@@ -1175,7 +1179,7 @@
     <!-- DEVELOPER -->
     <div class="filter-section">
       <div class="filter-label">Developer</div>
-      <select class="styled-select" id="developerFilter" onchange="applyFilters()">
+      <select class="styled-select" id="developerFilter">
         <option value="">All Developers</option>
       </select>
     </div>
@@ -1194,8 +1198,7 @@
           <span class="range-val" id="discountVal" style="color:var(--accent2)">0%</span>
           <span style="font-size:11px;color:var(--muted)">minimum</span>
         </div>
-        <input type="range" id="discountSlider" min="0" max="40" value="0"
-          oninput="document.getElementById('discountVal').textContent=this.value+'%';applyFilters()">
+        <input type="range" id="discountSlider" min="0" max="40" value="0">
       </div>
     </div>
 
@@ -1205,27 +1208,27 @@
       <div class="toggle-row">
         <span class="toggle-label">Free Club Fees</span>
         <label class="toggle">
-          <input type="checkbox" id="freeClub" onchange="applyFilters()">
+          <input type="checkbox" id="freeClub">
           <span class="toggle-slider"></span>
         </label>
       </div>
       <div class="toggle-row">
         <span class="toggle-label">Free Parking</span>
         <label class="toggle">
-          <input type="checkbox" id="freeParking" onchange="applyFilters()">
+          <input type="checkbox" id="freeParking">
           <span class="toggle-slider"></span>
         </label>
       </div>
       <div class="toggle-row">
         <span class="toggle-label">Hide Sold Units</span>
         <label class="toggle">
-          <input type="checkbox" id="hideSold" onchange="applyFilters()">
+          <input type="checkbox" id="hideSold">
           <span class="toggle-slider"></span>
         </label>
       </div>
     </div>
 
-    <button class="btn-reset" onclick="resetFilters()">↺ Reset All Filters</button>
+    <button class="btn-reset" id="resetBtn">↺ Reset All Filters</button>
     <!-- Extra padding at bottom for mobile scroll -->
     <div style="height: 40px;"></div>
   </aside>
@@ -1238,12 +1241,12 @@
       </div>
       <div class="sort-controls">
         <span style="font-size:12px;color:var(--muted);white-space:nowrap">Sort:</span>
-        <button class="sort-btn active" onclick="setSort('price_asc',this)">Price ↑</button>
-        <button class="sort-btn" onclick="setSort('price_desc',this)">Price ↓</button>
-        <button class="sort-btn" onclick="setSort('area_desc',this)">Area ↓</button>
-        <button class="sort-btn" onclick="setSort('psm_asc',this)">PSM ↑</button>
-        <button class="sort-btn" onclick="setSort('discount_desc',this)">Discount ↓</button>
-        <button class="sort-btn" onclick="setSort('delivery_asc',this)">Delivery ↑</button>
+        <button class="sort-btn active" data-sort="price_asc">Price ↑</button>
+        <button class="sort-btn" data-sort="price_desc">Price ↓</button>
+        <button class="sort-btn" data-sort="area_desc">Area ↓</button>
+        <button class="sort-btn" data-sort="psm_asc">PSM ↑</button>
+        <button class="sort-btn" data-sort="discount_desc">Discount ↓</button>
+        <button class="sort-btn" data-sort="delivery_asc">Delivery ↑</button>
       </div>
     </div>
 
@@ -1264,300 +1267,208 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 function toggleSidebar() {
   const sidebar = document.getElementById('sidebar');
-  const overlay = document.getElementById('sidebarOverlay');
-  const btn = document.getElementById('hamburgerBtn');
-  const isOpen = sidebar.classList.contains('open');
-  if (isOpen) { closeSidebar(); } else { openSidebar(); }
+  sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
 }
-
 function openSidebar() {
-  const sidebar = document.getElementById('sidebar');
-  const overlay = document.getElementById('sidebarOverlay');
-  const btn = document.getElementById('hamburgerBtn');
-  sidebar.classList.add('open');
-  overlay.classList.add('visible');
-  btn.classList.add('open');
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sidebarOverlay').classList.add('visible');
+  document.getElementById('hamburgerBtn').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
-
 function closeSidebar() {
-  const sidebar = document.getElementById('sidebar');
-  const overlay = document.getElementById('sidebarOverlay');
-  const btn = document.getElementById('hamburgerBtn');
-  sidebar.classList.remove('open');
-  overlay.classList.remove('visible');
-  btn.classList.remove('open');
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('visible');
+  document.getElementById('hamburgerBtn').classList.remove('open');
   document.body.style.overflow = '';
 }
-
-// Close on resize to desktop
-window.addEventListener('resize', () => {
-  if (window.innerWidth > 768) { closeSidebar(); }
-});
-
-// Count active filters for badge
-function updateFilterBadge() {
-  let count = 0;
-  if (activeFilters.cities.size)    count += activeFilters.cities.size;
-  if (activeFilters.unitTypes.size) count += activeFilters.unitTypes.size;
-  if (activeFilters.finishing.size) count += activeFilters.finishing.size;
-  if (activeFilters.bedrooms !== 'any') count++;
-  if (rangeState.priceMin !== null || rangeState.priceMax !== null) count++;
-  if (rangeState.areaMin !== null || rangeState.areaMax !== null)   count++;
-  if (rangeState.psmMin !== null || rangeState.psmMax !== null)     count++;
-  if (parseInt(document.getElementById('discountSlider').value) > 0) count++;
-  if (document.getElementById('freeClub').checked)    count++;
-  if (document.getElementById('freeParking').checked) count++;
-  if (document.getElementById('hideSold').checked)    count++;
-  if (document.getElementById('developerFilter').value) count++;
-  if (document.getElementById('deliveryFrom').value || document.getElementById('deliveryTo').value) count++;
-
-  const badge = document.getElementById('filterBadge');
-  if (count > 0) {
-    badge.textContent = count;
-    badge.classList.add('visible');
-  } else {
-    badge.classList.remove('visible');
-  }
-}
+window.addEventListener('resize', () => { if (window.innerWidth > 768) closeSidebar(); });
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SCALE CONFIG
 // ═══════════════════════════════════════════════════════════════════════════════
-const PRICE_LOG_MIN = 6;
-const PRICE_LOG_MAX = 8.699;
+const PRICE_LOG_MIN = 6, PRICE_LOG_MAX = 8.699;
 const AREA_LINEAR_MAX = 1000;
-const PSM_LOG_MIN = 4;
-const PSM_LOG_MAX = 6.3;
+const PSM_LOG_MIN = 4, PSM_LOG_MAX = 6.3;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════════════════════════════════
-let allData = [];
-let filteredData = [];
-let sortMode = 'price_asc';
-let currentBatchEnd = 50;
-
-const rangeState = {
-  priceMin: null, priceMax: null,
-  areaMin:  null, areaMax:  null,
-  psmMin:   null, psmMax:   null,
-};
-
-const activeFilters = {
-  cities:    new Set(),
-  unitTypes: new Set(),
-  bedrooms:  'any',
-  finishing: new Set(),
-};
+let allData = [], filteredData = [], sortMode = 'price_asc', currentBatchEnd = 50;
+const rangeState = { priceMin:null, priceMax:null, areaMin:null, areaMax:null, psmMin:null, psmMax:null };
+const activeFilters = { cities: new Set(), unitTypes: new Set(), bedrooms: 'any', finishing: new Set() };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// LOG SCALE HELPERS
+// HELPERS
 // ═══════════════════════════════════════════════════════════════════════════════
-function sliderToPrice(v) {
-  const t = v / 1000;
-  return Math.round(Math.pow(10, PRICE_LOG_MIN + t * (PRICE_LOG_MAX - PRICE_LOG_MIN)));
-}
-function priceToSlider(p) {
-  if (!p || p <= 0) return 0;
-  const t = (Math.log10(p) - PRICE_LOG_MIN) / (PRICE_LOG_MAX - PRICE_LOG_MIN);
-  return Math.round(Math.max(0, Math.min(1000, t * 1000)));
-}
-function sliderToPsm(v) {
-  const t = v / 1000;
-  return Math.round(Math.pow(10, PSM_LOG_MIN + t * (PSM_LOG_MAX - PSM_LOG_MIN)));
-}
-function psmToSlider(p) {
-  if (!p || p <= 0) return 0;
-  const t = (Math.log10(p) - PSM_LOG_MIN) / (PSM_LOG_MAX - PSM_LOG_MIN);
-  return Math.round(Math.max(0, Math.min(1000, t * 1000)));
-}
-function sliderToArea(v) { return Math.round((v / 1000) * AREA_LINEAR_MAX); }
-function areaToSlider(a) { return Math.round((a / AREA_LINEAR_MAX) * 1000); }
+const sliderToPrice = v => Math.round(Math.pow(10, PRICE_LOG_MIN + (v/1000)*(PRICE_LOG_MAX-PRICE_LOG_MIN)));
+const priceToSlider = p => { if(!p||p<=0)return 0; return Math.round(Math.max(0,Math.min(1000,((Math.log10(p)-PRICE_LOG_MIN)/(PRICE_LOG_MAX-PRICE_LOG_MIN))*1000))); };
+const sliderToPsm   = v => Math.round(Math.pow(10, PSM_LOG_MIN + (v/1000)*(PSM_LOG_MAX-PSM_LOG_MIN)));
+const psmToSlider   = p => { if(!p||p<=0)return 0; return Math.round(Math.max(0,Math.min(1000,((Math.log10(p)-PSM_LOG_MIN)/(PSM_LOG_MAX-PSM_LOG_MIN))*1000))); };
+const sliderToArea  = v => Math.round((v/1000)*AREA_LINEAR_MAX);
+const areaToSlider  = a => Math.round((a/AREA_LINEAR_MAX)*1000);
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// FORMAT HELPERS
-// ═══════════════════════════════════════════════════════════════════════════════
-function fmtNum(n) { return n?.toLocaleString('en-US') ?? '0'; }
+function fmtNum(n) { return n?.toLocaleString('en-US')?? '0'; }
 function fmtMillion(n) {
-  if (!n || n === 0) return '0';
-  if (n >= 1e9)  return (n / 1e9).toFixed(2).replace(/\.?0+$/, '') + 'B';
-  if (n >= 1e6)  return (n / 1e6).toFixed(2).replace(/\.?0+$/, '') + 'M';
-  if (n >= 1e3)  return (n / 1e3).toFixed(0) + 'K';
+  if(!n||n===0)return '0';
+  if(n>=1e9) return (n/1e9).toFixed(2).replace(/\.?0+$/,'')+' B';
+  if(n>=1e6) return (n/1e6).toFixed(2).replace(/\.?0+$/,'')+' M';
+  if(n>=1e3) return (n/1e3).toFixed(0)+'K';
   return fmtNum(Math.round(n));
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SLIDER FILL
-// ═══════════════════════════════════════════════════════════════════════════════
 function syncFill(fillId, minId, maxId) {
-  const fill = document.getElementById(fillId);
-  const minS = document.getElementById(minId);
-  const maxS = document.getElementById(maxId);
-  if (!fill || !minS || !maxS) return;
-  fill.style.left  = (parseInt(minS.value) / 10) + '%';
-  fill.style.width = ((parseInt(maxS.value) - parseInt(minS.value)) / 10) + '%';
+  const fill=document.getElementById(fillId), minS=document.getElementById(minId), maxS=document.getElementById(maxId);
+  if(!fill||!minS||!maxS)return;
+  fill.style.left=(parseInt(minS.value)/10)+'%';
+  fill.style.width=((parseInt(maxS.value)-parseInt(minS.value))/10)+'%';
 }
 
+function g(id) { return document.getElementById(id); }
+
 // ═══════════════════════════════════════════════════════════════════════════════
-// PRICE HANDLERS
+// PRICE
 // ═══════════════════════════════════════════════════════════════════════════════
 function onPriceSliderChange() {
-  const minS = document.getElementById('priceSliderMin');
-  const maxS = document.getElementById('priceSliderMax');
-  if (parseInt(minS.value) > parseInt(maxS.value)) minS.value = maxS.value;
-  const minVal = sliderToPrice(parseInt(minS.value));
-  const maxVal = sliderToPrice(parseInt(maxS.value));
-  rangeState.priceMin = parseInt(minS.value) === 0    ? null : minVal;
-  rangeState.priceMax = parseInt(maxS.value) === 1000 ? null : maxVal;
-  document.getElementById('priceMinInput').value = rangeState.priceMin || '';
-  document.getElementById('priceMaxInput').value = rangeState.priceMax || '';
-  document.getElementById('priceMinHint').textContent = rangeState.priceMin ? fmtMillion(minVal) : '—';
-  document.getElementById('priceMaxHint').textContent = rangeState.priceMax ? fmtMillion(maxVal) : '—';
+  const minS=g('priceSliderMin'), maxS=g('priceSliderMax');
+  if(parseInt(minS.value)>parseInt(maxS.value)) minS.value=maxS.value;
+  const minVal=sliderToPrice(parseInt(minS.value)), maxVal=sliderToPrice(parseInt(maxS.value));
+  rangeState.priceMin=parseInt(minS.value)===0?null:minVal;
+  rangeState.priceMax=parseInt(maxS.value)===1000?null:maxVal;
+  g('priceMinInput').value=rangeState.priceMin||'';
+  g('priceMaxInput').value=rangeState.priceMax||'';
+  g('priceMinHint').textContent=rangeState.priceMin?fmtMillion(minVal):'—';
+  g('priceMaxHint').textContent=rangeState.priceMax?fmtMillion(maxVal):'—';
   clearPresets('pricePresets');
-  syncFill('priceFill', 'priceSliderMin', 'priceSliderMax');
+  syncFill('priceFill','priceSliderMin','priceSliderMax');
   applyFilters();
 }
-
 function onPriceInputChange() {
-  const minRaw = parseFloat(document.getElementById('priceMinInput').value);
-  const maxRaw = parseFloat(document.getElementById('priceMaxInput').value);
-  rangeState.priceMin = isNaN(minRaw) || minRaw <= 0 ? null : minRaw;
-  rangeState.priceMax = isNaN(maxRaw) || maxRaw <= 0 ? null : maxRaw;
-  document.getElementById('priceMinHint').textContent = rangeState.priceMin ? fmtMillion(rangeState.priceMin) : '—';
-  document.getElementById('priceMaxHint').textContent = rangeState.priceMax ? fmtMillion(rangeState.priceMax) : '—';
-  document.getElementById('priceSliderMin').value = rangeState.priceMin ? priceToSlider(rangeState.priceMin) : 0;
-  document.getElementById('priceSliderMax').value = rangeState.priceMax ? priceToSlider(rangeState.priceMax) : 1000;
+  const minRaw=parseFloat(g('priceMinInput').value), maxRaw=parseFloat(g('priceMaxInput').value);
+  rangeState.priceMin=isNaN(minRaw)||minRaw<=0?null:minRaw;
+  rangeState.priceMax=isNaN(maxRaw)||maxRaw<=0?null:maxRaw;
+  g('priceMinHint').textContent=rangeState.priceMin?fmtMillion(rangeState.priceMin):'—';
+  g('priceMaxHint').textContent=rangeState.priceMax?fmtMillion(rangeState.priceMax):'—';
+  g('priceSliderMin').value=rangeState.priceMin?priceToSlider(rangeState.priceMin):0;
+  g('priceSliderMax').value=rangeState.priceMax?priceToSlider(rangeState.priceMax):1000;
   clearPresets('pricePresets');
-  syncFill('priceFill', 'priceSliderMin', 'priceSliderMax');
+  syncFill('priceFill','priceSliderMin','priceSliderMax');
   applyFilters();
 }
-
 function setPricePreset(min, max, label) {
-  rangeState.priceMin = min > 0 ? min : null;
-  rangeState.priceMax = max >= 999e9 ? null : max;
-  document.getElementById('priceMinInput').value = min > 0 ? min : '';
-  document.getElementById('priceMaxInput').value = max >= 999e9 ? '' : max;
-  document.getElementById('priceMinHint').textContent = min > 0 ? fmtMillion(min) : '—';
-  document.getElementById('priceMaxHint').textContent = (max && max < 999e9) ? fmtMillion(max) : '—';
-  document.getElementById('priceSliderMin').value = min > 0 ? priceToSlider(min) : 0;
-  document.getElementById('priceSliderMax').value = (max && max < 999e9) ? priceToSlider(max) : 1000;
-  syncFill('priceFill', 'priceSliderMin', 'priceSliderMax');
-  highlightPreset('pricePresets', label);
+  rangeState.priceMin=min>0?min:null;
+  rangeState.priceMax=max>=999e9?null:max;
+  g('priceMinInput').value=min>0?min:'';
+  g('priceMaxInput').value=max>=999e9?'':max;
+  g('priceMinHint').textContent=min>0?fmtMillion(min):'—';
+  g('priceMaxHint').textContent=(max&&max<999e9)?fmtMillion(max):'—';
+  g('priceSliderMin').value=min>0?priceToSlider(min):0;
+  g('priceSliderMax').value=(max&&max<999e9)?priceToSlider(max):1000;
+  syncFill('priceFill','priceSliderMin','priceSliderMax');
+  highlightPreset('pricePresets',label);
   applyFilters();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// AREA HANDLERS
+// AREA
 // ═══════════════════════════════════════════════════════════════════════════════
 function onAreaSliderChange() {
-  const minS = document.getElementById('areaSliderMin');
-  const maxS = document.getElementById('areaSliderMax');
-  if (parseInt(minS.value) > parseInt(maxS.value)) minS.value = maxS.value;
-  const minVal = sliderToArea(parseInt(minS.value));
-  const maxVal = sliderToArea(parseInt(maxS.value));
-  rangeState.areaMin = parseInt(minS.value) === 0    ? null : minVal;
-  rangeState.areaMax = parseInt(maxS.value) === 1000 ? null : maxVal;
-  document.getElementById('areaMinInput').value = rangeState.areaMin || '';
-  document.getElementById('areaMaxInput').value = rangeState.areaMax || '';
-  syncFill('areaFill', 'areaSliderMin', 'areaSliderMax');
+  const minS=g('areaSliderMin'), maxS=g('areaSliderMax');
+  if(parseInt(minS.value)>parseInt(maxS.value)) minS.value=maxS.value;
+  const minVal=sliderToArea(parseInt(minS.value)), maxVal=sliderToArea(parseInt(maxS.value));
+  rangeState.areaMin=parseInt(minS.value)===0?null:minVal;
+  rangeState.areaMax=parseInt(maxS.value)===1000?null:maxVal;
+  g('areaMinInput').value=rangeState.areaMin||'';
+  g('areaMaxInput').value=rangeState.areaMax||'';
+  syncFill('areaFill','areaSliderMin','areaSliderMax');
   applyFilters();
 }
-
 function onAreaInputChange() {
-  const minRaw = parseFloat(document.getElementById('areaMinInput').value);
-  const maxRaw = parseFloat(document.getElementById('areaMaxInput').value);
-  rangeState.areaMin = isNaN(minRaw) || minRaw <= 0 ? null : minRaw;
-  rangeState.areaMax = isNaN(maxRaw) || maxRaw <= 0 ? null : maxRaw;
-  document.getElementById('areaSliderMin').value = rangeState.areaMin ? areaToSlider(rangeState.areaMin) : 0;
-  document.getElementById('areaSliderMax').value = rangeState.areaMax ? areaToSlider(rangeState.areaMax) : 1000;
-  syncFill('areaFill', 'areaSliderMin', 'areaSliderMax');
+  const minRaw=parseFloat(g('areaMinInput').value), maxRaw=parseFloat(g('areaMaxInput').value);
+  rangeState.areaMin=isNaN(minRaw)||minRaw<=0?null:minRaw;
+  rangeState.areaMax=isNaN(maxRaw)||maxRaw<=0?null:maxRaw;
+  g('areaSliderMin').value=rangeState.areaMin?areaToSlider(rangeState.areaMin):0;
+  g('areaSliderMax').value=rangeState.areaMax?areaToSlider(rangeState.areaMax):1000;
+  syncFill('areaFill','areaSliderMin','areaSliderMax');
   applyFilters();
 }
-
 function setAreaPreset(min, max) {
-  rangeState.areaMin = min > 0 ? min : null;
-  rangeState.areaMax = max >= 9999 ? null : max;
-  document.getElementById('areaMinInput').value = min > 0 ? min : '';
-  document.getElementById('areaMaxInput').value = max >= 9999 ? '' : max;
-  document.getElementById('areaSliderMin').value = min > 0 ? areaToSlider(min) : 0;
-  document.getElementById('areaSliderMax').value = (max && max < 9999) ? areaToSlider(max) : 1000;
-  syncFill('areaFill', 'areaSliderMin', 'areaSliderMax');
+  rangeState.areaMin=min>0?min:null;
+  rangeState.areaMax=max>=9999?null:max;
+  g('areaMinInput').value=min>0?min:'';
+  g('areaMaxInput').value=max>=9999?'':max;
+  g('areaSliderMin').value=min>0?areaToSlider(min):0;
+  g('areaSliderMax').value=(max&&max<9999)?areaToSlider(max):1000;
+  syncFill('areaFill','areaSliderMin','areaSliderMax');
   applyFilters();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// PSM HANDLERS
+// PSM
 // ═══════════════════════════════════════════════════════════════════════════════
 function onPsmSliderChange() {
-  const minS = document.getElementById('psmSliderMin');
-  const maxS = document.getElementById('psmSliderMax');
-  if (parseInt(minS.value) > parseInt(maxS.value)) minS.value = maxS.value;
-  const minVal = sliderToPsm(parseInt(minS.value));
-  const maxVal = sliderToPsm(parseInt(maxS.value));
-  rangeState.psmMin = parseInt(minS.value) === 0    ? null : minVal;
-  rangeState.psmMax = parseInt(maxS.value) === 1000 ? null : maxVal;
-  document.getElementById('psmMinInput').value = rangeState.psmMin || '';
-  document.getElementById('psmMaxInput').value = rangeState.psmMax || '';
-  syncFill('psmFill', 'psmSliderMin', 'psmSliderMax');
+  const minS=g('psmSliderMin'), maxS=g('psmSliderMax');
+  if(parseInt(minS.value)>parseInt(maxS.value)) minS.value=maxS.value;
+  const minVal=sliderToPsm(parseInt(minS.value)), maxVal=sliderToPsm(parseInt(maxS.value));
+  rangeState.psmMin=parseInt(minS.value)===0?null:minVal;
+  rangeState.psmMax=parseInt(maxS.value)===1000?null:maxVal;
+  g('psmMinInput').value=rangeState.psmMin||'';
+  g('psmMaxInput').value=rangeState.psmMax||'';
+  syncFill('psmFill','psmSliderMin','psmSliderMax');
   applyFilters();
 }
-
 function onPsmInputChange() {
-  const minRaw = parseFloat(document.getElementById('psmMinInput').value);
-  const maxRaw = parseFloat(document.getElementById('psmMaxInput').value);
-  rangeState.psmMin = isNaN(minRaw) || minRaw <= 0 ? null : minRaw;
-  rangeState.psmMax = isNaN(maxRaw) || maxRaw <= 0 ? null : maxRaw;
-  document.getElementById('psmSliderMin').value = rangeState.psmMin ? psmToSlider(rangeState.psmMin) : 0;
-  document.getElementById('psmSliderMax').value = rangeState.psmMax ? psmToSlider(rangeState.psmMax) : 1000;
-  syncFill('psmFill', 'psmSliderMin', 'psmSliderMax');
+  const minRaw=parseFloat(g('psmMinInput').value), maxRaw=parseFloat(g('psmMaxInput').value);
+  rangeState.psmMin=isNaN(minRaw)||minRaw<=0?null:minRaw;
+  rangeState.psmMax=isNaN(maxRaw)||maxRaw<=0?null:maxRaw;
+  g('psmSliderMin').value=rangeState.psmMin?psmToSlider(rangeState.psmMin):0;
+  g('psmSliderMax').value=rangeState.psmMax?psmToSlider(rangeState.psmMax):1000;
+  syncFill('psmFill','psmSliderMin','psmSliderMax');
   applyFilters();
 }
-
 function setPsmPreset(min, max) {
-  rangeState.psmMin = min > 0 ? min : null;
-  rangeState.psmMax = max >= 9999999 ? null : max;
-  document.getElementById('psmMinInput').value = min > 0 ? min : '';
-  document.getElementById('psmMaxInput').value = max >= 9999999 ? '' : max;
-  document.getElementById('psmSliderMin').value = min > 0 ? psmToSlider(min) : 0;
-  document.getElementById('psmSliderMax').value = (max && max < 9999999) ? psmToSlider(max) : 1000;
-  syncFill('psmFill', 'psmSliderMin', 'psmSliderMax');
+  rangeState.psmMin=min>0?min:null;
+  rangeState.psmMax=max>=9999999?null:max;
+  g('psmMinInput').value=min>0?min:'';
+  g('psmMaxInput').value=max>=9999999?'':max;
+  g('psmSliderMin').value=min>0?psmToSlider(min):0;
+  g('psmSliderMax').value=(max&&max<9999999)?psmToSlider(max):1000;
+  syncFill('psmFill','psmSliderMin','psmSliderMax');
   applyFilters();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// DELIVERY HANDLERS
+// DELIVERY
 // ═══════════════════════════════════════════════════════════════════════════════
 function setDelivery(el, from, to) {
-  document.getElementById('deliveryFrom').value = from;
-  document.getElementById('deliveryTo').value = to;
-  document.querySelectorAll('#deliveryPresets .preset-chip').forEach(c => c.classList.remove('active'));
+  g('deliveryFrom').value=from;
+  g('deliveryTo').value=to;
+  document.querySelectorAll('.delivery-preset').forEach(c=>c.classList.remove('active'));
   el.classList.add('active');
   applyFilters();
 }
 function clearDeliveryPresets() {
-  document.querySelectorAll('#deliveryPresets .preset-chip').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.delivery-preset').forEach(c=>c.classList.remove('active'));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PRESET HELPERS
 // ═══════════════════════════════════════════════════════════════════════════════
 function highlightPreset(containerId, label) {
-  document.querySelectorAll(`#${containerId} .preset-chip`).forEach(c => {
-    c.classList.toggle('active', c.textContent.trim() === label);
+  document.querySelectorAll(`#${containerId} .preset-chip`).forEach(c=>{
+    c.classList.toggle('active', c.textContent.trim()===label);
   });
 }
 function clearPresets(containerId) {
-  document.querySelectorAll(`#${containerId} .preset-chip`).forEach(c => c.classList.remove('active'));
+  document.querySelectorAll(`#${containerId} .preset-chip`).forEach(c=>c.classList.remove('active'));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // BEDROOMS
 // ═══════════════════════════════════════════════════════════════════════════════
 function filterBed(el, val) {
-  document.querySelectorAll('#bedroomsFilter .pill').forEach(p => p.classList.remove('active', 'active-green'));
-  el.classList.add(val === 'any' ? 'active-green' : 'active');
-  activeFilters.bedrooms = val;
+  document.querySelectorAll('#bedroomsFilter .pill').forEach(p=>p.classList.remove('active','active-green'));
+  el.classList.add(val==='any'?'active-green':'active');
+  activeFilters.bedrooms=val;
   applyFilters();
 }
 
@@ -1565,8 +1476,8 @@ function filterBed(el, val) {
 // SORT
 // ═══════════════════════════════════════════════════════════════════════════════
 function setSort(mode, el) {
-  sortMode = mode;
-  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+  sortMode=mode;
+  document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active'));
   el.classList.add('active');
   applyFilters();
 }
@@ -1574,44 +1485,47 @@ function setSort(mode, el) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // SEARCH
 // ═══════════════════════════════════════════════════════════════════════════════
-function clearSearch() {
-  document.getElementById('searchInput').value = '';
-  document.getElementById('searchClear').classList.remove('visible');
-  applyFilters();
-}
+function clearSearch() { g('searchInput').value=''; g('searchClear').classList.remove('visible'); applyFilters(); }
+function clearSearchMobile() { g('searchInputMobile').value=''; g('searchClearMobile').style.opacity='0'; applyFilters(); }
 
-function clearSearchMobile() {
-  document.getElementById('searchInputMobile').value = '';
-  document.getElementById('searchClearMobile').style.opacity = '0';
-  applyFilters();
+// ═══════════════════════════════════════════════════════════════════════════════
+// FILTER BADGE
+// ═══════════════════════════════════════════════════════════════════════════════
+function updateFilterBadge() {
+  let count=0;
+  count+=activeFilters.cities.size+activeFilters.unitTypes.size+activeFilters.finishing.size;
+  if(activeFilters.bedrooms!=='any')count++;
+  if(rangeState.priceMin!==null||rangeState.priceMax!==null)count++;
+  if(rangeState.areaMin!==null||rangeState.areaMax!==null)count++;
+  if(rangeState.psmMin!==null||rangeState.psmMax!==null)count++;
+  if(parseInt(g('discountSlider').value)>0)count++;
+  if(g('freeClub').checked)count++;
+  if(g('freeParking').checked)count++;
+  if(g('hideSold').checked)count++;
+  if(g('developerFilter').value)count++;
+  if(g('deliveryFrom').value||g('deliveryTo').value)count++;
+  const badge=g('filterBadge');
+  if(count>0){ badge.textContent=count; badge.classList.add('visible'); }
+  else badge.classList.remove('visible');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // DATA LOAD
 // ═══════════════════════════════════════════════════════════════════════════════
 async function loadData() {
-  const grid = document.getElementById('cardsGrid');
-  grid.innerHTML = `<div class="loading"><div class="spinner"></div>Loading units data...</div>`;
-
+  const grid=g('cardsGrid');
+  grid.innerHTML='<div class="loading"><div class="spinner"></div>Loading units data...</div>';
   try {
-    const resp = await fetch('/api/units');
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
-    const data = await resp.json();
-    if (data.error) throw new Error(data.error);
-    allData = data;
-    console.log(`✅ Loaded ${allData.length} units from API`);
-  } catch (e) {
-    console.error('❌ API error:', e);
-    grid.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-icon">⚠️</div>
-        <h3>Failed to load data</h3>
-        <p style="margin-bottom:8px">${e.message}</p>
-        <button class="btn-reset" onclick="loadData()" style="width:auto;margin-top:16px">🔄 Retry</button>
-      </div>`;
+    const resp=await fetch('/api/units');
+    if(!resp.ok)throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+    const data=await resp.json();
+    if(data.error)throw new Error(data.error);
+    allData=data;
+  } catch(e) {
+    grid.innerHTML=`<div class="empty-state"><div class="empty-icon">⚠️</div><h3>Failed to load data</h3><p>${e.message}</p><button class="btn-reset" id="retryBtn" style="width:auto;margin-top:16px">🔄 Retry</button></div>`;
+    g('retryBtn')?.addEventListener('click', loadData);
     return;
   }
-
   initPage();
 }
 
@@ -1619,71 +1533,49 @@ async function loadData() {
 // INIT
 // ═══════════════════════════════════════════════════════════════════════════════
 function initPage() {
-  if (allData.length === 0) {
-    document.getElementById('cardsGrid').innerHTML = `
-      <div class="empty-state">
-        <div class="empty-icon">⚠️</div>
-        <h3>No data available</h3>
-        <p>Check database connection or run sync job</p>
-      </div>`;
+  if(!allData.length) {
+    g('cardsGrid').innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><h3>No data available</h3><p>Check database connection or run sync job</p></div>';
     return;
   }
-
-  buildPills('cityFilter',     [...new Set(allData.map(d => d.city_name))].sort(),                      'city');
-  buildPills('unitTypeFilter', [...new Set(allData.map(d => d.unit_type))].sort(),                     'type');
-  buildPills('finishingFilter',[...new Set(allData.map(d => d.finishing_type).filter(Boolean))].sort(), 'finishing');
-
-  const devSelect = document.getElementById('developerFilter');
-  [...new Set(allData.map(d => d.developer_name))].sort().forEach(dev => {
-    const opt = document.createElement('option');
-    opt.value = dev; opt.textContent = dev;
-    devSelect.appendChild(opt);
+  buildPills('cityFilter',     [...new Set(allData.map(d=>d.city_name))].sort(),                     'city');
+  buildPills('unitTypeFilter', [...new Set(allData.map(d=>d.unit_type))].sort(),                     'type');
+  buildPills('finishingFilter',[...new Set(allData.map(d=>d.finishing_type).filter(Boolean))].sort(),'finishing');
+  const devSelect=g('developerFilter');
+  [...new Set(allData.map(d=>d.developer_name))].sort().forEach(dev=>{
+    const opt=document.createElement('option'); opt.value=dev; opt.textContent=dev; devSelect.appendChild(opt);
   });
-
-  const total = fmtNum(allData.length);
-  const compounds = new Set(allData.map(d => d.compound_name)).size;
-  document.getElementById('totalCount').textContent      = total;
-  document.getElementById('compoundCount').textContent   = compounds;
-  document.getElementById('totalCountMobile').textContent    = total;
-  document.getElementById('compoundCountMobile').textContent = compounds;
-
-  syncFill('priceFill', 'priceSliderMin', 'priceSliderMax');
-  syncFill('areaFill',  'areaSliderMin',  'areaSliderMax');
-  syncFill('psmFill',   'psmSliderMin',   'psmSliderMax');
-
+  const total=fmtNum(allData.length), compounds=new Set(allData.map(d=>d.compound_name)).size;
+  g('totalCount').textContent=g('totalCountMobile').textContent=total;
+  g('compoundCount').textContent=g('compoundCountMobile').textContent=compounds;
+  syncFill('priceFill','priceSliderMin','priceSliderMax');
+  syncFill('areaFill','areaSliderMin','areaSliderMax');
+  syncFill('psmFill','psmSliderMin','psmSliderMax');
   applyFilters();
 }
 
 function buildPills(containerId, values, type) {
-  const el = document.getElementById(containerId);
-  const anyPill = document.createElement('div');
-  anyPill.className = 'pill active-green';
-  anyPill.textContent = 'All';
-  anyPill.onclick = () => {
-    const set = type === 'city' ? activeFilters.cities
-              : type === 'type' ? activeFilters.unitTypes
-              : activeFilters.finishing;
+  const el=g(containerId);
+  const anyPill=document.createElement('div');
+  anyPill.className='pill active-green'; anyPill.textContent='All';
+  anyPill.addEventListener('click', ()=>{
+    const set=type==='city'?activeFilters.cities:type==='type'?activeFilters.unitTypes:activeFilters.finishing;
     set.clear();
-    el.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+    el.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
     anyPill.classList.add('active-green');
     applyFilters();
-  };
+  });
   el.appendChild(anyPill);
-
-  values.forEach(val => {
-    const pill = document.createElement('div');
-    pill.className = 'pill';
-    pill.textContent = val;
-    pill.onclick = () => {
+  values.forEach(val=>{
+    const pill=document.createElement('div');
+    pill.className='pill'; pill.textContent=val;
+    pill.addEventListener('click', ()=>{
       anyPill.classList.remove('active-green');
-      const set = type === 'city' ? activeFilters.cities
-                : type === 'type' ? activeFilters.unitTypes
-                : activeFilters.finishing;
-      if (set.has(val)) { set.delete(val); pill.classList.remove('active'); }
-      else              { set.add(val);    pill.classList.add('active'); }
-      if (set.size === 0) anyPill.classList.add('active-green');
+      const set=type==='city'?activeFilters.cities:type==='type'?activeFilters.unitTypes:activeFilters.finishing;
+      if(set.has(val)){ set.delete(val); pill.classList.remove('active'); }
+      else { set.add(val); pill.classList.add('active'); }
+      if(!set.size) anyPill.classList.add('active-green');
       applyFilters();
-    };
+    });
     el.appendChild(pill);
   });
 }
@@ -1692,67 +1584,59 @@ function buildPills(containerId, values, type) {
 // FILTER
 // ═══════════════════════════════════════════════════════════════════════════════
 function applyFilters() {
-  // Use whichever search is active (desktop or mobile)
-  const desktopSearch = document.getElementById('searchInput').value.toLowerCase().trim();
-  const mobileSearch  = document.getElementById('searchInputMobile').value.toLowerCase().trim();
-  const search = desktopSearch || mobileSearch;
+  const desktopSearch=g('searchInput').value.toLowerCase().trim();
+  const mobileSearch=g('searchInputMobile').value.toLowerCase().trim();
+  const search=desktopSearch||mobileSearch;
+  const delivFrom=parseFloat(g('deliveryFrom').value)||0;
+  const delivTo=parseFloat(g('deliveryTo').value)||9999;
+  const devFilter=g('developerFilter').value;
+  const discount=parseInt(g('discountSlider').value)||0;
+  const freeClub=g('freeClub').checked;
+  const freePark=g('freeParking').checked;
+  const hideSold=g('hideSold').checked;
 
-  const delivFrom = parseFloat(document.getElementById('deliveryFrom').value) || 0;
-  const delivTo   = parseFloat(document.getElementById('deliveryTo').value)   || 9999;
-  const devFilter = document.getElementById('developerFilter').value;
-  const discount  = parseInt(document.getElementById('discountSlider').value) || 0;
-  const freeClub  = document.getElementById('freeClub').checked;
-  const freePark  = document.getElementById('freeParking').checked;
-  const hideSold  = document.getElementById('hideSold').checked;
+  g('searchClear').classList.toggle('visible',desktopSearch.length>0);
+  g('searchClearMobile').style.opacity=mobileSearch.length>0?'1':'0';
 
-  // sync search clears
-  document.getElementById('searchClear').classList.toggle('visible', desktopSearch.length > 0);
-  document.getElementById('searchClearMobile').style.opacity = mobileSearch.length > 0 ? '1' : '0';
-
-  filteredData = allData.filter(u => {
-    if (hideSold && (u.is_sold || u.status === 0)) return false;
-    if (activeFilters.cities.size    && !activeFilters.cities.has(u.city_name))        return false;
-    if (activeFilters.unitTypes.size && !activeFilters.unitTypes.has(u.unit_type))     return false;
-    if (activeFilters.finishing.size && !activeFilters.finishing.has(u.finishing_type)) return false;
-
-    if (activeFilters.bedrooms !== 'any') {
-      const b = parseInt(activeFilters.bedrooms);
-      if (b === 5) { if (u.bedrooms < 5) return false; }
-      else         { if (u.bedrooms !== b) return false; }
+  filteredData=allData.filter(u=>{
+    if(hideSold&&(u.is_sold||u.status===0))return false;
+    if(activeFilters.cities.size&&!activeFilters.cities.has(u.city_name))return false;
+    if(activeFilters.unitTypes.size&&!activeFilters.unitTypes.has(u.unit_type))return false;
+    if(activeFilters.finishing.size&&!activeFilters.finishing.has(u.finishing_type))return false;
+    if(activeFilters.bedrooms!=='any'){
+      const b=parseInt(activeFilters.bedrooms);
+      if(b===5){if(u.bedrooms<5)return false;}
+      else{if(u.bedrooms!==b)return false;}
     }
-
-    if (rangeState.priceMin !== null && u.total_price_egp   < rangeState.priceMin) return false;
-    if (rangeState.priceMax !== null && u.total_price_egp   > rangeState.priceMax) return false;
-    if (rangeState.areaMin  !== null && u.built_up_area_sqm < rangeState.areaMin)  return false;
-    if (rangeState.areaMax  !== null && u.built_up_area_sqm > rangeState.areaMax)  return false;
-    if (rangeState.psmMin   !== null && u.price_per_sqm_egp < rangeState.psmMin)   return false;
-    if (rangeState.psmMax   !== null && u.price_per_sqm_egp > rangeState.psmMax)   return false;
-
-    if (u.delivery_from_months < delivFrom || u.delivery_to_months > delivTo) return false;
-    if (devFilter && u.developer_name !== devFilter)             return false;
-    if (discount  && (u.cash_discount_percent || 0) < discount)  return false;
-    if (freeClub  && u.club_fees?.toLowerCase()    !== 'free')   return false;
-    if (freePark  && u.parking_fees?.toLowerCase() !== 'free')   return false;
-
-    if (search) {
-      const hay = `${u.compound_name} ${u.developer_name} ${u.city_name} ${u.unit_type} ${u.finishing_type || ''}`.toLowerCase();
-      if (!hay.includes(search)) return false;
+    if(rangeState.priceMin!==null&&u.total_price_egp<rangeState.priceMin)return false;
+    if(rangeState.priceMax!==null&&u.total_price_egp>rangeState.priceMax)return false;
+    if(rangeState.areaMin!==null&&u.built_up_area_sqm<rangeState.areaMin)return false;
+    if(rangeState.areaMax!==null&&u.built_up_area_sqm>rangeState.areaMax)return false;
+    if(rangeState.psmMin!==null&&u.price_per_sqm_egp<rangeState.psmMin)return false;
+    if(rangeState.psmMax!==null&&u.price_per_sqm_egp>rangeState.psmMax)return false;
+    if(u.delivery_from_months<delivFrom||u.delivery_to_months>delivTo)return false;
+    if(devFilter&&u.developer_name!==devFilter)return false;
+    if(discount&&(u.cash_discount_percent||0)<discount)return false;
+    if(freeClub&&u.club_fees?.toLowerCase()!=='free')return false;
+    if(freePark&&u.parking_fees?.toLowerCase()!=='free')return false;
+    if(search){
+      const hay=`${u.compound_name} ${u.developer_name} ${u.city_name} ${u.unit_type} ${u.finishing_type||''}`.toLowerCase();
+      if(!hay.includes(search))return false;
     }
-
     return true;
   });
 
-  filteredData.sort((a, b) => {
-    if (sortMode === 'price_asc')     return a.total_price_egp - b.total_price_egp;
-    if (sortMode === 'price_desc')    return b.total_price_egp - a.total_price_egp;
-    if (sortMode === 'area_desc')     return b.built_up_area_sqm - a.built_up_area_sqm;
-    if (sortMode === 'psm_asc')       return a.price_per_sqm_egp - b.price_per_sqm_egp;
-    if (sortMode === 'discount_desc') return (b.cash_discount_percent || 0) - (a.cash_discount_percent || 0);
-    if (sortMode === 'delivery_asc')  return a.delivery_from_months - b.delivery_from_months;
+  filteredData.sort((a,b)=>{
+    if(sortMode==='price_asc')    return a.total_price_egp-b.total_price_egp;
+    if(sortMode==='price_desc')   return b.total_price_egp-a.total_price_egp;
+    if(sortMode==='area_desc')    return b.built_up_area_sqm-a.built_up_area_sqm;
+    if(sortMode==='psm_asc')      return a.price_per_sqm_egp-b.price_per_sqm_egp;
+    if(sortMode==='discount_desc')return (b.cash_discount_percent||0)-(a.cash_discount_percent||0);
+    if(sortMode==='delivery_asc') return a.delivery_from_months-b.delivery_from_months;
     return 0;
   });
 
-  currentBatchEnd = 50;
+  currentBatchEnd=50;
   renderCards();
   updateStats();
   updateTags();
@@ -1763,264 +1647,206 @@ function applyFilters() {
 // RENDER
 // ═══════════════════════════════════════════════════════════════════════════════
 function renderCards() {
-  const grid = document.getElementById('cardsGrid');
-  document.getElementById('resultNum').textContent = fmtNum(filteredData.length);
-
-  if (filteredData.length === 0) {
-    grid.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-icon">🔍</div>
-        <h3>No units found</h3>
-        <p>Try adjusting your filters to see more results</p>
-        <button class="btn-reset" onclick="resetFilters()" style="width:auto;margin-top:16px">Clear Filters</button>
-      </div>`;
+  const grid=g('cardsGrid');
+  g('resultNum').textContent=fmtNum(filteredData.length);
+  if(!filteredData.length){
+    grid.innerHTML=`<div class="empty-state"><div class="empty-icon">🔍</div><h3>No units found</h3><p>Try adjusting your filters</p><button class="btn-reset" id="clearFiltersBtn" style="width:auto;margin-top:16px">Clear Filters</button></div>`;
+    g('clearFiltersBtn')?.addEventListener('click', resetFilters);
     return;
   }
-
-  grid.innerHTML = filteredData.slice(0, 50).map((u, i) => renderCard(u, i)).join('');
-
-  if (filteredData.length > 50) {
-    const rem = filteredData.length - 50;
-    grid.innerHTML += `
-      <div class="empty-state" id="loadMoreCard"
-        style="background:var(--surface2);border-radius:16px;border:1px dashed var(--border)">
-        <div style="font-size:24px">📦</div>
-        <h3 style="font-size:16px">${fmtNum(rem)} more units</h3>
-        <button class="btn-reset" onclick="loadMoreUnits()" style="width:auto;margin-top:12px">Show More</button>
-      </div>`;
+  grid.innerHTML=filteredData.slice(0,50).map((u,i)=>renderCard(u,i)).join('');
+  if(filteredData.length>50){
+    const rem=filteredData.length-50;
+    grid.innerHTML+=`<div class="empty-state" id="loadMoreCard" style="background:var(--surface2);border-radius:16px;border:1px dashed var(--border)"><div style="font-size:24px">📦</div><h3 style="font-size:16px">${fmtNum(rem)} more units</h3><button class="btn-reset" id="loadMoreBtn" style="width:auto;margin-top:12px">Show More</button></div>`;
+    g('loadMoreBtn')?.addEventListener('click', loadMoreUnits);
   }
 }
 
-function renderCard(u, i) {
-  return `
-    <div class="unit-card" style="animation-delay:${(i % 50) * 0.02}s">
-      <div class="card-header">
-        <div class="compound-name">${u.compound_name}</div>
-        <div class="unit-type-badge">${u.unit_type}</div>
-      </div>
-      <div class="card-meta">
-        <div class="meta-chip">📍 <strong>${u.city_name}</strong></div>
-        <div class="meta-chip">🏗️ <strong>${u.developer_name}</strong></div>
-        <div class="meta-chip">🛏️ <strong>${u.bedrooms} BR</strong></div>
-        <div class="meta-chip">📐 <strong>${u.built_up_area_sqm} m²</strong></div>
-        ${u.outdoor_area && u.outdoor_area !== '0' ? `<div class="meta-chip">🌿 <strong>${u.outdoor_area}</strong></div>` : ''}
-        ${u.finishing_type ? `<div class="meta-chip">🎨 <strong>${u.finishing_type}</strong></div>` : ''}
-      </div>
-      <div class="card-price">
-        <div class="price-main">
-          <small>Total Price</small>
-          ${fmtMillion(u.total_price_egp)} EGP
-        </div>
-        <div class="price-psm">
-          ${fmtNum(Math.round(u.price_per_sqm_egp))} EGP/m²
-          <small>per sqm</small>
-        </div>
-      </div>
-      <div class="card-footer">
-        <div class="card-detail">
-          <strong>${u.cash_price_from_egp ? fmtMillion(u.cash_price_from_egp) : '—'}</strong>
-          Cash Price
-        </div>
-        <div class="card-detail">
-          <strong>${u.cash_discount_percent || 0}%</strong>
-          Discount
-        </div>
-        <div class="card-detail">
-          <strong>${u.delivery_from_months}–${u.delivery_to_months}mo</strong>
-          Delivery
-        </div>
-        <div class="card-detail">
-          <strong>${u.club_fees === 'Free' ? '✓ Free' : (u.club_fees || '—')}</strong>
-          Club
-        </div>
-      </div>
-      ${u.payment_plan
-        ? `<div style="margin-top:10px;font-size:11px;color:var(--muted);border-top:1px solid var(--border);padding-top:8px">💳 ${u.payment_plan}</div>`
-        : ''}
-    </div>`;
+function renderCard(u,i) {
+  return `<div class="unit-card" style="animation-delay:${(i%50)*0.02}s">
+    <div class="card-header">
+      <div class="compound-name">${u.compound_name}</div>
+      <div class="unit-type-badge">${u.unit_type}</div>
+    </div>
+    <div class="card-meta">
+      <div class="meta-chip">📍 <strong>${u.city_name}</strong></div>
+      <div class="meta-chip">🏗️ <strong>${u.developer_name}</strong></div>
+      <div class="meta-chip">🛏️ <strong>${u.bedrooms} BR</strong></div>
+      <div class="meta-chip">📐 <strong>${u.built_up_area_sqm} m²</strong></div>
+      ${u.outdoor_area&&u.outdoor_area!=='0'?`<div class="meta-chip">🌿 <strong>${u.outdoor_area}</strong></div>`:''}
+      ${u.finishing_type?`<div class="meta-chip">🎨 <strong>${u.finishing_type}</strong></div>`:''}
+    </div>
+    <div class="card-price">
+      <div class="price-main"><small>Total Price</small>${fmtMillion(u.total_price_egp)} EGP</div>
+      <div class="price-psm">${fmtNum(Math.round(u.price_per_sqm_egp))} EGP/m²<small>per sqm</small></div>
+    </div>
+    <div class="card-footer">
+      <div class="card-detail"><strong>${u.cash_price_from_egp?fmtMillion(u.cash_price_from_egp):'—'}</strong>Cash Price</div>
+      <div class="card-detail"><strong>${u.cash_discount_percent||0}%</strong>Discount</div>
+      <div class="card-detail"><strong>${u.delivery_from_months}–${u.delivery_to_months}mo</strong>Delivery</div>
+      <div class="card-detail"><strong>${u.club_fees==='Free'?'✓ Free':(u.club_fees||'—')}</strong>Club</div>
+    </div>
+    ${u.payment_plan?`<div style="margin-top:10px;font-size:11px;color:var(--muted);border-top:1px solid var(--border);padding-top:8px">💳 ${u.payment_plan}</div>`:''}
+  </div>`;
 }
 
 function loadMoreUnits() {
-  const grid = document.getElementById('cardsGrid');
-  document.getElementById('loadMoreCard')?.remove();
-  filteredData.slice(currentBatchEnd, currentBatchEnd + 50).forEach((u, i) => {
-    grid.insertAdjacentHTML('beforeend', renderCard(u, i));
+  const grid=g('cardsGrid');
+  g('loadMoreCard')?.remove();
+  filteredData.slice(currentBatchEnd,currentBatchEnd+50).forEach((u,i)=>{
+    grid.insertAdjacentHTML('beforeend',renderCard(u,i));
   });
-  currentBatchEnd += 50;
-  if (currentBatchEnd < filteredData.length) {
-    const rem = filteredData.length - currentBatchEnd;
-    grid.insertAdjacentHTML('beforeend', `
-      <div class="empty-state" id="loadMoreCard"
-        style="background:var(--surface2);border-radius:16px;border:1px dashed var(--border)">
-        <div style="font-size:24px">📦</div>
-        <h3 style="font-size:16px">${fmtNum(rem)} more units</h3>
-        <button class="btn-reset" onclick="loadMoreUnits()" style="width:auto;margin-top:12px">Show More</button>
-      </div>`);
+  currentBatchEnd+=50;
+  if(currentBatchEnd<filteredData.length){
+    const rem=filteredData.length-currentBatchEnd;
+    grid.insertAdjacentHTML('beforeend',`<div class="empty-state" id="loadMoreCard" style="background:var(--surface2);border-radius:16px;border:1px dashed var(--border)"><div style="font-size:24px">📦</div><h3 style="font-size:16px">${fmtNum(rem)} more units</h3><button class="btn-reset" id="loadMoreBtn" style="width:auto;margin-top:12px">Show More</button></div>`);
+    g('loadMoreBtn')?.addEventListener('click',loadMoreUnits);
   }
 }
 
 function updateStats() {
-  const prices = filteredData.map(d => d.total_price_egp).filter(Boolean);
-  const avg = prices.length ? prices.reduce((a, b) => a + b, 0) / prices.length : 0;
-  const filtered = fmtNum(filteredData.length);
-  const avgFmt = avg ? fmtMillion(avg) : '—';
-
-  document.getElementById('filteredCount').textContent      = filtered;
-  document.getElementById('avgPrice').textContent           = avgFmt;
-  document.getElementById('filteredCountMobile').textContent = filtered;
-  document.getElementById('avgPriceMobile').textContent      = avgFmt;
+  const prices=filteredData.map(d=>d.total_price_egp).filter(Boolean);
+  const avg=prices.length?prices.reduce((a,b)=>a+b,0)/prices.length:0;
+  const filtered=fmtNum(filteredData.length), avgFmt=avg?fmtMillion(avg):'—';
+  g('filteredCount').textContent=g('filteredCountMobile').textContent=filtered;
+  g('avgPrice').textContent=g('avgPriceMobile').textContent=avgFmt;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ACTIVE FILTER TAGS
 // ═══════════════════════════════════════════════════════════════════════════════
 function updateTags() {
-  const tags = [];
+  const tags=[];
+  [...activeFilters.cities].forEach(c=>tags.push({label:`📍 ${c}`,clear:()=>{activeFilters.cities.delete(c);applyFilters();}}));
+  [...activeFilters.unitTypes].forEach(t=>tags.push({label:`🏠 ${t}`,clear:()=>{activeFilters.unitTypes.delete(t);applyFilters();}}));
+  [...activeFilters.finishing].forEach(f=>tags.push({label:`🎨 ${f}`,clear:()=>{activeFilters.finishing.delete(f);applyFilters();}}));
+  if(activeFilters.bedrooms!=='any')tags.push({label:`🛏️ ${activeFilters.bedrooms}+ BR`,clear:()=>{activeFilters.bedrooms='any';document.querySelectorAll('#bedroomsFilter .pill').forEach(p=>p.classList.remove('active'));document.querySelector('#bedroomsFilter .pill').classList.add('active-green');applyFilters();}});
+  if(rangeState.priceMin!==null||rangeState.priceMax!==null)tags.push({label:`💰 ${rangeState.priceMin?fmtMillion(rangeState.priceMin):'0'} → ${rangeState.priceMax?fmtMillion(rangeState.priceMax):'∞'}`,clear:()=>{rangeState.priceMin=null;rangeState.priceMax=null;['priceMinInput','priceMaxInput'].forEach(id=>g(id).value='');g('priceMinHint').textContent='—';g('priceMaxHint').textContent='—';g('priceSliderMin').value=0;g('priceSliderMax').value=1000;syncFill('priceFill','priceSliderMin','priceSliderMax');clearPresets('pricePresets');applyFilters();}});
+  if(rangeState.areaMin!==null||rangeState.areaMax!==null)tags.push({label:`📐 ${rangeState.areaMin||0}m² → ${rangeState.areaMax?rangeState.areaMax+'m²':'∞'}`,clear:()=>{rangeState.areaMin=null;rangeState.areaMax=null;['areaMinInput','areaMaxInput'].forEach(id=>g(id).value='');g('areaSliderMin').value=0;g('areaSliderMax').value=1000;syncFill('areaFill','areaSliderMin','areaSliderMax');applyFilters();}});
+  if(rangeState.psmMin!==null||rangeState.psmMax!==null)tags.push({label:`📊 ${rangeState.psmMin?fmtMillion(rangeState.psmMin):'0'}/m² → ${rangeState.psmMax?fmtMillion(rangeState.psmMax)+'/m²':'∞'}`,clear:()=>{rangeState.psmMin=null;rangeState.psmMax=null;['psmMinInput','psmMaxInput'].forEach(id=>g(id).value='');g('psmSliderMin').value=0;g('psmSliderMax').value=1000;syncFill('psmFill','psmSliderMin','psmSliderMax');applyFilters();}});
+  if(parseInt(g('discountSlider').value)>0)tags.push({label:`🎯 Min ${g('discountSlider').value}% off`,clear:()=>{g('discountSlider').value=0;g('discountVal').textContent='0%';applyFilters();}});
+  if(g('freeClub').checked)tags.push({label:'🏊 Free Club',clear:()=>{g('freeClub').checked=false;applyFilters();}});
+  if(g('freeParking').checked)tags.push({label:'🚗 Free Parking',clear:()=>{g('freeParking').checked=false;applyFilters();}});
+  if(g('developerFilter').value)tags.push({label:`🏗️ ${g('developerFilter').value}`,clear:()=>{g('developerFilter').value='';applyFilters();}});
+  const dFrom=g('deliveryFrom').value, dTo=g('deliveryTo').value;
+  if(dFrom||dTo)tags.push({label:`📅 Delivery ${dFrom||0}–${dTo||'∞'} mo`,clear:()=>{g('deliveryFrom').value='';g('deliveryTo').value='';clearDeliveryPresets();applyFilters();}});
+  if(g('hideSold').checked)tags.push({label:'🚫 Hiding Sold',clear:()=>{g('hideSold').checked=false;applyFilters();}});
 
-  [...activeFilters.cities].forEach(c =>
-    tags.push({ label: `📍 ${c}`, clear: () => { activeFilters.cities.delete(c); applyFilters(); }}));
-  [...activeFilters.unitTypes].forEach(t =>
-    tags.push({ label: `🏠 ${t}`, clear: () => { activeFilters.unitTypes.delete(t); applyFilters(); }}));
-  [...activeFilters.finishing].forEach(f =>
-    tags.push({ label: `🎨 ${f}`, clear: () => { activeFilters.finishing.delete(f); applyFilters(); }}));
-
-  if (activeFilters.bedrooms !== 'any')
-    tags.push({ label: `🛏️ ${activeFilters.bedrooms}+ BR`, clear: () => {
-      activeFilters.bedrooms = 'any';
-      document.querySelectorAll('#bedroomsFilter .pill').forEach(p => p.classList.remove('active'));
-      document.querySelector('#bedroomsFilter .pill').classList.add('active-green');
-      applyFilters();
-    }});
-
-  if (rangeState.priceMin !== null || rangeState.priceMax !== null)
-    tags.push({ label: `💰 ${rangeState.priceMin ? fmtMillion(rangeState.priceMin) : '0'} → ${rangeState.priceMax ? fmtMillion(rangeState.priceMax) : '∞'}`,
-      clear: () => {
-        rangeState.priceMin = null; rangeState.priceMax = null;
-        ['priceMinInput','priceMaxInput'].forEach(id => document.getElementById(id).value = '');
-        document.getElementById('priceMinHint').textContent = '—';
-        document.getElementById('priceMaxHint').textContent = '—';
-        document.getElementById('priceSliderMin').value = 0;
-        document.getElementById('priceSliderMax').value = 1000;
-        syncFill('priceFill','priceSliderMin','priceSliderMax');
-        clearPresets('pricePresets');
-        applyFilters();
-      }});
-
-  if (rangeState.areaMin !== null || rangeState.areaMax !== null)
-    tags.push({ label: `📐 ${rangeState.areaMin || 0}m² → ${rangeState.areaMax ? rangeState.areaMax + 'm²' : '∞'}`,
-      clear: () => {
-        rangeState.areaMin = null; rangeState.areaMax = null;
-        ['areaMinInput','areaMaxInput'].forEach(id => document.getElementById(id).value = '');
-        document.getElementById('areaSliderMin').value = 0;
-        document.getElementById('areaSliderMax').value = 1000;
-        syncFill('areaFill','areaSliderMin','areaSliderMax');
-        applyFilters();
-      }});
-
-  if (rangeState.psmMin !== null || rangeState.psmMax !== null)
-    tags.push({ label: `📊 ${rangeState.psmMin ? fmtMillion(rangeState.psmMin) : '0'}/m² → ${rangeState.psmMax ? fmtMillion(rangeState.psmMax) + '/m²' : '∞'}`,
-      clear: () => {
-        rangeState.psmMin = null; rangeState.psmMax = null;
-        ['psmMinInput','psmMaxInput'].forEach(id => document.getElementById(id).value = '');
-        document.getElementById('psmSliderMin').value = 0;
-        document.getElementById('psmSliderMax').value = 1000;
-        syncFill('psmFill','psmSliderMin','psmSliderMax');
-        applyFilters();
-      }});
-
-  if (parseInt(document.getElementById('discountSlider').value) > 0)
-    tags.push({ label: `🎯 Min ${document.getElementById('discountSlider').value}% off`,
-      clear: () => { document.getElementById('discountSlider').value = 0; document.getElementById('discountVal').textContent = '0%'; applyFilters(); }});
-
-  if (document.getElementById('freeClub').checked)
-    tags.push({ label: '🏊 Free Club', clear: () => { document.getElementById('freeClub').checked = false; applyFilters(); }});
-
-  if (document.getElementById('freeParking').checked)
-    tags.push({ label: '🚗 Free Parking', clear: () => { document.getElementById('freeParking').checked = false; applyFilters(); }});
-
-  if (document.getElementById('developerFilter').value)
-    tags.push({ label: `🏗️ ${document.getElementById('developerFilter').value}`,
-      clear: () => { document.getElementById('developerFilter').value = ''; applyFilters(); }});
-
-  const dFrom = document.getElementById('deliveryFrom').value;
-  const dTo   = document.getElementById('deliveryTo').value;
-  if (dFrom || dTo)
-    tags.push({ label: `📅 Delivery ${dFrom || 0}–${dTo || '∞'} mo`,
-      clear: () => { document.getElementById('deliveryFrom').value = ''; document.getElementById('deliveryTo').value = ''; clearDeliveryPresets(); applyFilters(); }});
-
-  if (document.getElementById('hideSold').checked)
-    tags.push({ label: '🚫 Hiding Sold', clear: () => { document.getElementById('hideSold').checked = false; applyFilters(); }});
-
-  const container = document.getElementById('activeTags');
-  container.innerHTML = tags.map((t, i) => `
-    <div class="filter-tag">
-      ${t.label}
-      <button onclick="clearTag(${i})">×</button>
-    </div>`).join('');
-  window._tagClears = tags.map(t => t.clear);
+  const container=g('activeTags');
+  container.innerHTML=tags.map((t,i)=>`<div class="filter-tag">${t.label}<button data-tag="${i}">×</button></div>`).join('');
+  window._tagClears=tags.map(t=>t.clear);
+  container.querySelectorAll('button[data-tag]').forEach(btn=>{
+    btn.addEventListener('click',()=>window._tagClears[parseInt(btn.dataset.tag)]());
+  });
 }
-
-function clearTag(i) { window._tagClears[i](); }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // RESET
 // ═══════════════════════════════════════════════════════════════════════════════
 function resetFilters() {
-  activeFilters.cities.clear();
-  activeFilters.unitTypes.clear();
-  activeFilters.finishing.clear();
-  activeFilters.bedrooms = 'any';
-
-  Object.assign(rangeState, { priceMin:null, priceMax:null, areaMin:null, areaMax:null, psmMin:null, psmMax:null });
-
-  ['priceMinInput','priceMaxInput','areaMinInput','areaMaxInput','psmMinInput','psmMaxInput']
-    .forEach(id => document.getElementById(id).value = '');
-  ['priceMinHint','priceMaxHint']
-    .forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '—'; });
-  ['priceSliderMin','priceSliderMax','areaSliderMin','areaSliderMax','psmSliderMin','psmSliderMax']
-    .forEach(id => document.getElementById(id).value = id.includes('Min') ? 0 : 1000);
-
+  activeFilters.cities.clear(); activeFilters.unitTypes.clear(); activeFilters.finishing.clear(); activeFilters.bedrooms='any';
+  Object.assign(rangeState,{priceMin:null,priceMax:null,areaMin:null,areaMax:null,psmMin:null,psmMax:null});
+  ['priceMinInput','priceMaxInput','areaMinInput','areaMaxInput','psmMinInput','psmMaxInput'].forEach(id=>g(id).value='');
+  ['priceMinHint','priceMaxHint'].forEach(id=>{const el=g(id);if(el)el.textContent='—';});
+  ['priceSliderMin','priceSliderMax','areaSliderMin','areaSliderMax','psmSliderMin','psmSliderMax'].forEach(id=>g(id).value=id.includes('Min')?0:1000);
   syncFill('priceFill','priceSliderMin','priceSliderMax');
-  syncFill('areaFill', 'areaSliderMin', 'areaSliderMax');
-  syncFill('psmFill',  'psmSliderMin',  'psmSliderMax');
-
-  document.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active'));
-  document.getElementById('discountSlider').value = 0;
-  document.getElementById('discountVal').textContent = '0%';
-  document.getElementById('deliveryFrom').value = '';
-  document.getElementById('deliveryTo').value   = '';
-  document.getElementById('developerFilter').value = '';
-  document.getElementById('freeClub').checked    = false;
-  document.getElementById('freeParking').checked = false;
-  document.getElementById('hideSold').checked    = false;
-  document.getElementById('searchInput').value   = '';
-  document.getElementById('searchInputMobile').value = '';
-  document.getElementById('searchClear').classList.remove('visible');
-  document.getElementById('searchClearMobile').style.opacity = '0';
-
-  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active','active-green'));
-  document.querySelectorAll('.pill-group .pill:first-child').forEach(p => p.classList.add('active-green'));
-
+  syncFill('areaFill','areaSliderMin','areaSliderMax');
+  syncFill('psmFill','psmSliderMin','psmSliderMax');
+  document.querySelectorAll('.preset-chip').forEach(c=>c.classList.remove('active'));
+  g('discountSlider').value=0; g('discountVal').textContent='0%';
+  g('deliveryFrom').value=''; g('deliveryTo').value='';
+  g('developerFilter').value='';
+  g('freeClub').checked=false; g('freeParking').checked=false; g('hideSold').checked=false;
+  g('searchInput').value=''; g('searchInputMobile').value='';
+  g('searchClear').classList.remove('visible'); g('searchClearMobile').style.opacity='0';
+  document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active','active-green'));
+  document.querySelectorAll('.pill-group .pill:first-child').forEach(p=>p.classList.add('active-green'));
   applyFilters();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SEARCH DEBOUNCE
+// WIRE UP ALL EVENT LISTENERS — بعد DOM اتحمل
 // ═══════════════════════════════════════════════════════════════════════════════
-let searchTimer;
-document.getElementById('searchInput').addEventListener('input', () => {
-  clearTimeout(searchTimer);
-  searchTimer = setTimeout(applyFilters, 200);
-});
-document.getElementById('searchInputMobile').addEventListener('input', () => {
-  clearTimeout(searchTimer);
-  searchTimer = setTimeout(applyFilters, 200);
+document.addEventListener('DOMContentLoaded', () => {
+  // Sidebar controls
+  g('hamburgerBtn').addEventListener('click', toggleSidebar);
+  g('sidebarOverlay').addEventListener('click', closeSidebar);
+  g('sidebarCloseBtn').addEventListener('click', closeSidebar);
+  g('resetBtn').addEventListener('click', resetFilters);
+
+  // Search
+  g('searchClear').addEventListener('click', clearSearch);
+  g('searchClearMobile').addEventListener('click', clearSearchMobile);
+  let searchTimer;
+  g('searchInput').addEventListener('input', ()=>{ clearTimeout(searchTimer); searchTimer=setTimeout(applyFilters,200); });
+  g('searchInputMobile').addEventListener('input', ()=>{ clearTimeout(searchTimer); searchTimer=setTimeout(applyFilters,200); });
+
+  // Price sliders & inputs
+  g('priceSliderMin').addEventListener('input', onPriceSliderChange);
+  g('priceSliderMax').addEventListener('input', onPriceSliderChange);
+  g('priceMinInput').addEventListener('input', onPriceInputChange);
+  g('priceMaxInput').addEventListener('input', onPriceInputChange);
+
+  // Area sliders & inputs
+  g('areaSliderMin').addEventListener('input', onAreaSliderChange);
+  g('areaSliderMax').addEventListener('input', onAreaSliderChange);
+  g('areaMinInput').addEventListener('input', onAreaInputChange);
+  g('areaMaxInput').addEventListener('input', onAreaInputChange);
+
+  // PSM sliders & inputs
+  g('psmSliderMin').addEventListener('input', onPsmSliderChange);
+  g('psmSliderMax').addEventListener('input', onPsmSliderChange);
+  g('psmMinInput').addEventListener('input', onPsmInputChange);
+  g('psmMaxInput').addEventListener('input', onPsmInputChange);
+
+  // Discount slider
+  g('discountSlider').addEventListener('input', ()=>{ g('discountVal').textContent=g('discountSlider').value+'%'; applyFilters(); });
+
+  // Toggles & select
+  ['freeClub','freeParking','hideSold'].forEach(id=>g(id).addEventListener('change', applyFilters));
+  g('developerFilter').addEventListener('change', applyFilters);
+
+  // Delivery inputs
+  g('deliveryFrom').addEventListener('input', ()=>{ clearDeliveryPresets(); applyFilters(); });
+  g('deliveryTo').addEventListener('input', ()=>{ clearDeliveryPresets(); applyFilters(); });
+
+  // Sort buttons
+  document.querySelectorAll('.sort-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>setSort(btn.dataset.sort, btn));
+  });
+
+  // Bedrooms pills
+  document.querySelectorAll('#bedroomsFilter .pill').forEach(pill=>{
+    pill.addEventListener('click', ()=>filterBed(pill, pill.dataset.bed));
+  });
+
+  // Price preset chips
+  document.querySelectorAll('#pricePresets .preset-chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      const min=parseFloat(chip.dataset.priceMin), max=parseFloat(chip.dataset.priceMax);
+      setPricePreset(min, max, chip.dataset.label);
+    });
+  });
+
+  // Area preset chips
+  document.querySelectorAll('.area-preset').forEach(chip=>{
+    chip.addEventListener('click', ()=>setAreaPreset(parseFloat(chip.dataset.min), parseFloat(chip.dataset.max)));
+  });
+
+  // PSM preset chips
+  document.querySelectorAll('.psm-preset').forEach(chip=>{
+    chip.addEventListener('click', ()=>setPsmPreset(parseFloat(chip.dataset.min), parseFloat(chip.dataset.max)));
+  });
+
+  // Delivery preset chips
+  document.querySelectorAll('.delivery-preset').forEach(chip=>{
+    chip.addEventListener('click', ()=>setDelivery(chip, parseFloat(chip.dataset.from), parseFloat(chip.dataset.to)));
+  });
+
+  // Start loading data
+  loadData();
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// START
-// ═══════════════════════════════════════════════════════════════════════════════
-loadData();
 </script>
 </body>
 </html>
