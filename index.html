@@ -48,6 +48,7 @@
     z-index: 0;
   }
 
+  /* ═══ DESKTOP LAYOUT ═══ */
   .app {
     position: relative;
     z-index: 1;
@@ -57,51 +58,61 @@
     min-height: 100vh;
   }
 
+  /* ═══ HEADER ═══ */
   header {
     grid-column: 1 / -1;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 20px 32px;
+    padding: 16px 24px;
     border-bottom: 1px solid var(--border);
-    background: rgba(10,10,15,0.8);
+    background: rgba(10,10,15,0.9);
     backdrop-filter: blur(20px);
     position: sticky; top: 0; z-index: 100;
+    gap: 16px;
   }
 
   .logo {
-    display: flex; align-items: center; gap: 12px;
+    display: flex; align-items: center; gap: 10px;
+    flex-shrink: 0;
   }
   .logo-icon {
-    width: 36px; height: 36px;
+    width: 34px; height: 34px;
     background: linear-gradient(135deg, var(--accent), var(--accent2));
     border-radius: 10px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
+    font-size: 17px;
   }
   .logo-text {
     font-family: 'Syne', sans-serif;
     font-weight: 800;
-    font-size: 20px;
+    font-size: 18px;
     letter-spacing: -0.5px;
   }
   .logo-text span { color: var(--accent); }
 
   .header-stats {
-    display: flex; gap: 32px;
+    display: flex; gap: 20px;
+    flex-shrink: 0;
   }
   .stat { text-align: center; }
   .stat-value {
     font-family: 'Syne', sans-serif;
     font-weight: 700;
-    font-size: 20px;
+    font-size: 18px;
     color: var(--accent3);
   }
   .stat-label {
-    font-size: 11px;
+    font-size: 10px;
     color: var(--muted);
     text-transform: uppercase;
     letter-spacing: 0.8px;
+  }
+
+  .header-right {
+    display: flex; align-items: center; gap: 10px;
+    flex: 1;
+    justify-content: flex-end;
   }
 
   .header-search {
@@ -109,8 +120,8 @@
     background: var(--surface2);
     border: 1px solid var(--border);
     border-radius: 12px;
-    padding: 10px 16px;
-    width: 280px;
+    padding: 10px 14px;
+    width: 260px;
     transition: border-color 0.2s;
     position: relative;
   }
@@ -129,13 +140,42 @@
   }
   .search-clear.visible { opacity: 1; }
 
-  /* ── SIDEBAR ── */
+  /* Mobile filter toggle button */
+  .mobile-filter-btn {
+    display: none;
+    align-items: center; gap: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .mobile-filter-btn:hover, .mobile-filter-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .mobile-filter-btn .filter-count {
+    background: var(--accent);
+    color: #fff;
+    border-radius: 10px;
+    font-size: 11px;
+    padding: 1px 7px;
+    font-weight: 700;
+  }
+
+  /* ═══ SIDEBAR ═══ */
   .sidebar {
     border-right: 1px solid var(--border);
     padding: 20px;
     overflow-y: auto;
-    max-height: calc(100vh - 77px);
-    position: sticky; top: 77px;
+    max-height: calc(100vh - 73px);
+    position: sticky; top: 73px;
     scrollbar-width: thin;
     scrollbar-color: var(--border) transparent;
   }
@@ -155,9 +195,27 @@
     height: 1px; background: var(--border);
   }
 
-  .filter-section {
-    margin-bottom: 22px;
+  /* Mobile sidebar close btn */
+  .sidebar-close-btn {
+    display: none;
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 12px;
+    cursor: pointer;
+    margin-bottom: 16px;
+    transition: all 0.2s;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
   }
+  .sidebar-close-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  .filter-section { margin-bottom: 22px; }
 
   .filter-label {
     font-size: 11px;
@@ -185,7 +243,7 @@
     margin-bottom: 12px;
   }
   .preset-chip {
-    padding: 3px 9px;
+    padding: 4px 10px;
     border-radius: 16px;
     border: 1px solid var(--border);
     background: transparent;
@@ -264,7 +322,7 @@
   }
   .slider-wrap input[type=range]::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 18px; height: 18px;
+    width: 20px; height: 20px;
     border-radius: 50%;
     background: var(--accent);
     border: 3px solid var(--bg);
@@ -276,9 +334,6 @@
   .slider-wrap input[type=range]::-webkit-slider-thumb:hover {
     transform: scale(1.25);
     box-shadow: 0 0 0 4px rgba(124,109,255,0.3);
-  }
-  .slider-wrap input[type=range]::-webkit-slider-thumb:active {
-    transform: scale(1.1);
   }
 
   .scale-markers {
@@ -426,11 +481,11 @@
   .toggle input:checked + .toggle-slider { background: var(--accent); border-color: var(--accent); }
   .toggle input:checked + .toggle-slider::after { left: 21px; background: #fff; }
 
-  /* ── MAIN ── */
+  /* ═══ MAIN ═══ */
   .main {
     padding: 24px;
     overflow-y: auto;
-    max-height: calc(100vh - 77px);
+    max-height: calc(100vh - 73px);
   }
 
   .results-header {
@@ -441,7 +496,7 @@
 
   .results-count {
     font-family: 'Syne', sans-serif;
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 700;
   }
   .results-count span { color: var(--accent); }
@@ -636,6 +691,174 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* Mobile overlay backdrop */
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .sidebar-overlay.open {
+    opacity: 1;
+  }
+
+  /* ═══════════════════════════════
+     MOBILE RESPONSIVE — ≤ 768px
+  ═══════════════════════════════ */
+  @media (max-width: 768px) {
+    /* Header goes single line mobile */
+    header {
+      padding: 12px 16px;
+      flex-wrap: nowrap;
+      gap: 10px;
+    }
+    .header-stats { display: none; }
+    .logo-text { font-size: 16px; }
+    .logo-icon { width: 30px; height: 30px; font-size: 15px; }
+    .header-right {
+      flex: 1;
+      gap: 8px;
+    }
+    .header-search {
+      flex: 1;
+      width: auto;
+      min-width: 0;
+      padding: 9px 12px;
+    }
+    .header-search input { font-size: 13px; }
+    .mobile-filter-btn { display: flex; }
+
+    /* App goes single column */
+    .app {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto 1fr;
+    }
+
+    /* Sidebar becomes sliding drawer */
+    .sidebar {
+      position: fixed;
+      top: 0; left: 0;
+      width: min(340px, 90vw);
+      height: 100vh;
+      max-height: 100vh;
+      z-index: 300;
+      border-right: 1px solid var(--border);
+      background: var(--bg);
+      transform: translateX(-105%);
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 0 20px 20px 0;
+      overflow-y: auto;
+      padding: 16px;
+      padding-top: 0;
+    }
+    .sidebar.open {
+      transform: translateX(0);
+    }
+    .sidebar-overlay { display: block; }
+
+    .sidebar-close-btn {
+      display: flex;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--bg);
+      margin-bottom: 16px;
+      padding: 14px 12px;
+      margin-left: -16px;
+      margin-right: -16px;
+      border-radius: 0;
+      border-left: none;
+      border-right: none;
+      border-top: none;
+    }
+
+    /* Main takes full width */
+    .main {
+      max-height: none;
+      padding: 16px;
+      overflow-y: visible;
+    }
+
+    /* Results header stacks */
+    .results-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .results-count { font-size: 17px; }
+
+    /* Sort buttons become scrollable row */
+    .sort-controls {
+      overflow-x: auto;
+      flex-wrap: nowrap;
+      padding-bottom: 4px;
+      width: 100%;
+      scrollbar-width: none;
+    }
+    .sort-controls::-webkit-scrollbar { display: none; }
+    .sort-btn { flex-shrink: 0; }
+
+    /* Cards full width on small screens */
+    .cards-grid {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    /* Active filter tags scrollable */
+    .active-filters {
+      overflow-x: auto;
+      flex-wrap: nowrap;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+    }
+    .active-filters::-webkit-scrollbar { display: none; }
+
+    /* Mobile stat bar below header */
+    .mobile-stats-bar {
+      display: flex;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 16px;
+      gap: 0;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .mobile-stats-bar .stat {
+      flex: 1;
+      min-width: 70px;
+      border-right: 1px solid var(--border);
+      padding: 0 8px;
+      text-align: center;
+    }
+    .mobile-stats-bar .stat:last-child { border-right: none; }
+    .mobile-stats-bar .stat-value { font-size: 16px; }
+    .mobile-stats-bar .stat-label { font-size: 9px; }
+
+    /* Card footer wrap on mobile */
+    .card-footer { flex-wrap: wrap; }
+    .card-detail { min-width: calc(50% - 3px); flex: none; }
+  }
+
+  /* Small phones ≤ 380px */
+  @media (max-width: 380px) {
+    .card-footer { flex-direction: column; }
+    .card-detail { flex: none; min-width: 100%; }
+  }
+
+  /* Medium screens - 2 columns for cards */
+  @media (min-width: 769px) and (max-width: 1100px) {
+    .cards-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  /* Hide mobile stats bar on desktop */
+  .mobile-stats-bar { display: none; }
+
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
@@ -671,15 +894,50 @@
       </div>
     </div>
 
-    <div class="header-search">
-      <span>🔍</span>
-      <input type="text" id="searchInput" placeholder="Compound, developer, area..." autocomplete="off">
-      <button class="search-clear" id="searchClear" onclick="clearSearch()">×</button>
+    <div class="header-right">
+      <div class="header-search">
+        <span>🔍</span>
+        <input type="text" id="searchInput" placeholder="Compound, developer, area..." autocomplete="off">
+        <button class="search-clear" id="searchClear" onclick="clearSearch()">×</button>
+      </div>
+      <button class="mobile-filter-btn" id="mobileFilterBtn" onclick="toggleSidebar()">
+        ⚙️ Filters
+        <span class="filter-count" id="filterCount" style="display:none">0</span>
+      </button>
     </div>
   </header>
 
+  <!-- Mobile stats bar (shown only on mobile) -->
+  <div class="mobile-stats-bar">
+    <div class="stat">
+      <div class="stat-value" id="totalCountMobile">—</div>
+      <div class="stat-label">Total</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="filteredCountMobile">—</div>
+      <div class="stat-label">Found</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="avgPriceMobile">—</div>
+      <div class="stat-label">Avg</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="compoundCountMobile">—</div>
+      <div class="stat-label">Compounds</div>
+    </div>
+  </div>
+
+  <!-- Sidebar overlay (mobile) -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
   <!-- ═══ SIDEBAR ═══ -->
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
+
+    <!-- Mobile close button -->
+    <button class="sidebar-close-btn" onclick="closeSidebar()">
+      ← Close Filters
+    </button>
+
     <div class="sidebar-title">Filters</div>
 
     <!-- CITY -->
@@ -725,19 +983,18 @@
         <div class="range-inputs">
           <div class="range-manual-input">
             <label>Min</label>
-            <input type="number" id="priceMinInput" placeholder="e.g. 3000000" min="0" step="500000"
+            <input type="number" id="priceMinInput" placeholder="e.g. 3M" min="0" step="500000"
               oninput="onPriceInputChange()">
             <div class="unit-hint" id="priceMinHint">—</div>
           </div>
           <div class="range-sep-arrow">→</div>
           <div class="range-manual-input">
             <label>Max</label>
-            <input type="number" id="priceMaxInput" placeholder="e.g. 15000000" min="0" step="500000"
+            <input type="number" id="priceMaxInput" placeholder="e.g. 15M" min="0" step="500000"
               oninput="onPriceInputChange()">
             <div class="unit-hint" id="priceMaxHint">—</div>
           </div>
         </div>
-        <!-- Logarithmic dual slider -->
         <div class="slider-wrap">
           <div class="range-track-bg">
             <div class="range-fill" id="priceFill"
@@ -746,7 +1003,6 @@
           <input type="range" id="priceSliderMin" min="0" max="1000" value="0"   oninput="onPriceSliderChange()">
           <input type="range" id="priceSliderMax" min="0" max="1000" value="1000" oninput="onPriceSliderChange()">
         </div>
-        <!-- Scale reference marks: log scale 1M → 500M+ -->
         <div class="scale-markers">
           <span class="scale-marker">1M</span>
           <span class="scale-marker">5M</span>
@@ -906,6 +1162,13 @@
     </div>
 
     <button class="btn-reset" onclick="resetFilters()">↺ Reset All Filters</button>
+
+    <!-- Mobile apply button -->
+    <button class="btn-reset" onclick="closeSidebar()"
+      style="margin-top:8px;border-color:var(--accent);color:var(--accent);display:none"
+      id="mobileApplyBtn">
+      ✓ Apply & View Results
+    </button>
   </aside>
 
   <!-- ═══ MAIN ═══ -->
@@ -915,7 +1178,7 @@
         <span id="resultNum">—</span> units found
       </div>
       <div class="sort-controls">
-        <span style="font-size:12px;color:var(--muted)">Sort:</span>
+        <span style="font-size:12px;color:var(--muted);flex-shrink:0">Sort:</span>
         <button class="sort-btn active" onclick="setSort('price_asc',this)">Price ↑</button>
         <button class="sort-btn" onclick="setSort('price_desc',this)">Price ↓</button>
         <button class="sort-btn" onclick="setSort('area_desc',this)">Area ↓</button>
@@ -938,15 +1201,53 @@
 
 <script>
 // ═══════════════════════════════════════════════════════════════════════════════
-// SCALE CONFIG
-// Price: logarithmic 1M → 500M+ (10^6 to 10^8.7 ≈ 500M)
+// MOBILE SIDEBAR TOGGLE
 // ═══════════════════════════════════════════════════════════════════════════════
-const PRICE_LOG_MIN = 6;       // 10^6  = 1,000,000
-const PRICE_LOG_MAX = 8.699;   // 10^8.699 ≈ 500,000,000
+function toggleSidebar() {
+  const sidebar  = document.getElementById('sidebar');
+  const overlay  = document.getElementById('sidebarOverlay');
+  const applyBtn = document.getElementById('mobileApplyBtn');
+  const isMobile = window.innerWidth <= 768;
 
-const AREA_LINEAR_MAX = 1000;  // sqm max for slider
-const PSM_LOG_MIN = 4;         // 10^4 = 10,000
-const PSM_LOG_MAX = 6.3;       // 10^6.3 ≈ 2,000,000
+  if (!isMobile) return;
+
+  sidebar.classList.toggle('open');
+  overlay.classList.toggle('open');
+  applyBtn.style.display = sidebar.classList.contains('open') ? 'block' : 'none';
+  document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
+}
+
+function closeSidebar() {
+  const sidebar  = document.getElementById('sidebar');
+  const overlay  = document.getElementById('sidebarOverlay');
+  sidebar.classList.remove('open');
+  overlay.classList.remove('open');
+  document.getElementById('mobileApplyBtn').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+// Handle resize - close mobile sidebar if resized to desktop
+window.addEventListener('resize', () => {
+  if (window.innerWidth > 768) closeSidebar();
+});
+
+// Show/hide mobile-specific elements
+function updateMobileVisibility() {
+  const isMobile = window.innerWidth <= 768;
+  const mobileStats = document.querySelector('.mobile-stats-bar');
+  if (mobileStats) mobileStats.style.display = isMobile ? 'flex' : 'none';
+}
+window.addEventListener('resize', updateMobileVisibility);
+updateMobileVisibility();
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SCALE CONFIG
+// ═══════════════════════════════════════════════════════════════════════════════
+const PRICE_LOG_MIN = 6;
+const PRICE_LOG_MAX = 8.699;
+const AREA_LINEAR_MAX = 1000;
+const PSM_LOG_MIN = 4;
+const PSM_LOG_MAX = 6.3;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // STATE
@@ -955,6 +1256,7 @@ let allData = [];
 let filteredData = [];
 let sortMode = 'price_asc';
 let currentBatchEnd = 50;
+let activeFilterCount = 0;
 
 const rangeState = {
   priceMin: null, priceMax: null,
@@ -981,7 +1283,6 @@ function priceToSlider(p) {
   const t = (Math.log10(p) - PRICE_LOG_MIN) / (PRICE_LOG_MAX - PRICE_LOG_MIN);
   return Math.round(Math.max(0, Math.min(1000, t * 1000)));
 }
-
 function sliderToPsm(v) {
   const t = v / 1000;
   return Math.round(Math.pow(10, PSM_LOG_MIN + t * (PSM_LOG_MAX - PSM_LOG_MIN)));
@@ -991,7 +1292,6 @@ function psmToSlider(p) {
   const t = (Math.log10(p) - PSM_LOG_MIN) / (PSM_LOG_MAX - PSM_LOG_MIN);
   return Math.round(Math.max(0, Math.min(1000, t * 1000)));
 }
-
 function sliderToArea(v) { return Math.round((v / 1000) * AREA_LINEAR_MAX); }
 function areaToSlider(a) { return Math.round((a / AREA_LINEAR_MAX) * 1000); }
 
@@ -1026,18 +1326,14 @@ function onPriceSliderChange() {
   const minS = document.getElementById('priceSliderMin');
   const maxS = document.getElementById('priceSliderMax');
   if (parseInt(minS.value) > parseInt(maxS.value)) minS.value = maxS.value;
-
   const minVal = sliderToPrice(parseInt(minS.value));
   const maxVal = sliderToPrice(parseInt(maxS.value));
-
   rangeState.priceMin = parseInt(minS.value) === 0    ? null : minVal;
   rangeState.priceMax = parseInt(maxS.value) === 1000 ? null : maxVal;
-
   document.getElementById('priceMinInput').value = rangeState.priceMin || '';
   document.getElementById('priceMaxInput').value = rangeState.priceMax || '';
   document.getElementById('priceMinHint').textContent = rangeState.priceMin ? fmtMillion(minVal) : '—';
   document.getElementById('priceMaxHint').textContent = rangeState.priceMax ? fmtMillion(maxVal) : '—';
-
   clearPresets('pricePresets');
   syncFill('priceFill', 'priceSliderMin', 'priceSliderMax');
   applyFilters();
@@ -1046,15 +1342,12 @@ function onPriceSliderChange() {
 function onPriceInputChange() {
   const minRaw = parseFloat(document.getElementById('priceMinInput').value);
   const maxRaw = parseFloat(document.getElementById('priceMaxInput').value);
-
   rangeState.priceMin = isNaN(minRaw) || minRaw <= 0 ? null : minRaw;
   rangeState.priceMax = isNaN(maxRaw) || maxRaw <= 0 ? null : maxRaw;
-
   document.getElementById('priceMinHint').textContent = rangeState.priceMin ? fmtMillion(rangeState.priceMin) : '—';
   document.getElementById('priceMaxHint').textContent = rangeState.priceMax ? fmtMillion(rangeState.priceMax) : '—';
   document.getElementById('priceSliderMin').value = rangeState.priceMin ? priceToSlider(rangeState.priceMin) : 0;
   document.getElementById('priceSliderMax').value = rangeState.priceMax ? priceToSlider(rangeState.priceMax) : 1000;
-
   clearPresets('pricePresets');
   syncFill('priceFill', 'priceSliderMin', 'priceSliderMax');
   applyFilters();
@@ -1063,14 +1356,12 @@ function onPriceInputChange() {
 function setPricePreset(min, max, label) {
   rangeState.priceMin = min > 0 ? min : null;
   rangeState.priceMax = max >= 999e9 ? null : max;
-
   document.getElementById('priceMinInput').value = min > 0 ? min : '';
   document.getElementById('priceMaxInput').value = max >= 999e9 ? '' : max;
   document.getElementById('priceMinHint').textContent = min > 0 ? fmtMillion(min) : '—';
   document.getElementById('priceMaxHint').textContent = (max && max < 999e9) ? fmtMillion(max) : '—';
   document.getElementById('priceSliderMin').value = min > 0 ? priceToSlider(min) : 0;
   document.getElementById('priceSliderMax').value = (max && max < 999e9) ? priceToSlider(max) : 1000;
-
   syncFill('priceFill', 'priceSliderMin', 'priceSliderMax');
   highlightPreset('pricePresets', label);
   applyFilters();
@@ -1083,13 +1374,10 @@ function onAreaSliderChange() {
   const minS = document.getElementById('areaSliderMin');
   const maxS = document.getElementById('areaSliderMax');
   if (parseInt(minS.value) > parseInt(maxS.value)) minS.value = maxS.value;
-
   const minVal = sliderToArea(parseInt(minS.value));
   const maxVal = sliderToArea(parseInt(maxS.value));
-
   rangeState.areaMin = parseInt(minS.value) === 0    ? null : minVal;
   rangeState.areaMax = parseInt(maxS.value) === 1000 ? null : maxVal;
-
   document.getElementById('areaMinInput').value = rangeState.areaMin || '';
   document.getElementById('areaMaxInput').value = rangeState.areaMax || '';
   syncFill('areaFill', 'areaSliderMin', 'areaSliderMax');
@@ -1099,10 +1387,8 @@ function onAreaSliderChange() {
 function onAreaInputChange() {
   const minRaw = parseFloat(document.getElementById('areaMinInput').value);
   const maxRaw = parseFloat(document.getElementById('areaMaxInput').value);
-
   rangeState.areaMin = isNaN(minRaw) || minRaw <= 0 ? null : minRaw;
   rangeState.areaMax = isNaN(maxRaw) || maxRaw <= 0 ? null : maxRaw;
-
   document.getElementById('areaSliderMin').value = rangeState.areaMin ? areaToSlider(rangeState.areaMin) : 0;
   document.getElementById('areaSliderMax').value = rangeState.areaMax ? areaToSlider(rangeState.areaMax) : 1000;
   syncFill('areaFill', 'areaSliderMin', 'areaSliderMax');
@@ -1127,13 +1413,10 @@ function onPsmSliderChange() {
   const minS = document.getElementById('psmSliderMin');
   const maxS = document.getElementById('psmSliderMax');
   if (parseInt(minS.value) > parseInt(maxS.value)) minS.value = maxS.value;
-
   const minVal = sliderToPsm(parseInt(minS.value));
   const maxVal = sliderToPsm(parseInt(maxS.value));
-
   rangeState.psmMin = parseInt(minS.value) === 0    ? null : minVal;
   rangeState.psmMax = parseInt(maxS.value) === 1000 ? null : maxVal;
-
   document.getElementById('psmMinInput').value = rangeState.psmMin || '';
   document.getElementById('psmMaxInput').value = rangeState.psmMax || '';
   syncFill('psmFill', 'psmSliderMin', 'psmSliderMax');
@@ -1143,10 +1426,8 @@ function onPsmSliderChange() {
 function onPsmInputChange() {
   const minRaw = parseFloat(document.getElementById('psmMinInput').value);
   const maxRaw = parseFloat(document.getElementById('psmMaxInput').value);
-
   rangeState.psmMin = isNaN(minRaw) || minRaw <= 0 ? null : minRaw;
   rangeState.psmMax = isNaN(maxRaw) || maxRaw <= 0 ? null : maxRaw;
-
   document.getElementById('psmSliderMin').value = rangeState.psmMin ? psmToSlider(rangeState.psmMin) : 0;
   document.getElementById('psmSliderMax').value = rangeState.psmMax ? psmToSlider(rangeState.psmMax) : 1000;
   syncFill('psmFill', 'psmSliderMin', 'psmSliderMax');
@@ -1220,7 +1501,7 @@ function clearSearch() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// DATA LOAD — fetches from Flask /api/units
+// DATA LOAD
 // ═══════════════════════════════════════════════════════════════════════════════
 async function loadData() {
   const grid = document.getElementById('cardsGrid');
@@ -1232,9 +1513,7 @@ async function loadData() {
     const data = await resp.json();
     if (data.error) throw new Error(data.error);
     allData = data;
-    console.log(`✅ Loaded ${allData.length} units from API`);
   } catch (e) {
-    console.error('❌ API error:', e);
     grid.innerHTML = `
       <div class="empty-state">
         <div class="empty-icon">⚠️</div>
@@ -1262,8 +1541,8 @@ function initPage() {
     return;
   }
 
-  buildPills('cityFilter',     [...new Set(allData.map(d => d.city_name))].sort(),                      'city');
-  buildPills('unitTypeFilter', [...new Set(allData.map(d => d.unit_type))].sort(),                     'type');
+  buildPills('cityFilter',     [...new Set(allData.map(d => d.city_name))].sort(),                       'city');
+  buildPills('unitTypeFilter', [...new Set(allData.map(d => d.unit_type))].sort(),                      'type');
   buildPills('finishingFilter',[...new Set(allData.map(d => d.finishing_type).filter(Boolean))].sort(), 'finishing');
 
   const devSelect = document.getElementById('developerFilter');
@@ -1273,8 +1552,12 @@ function initPage() {
     devSelect.appendChild(opt);
   });
 
-  document.getElementById('totalCount').textContent    = fmtNum(allData.length);
-  document.getElementById('compoundCount').textContent = new Set(allData.map(d => d.compound_name)).size;
+  const totalStr = fmtNum(allData.length);
+  const compStr  = String(new Set(allData.map(d => d.compound_name)).size);
+  document.getElementById('totalCount').textContent    = totalStr;
+  document.getElementById('compoundCount').textContent = compStr;
+  document.getElementById('totalCountMobile').textContent    = totalStr;
+  document.getElementById('compoundCountMobile').textContent = compStr;
 
   syncFill('priceFill', 'priceSliderMin', 'priceSliderMax');
   syncFill('areaFill',  'areaSliderMin',  'areaSliderMax');
@@ -1334,35 +1617,29 @@ function applyFilters() {
 
   filteredData = allData.filter(u => {
     if (hideSold && (u.is_sold || u.status === 0)) return false;
-
     if (activeFilters.cities.size    && !activeFilters.cities.has(u.city_name))        return false;
     if (activeFilters.unitTypes.size && !activeFilters.unitTypes.has(u.unit_type))     return false;
     if (activeFilters.finishing.size && !activeFilters.finishing.has(u.finishing_type)) return false;
-
     if (activeFilters.bedrooms !== 'any') {
       const b = parseInt(activeFilters.bedrooms);
       if (b === 5) { if (u.bedrooms < 5) return false; }
       else         { if (u.bedrooms !== b) return false; }
     }
-
     if (rangeState.priceMin !== null && u.total_price_egp   < rangeState.priceMin) return false;
     if (rangeState.priceMax !== null && u.total_price_egp   > rangeState.priceMax) return false;
     if (rangeState.areaMin  !== null && u.built_up_area_sqm < rangeState.areaMin)  return false;
     if (rangeState.areaMax  !== null && u.built_up_area_sqm > rangeState.areaMax)  return false;
     if (rangeState.psmMin   !== null && u.price_per_sqm_egp < rangeState.psmMin)   return false;
     if (rangeState.psmMax   !== null && u.price_per_sqm_egp > rangeState.psmMax)   return false;
-
     if (u.delivery_from_months < delivFrom || u.delivery_to_months > delivTo) return false;
     if (devFilter && u.developer_name !== devFilter)             return false;
     if (discount  && (u.cash_discount_percent || 0) < discount)  return false;
     if (freeClub  && u.club_fees?.toLowerCase()    !== 'free')   return false;
     if (freePark  && u.parking_fees?.toLowerCase() !== 'free')   return false;
-
     if (search) {
       const hay = `${u.compound_name} ${u.developer_name} ${u.city_name} ${u.unit_type} ${u.finishing_type || ''}`.toLowerCase();
       if (!hay.includes(search)) return false;
     }
-
     return true;
   });
 
@@ -1380,6 +1657,35 @@ function applyFilters() {
   renderCards();
   updateStats();
   updateTags();
+  updateFilterCount();
+}
+
+// Update mobile filter badge count
+function updateFilterCount() {
+  let count = 0;
+  if (activeFilters.cities.size)    count++;
+  if (activeFilters.unitTypes.size) count++;
+  if (activeFilters.finishing.size) count++;
+  if (activeFilters.bedrooms !== 'any') count++;
+  if (rangeState.priceMin || rangeState.priceMax) count++;
+  if (rangeState.areaMin  || rangeState.areaMax)  count++;
+  if (rangeState.psmMin   || rangeState.psmMax)   count++;
+  if (parseInt(document.getElementById('discountSlider').value) > 0) count++;
+  if (document.getElementById('freeClub').checked)    count++;
+  if (document.getElementById('freeParking').checked) count++;
+  if (document.getElementById('developerFilter').value) count++;
+  if (document.getElementById('deliveryFrom').value || document.getElementById('deliveryTo').value) count++;
+
+  const badge = document.getElementById('filterCount');
+  const btn   = document.getElementById('mobileFilterBtn');
+  if (count > 0) {
+    badge.textContent = count;
+    badge.style.display = 'inline';
+    btn.classList.add('active');
+  } else {
+    badge.style.display = 'none';
+    btn.classList.remove('active');
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1485,10 +1791,15 @@ function loadMoreUnits() {
 }
 
 function updateStats() {
-  document.getElementById('filteredCount').textContent = fmtNum(filteredData.length);
   const prices = filteredData.map(d => d.total_price_egp).filter(Boolean);
   const avg = prices.length ? prices.reduce((a, b) => a + b, 0) / prices.length : 0;
-  document.getElementById('avgPrice').textContent = avg ? fmtMillion(avg) : '—';
+  const filtStr = fmtNum(filteredData.length);
+  const avgStr  = avg ? fmtMillion(avg) : '—';
+
+  document.getElementById('filteredCount').textContent    = filtStr;
+  document.getElementById('avgPrice').textContent         = avgStr;
+  document.getElementById('filteredCountMobile').textContent = filtStr;
+  document.getElementById('avgPriceMobile').textContent      = avgStr;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
