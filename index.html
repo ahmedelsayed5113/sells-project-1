@@ -199,7 +199,29 @@
   .tag button { background:none; border:none; cursor:pointer; color:var(--accent); font-size:16px; line-height:1; padding:0; min-width:24px; min-height:24px; display:flex; align-items:center; justify-content:center; touch-action:manipulation; }
 
   .cards-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:14px; }
-  .unit-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:18px; position:relative; overflow:hidden; animation:cardIn .3s ease both; }
+  .unit-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:18px; position:relative; overflow:visible; animation:cardIn .3s ease both; }
+  /* ── TOOLTIP ── */
+.card-tooltip {
+  display:none; position:absolute; bottom:calc(100% + 10px); left:50%;
+  transform:translateX(-50%); width:260px;
+  background:#1e1e2e; border:1px solid var(--accent);
+  border-radius:14px; padding:14px; z-index:200;
+  box-shadow:0 8px 32px rgba(0,0,0,0.6);
+  pointer-events:none;
+  animation:tipIn .15s ease;
+}
+@keyframes tipIn { from{opacity:0;transform:translateX(-50%) translateY(6px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+.card-tooltip::after {
+  content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%);
+  border:7px solid transparent; border-top-color:var(--accent);
+}
+.unit-card:hover .card-tooltip { display:block; }
+.tip-row { display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid var(--border); font-size:11px; }
+.tip-row:last-child { border-bottom:none; }
+.tip-key { color:var(--muted); }
+.tip-val { color:var(--text); font-weight:600; text-align:right; }
+.tip-title { font-family:'Syne',sans-serif; font-size:12px; font-weight:700; color:var(--accent); margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--border); }
+@media (max-width:768px) { .card-tooltip { display:none !important; } }
   @keyframes cardIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
   .card-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; }
   .compound-name { font-family:'Syne',sans-serif; font-size:14px; font-weight:700; flex:1; }
@@ -712,6 +734,24 @@ function applyFilters(){
 }
 
 function cardHTML(u,i){return`<div class="unit-card" style="animation-delay:${(i%50)*.02}s">
+  <div class="card-tooltip">
+    <div class="tip-title">📋 ${u.compound_name}</div>
+    <div class="tip-row"><span class="tip-key">🏙️ Developer</span><span class="tip-val">${u.developer_name}</span></div>
+    <div class="tip-row"><span class="tip-key">📍 City</span><span class="tip-val">${u.city_name}</span></div>
+    <div class="tip-row"><span class="tip-key">🏠 Type</span><span class="tip-val">${u.unit_type}</span></div>
+    <div class="tip-row"><span class="tip-key">🛏️ Bedrooms</span><span class="tip-val">${u.bedrooms} BR</span></div>
+    <div class="tip-row"><span class="tip-key">📐 Area</span><span class="tip-val">${u.built_up_area_sqm} m²</span></div>
+    ${u.outdoor_area&&u.outdoor_area!=='0'?`<div class="tip-row"><span class="tip-key">🌿 Outdoor</span><span class="tip-val">${u.outdoor_area}</span></div>`:''}
+    <div class="tip-row"><span class="tip-key">🎨 Finishing</span><span class="tip-val">${u.finishing_type||'—'}</span></div>
+    <div class="tip-row"><span class="tip-key">💰 Total Price</span><span class="tip-val">${fmtM(u.total_price_egp)} EGP</span></div>
+    <div class="tip-row"><span class="tip-key">💵 Cash Price</span><span class="tip-val">${u.cash_price_from_egp?fmtM(u.cash_price_from_egp)+' EGP':'—'}</span></div>
+    <div class="tip-row"><span class="tip-key">🎯 Discount</span><span class="tip-val">${u.cash_discount_percent||0}%</span></div>
+    <div class="tip-row"><span class="tip-key">📊 Price/m²</span><span class="tip-val">${fmt(Math.round(u.price_per_sqm_egp))} EGP</span></div>
+    <div class="tip-row"><span class="tip-key">📅 Delivery</span><span class="tip-val">${u.delivery_from_months}–${u.delivery_to_months} mo</span></div>
+    <div class="tip-row"><span class="tip-key">🏊 Club Fees</span><span class="tip-val">${u.club_fees||'—'}</span></div>
+    <div class="tip-row"><span class="tip-key">🚗 Parking</span><span class="tip-val">${u.parking_fees||'—'}</span></div>
+    ${u.payment_plan?`<div class="tip-row"><span class="tip-key">💳 Plan</span><span class="tip-val">${u.payment_plan}</span></div>`:''}
+  </div>
   <div class="card-header"><div class="compound-name">${u.compound_name}</div><div class="type-badge">${u.unit_type}</div></div>
   <div class="card-meta">
     <div class="meta-chip">📍 <strong>${u.city_name}</strong></div>
