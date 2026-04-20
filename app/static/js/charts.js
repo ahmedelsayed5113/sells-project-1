@@ -13,6 +13,13 @@ const CHART_COLORS = {
   grid: 'rgba(255,255,255,0.05)',
 };
 
+// Wait for Plotly to load (up to 5 seconds), then call the drawer function.
+function _waitForPlotly(fn, attempt = 0) {
+  if (typeof Plotly !== 'undefined') { fn(); return; }
+  if (attempt >= 50) { console.warn('Plotly CDN failed to load'); return; }
+  setTimeout(() => _waitForPlotly(fn, attempt + 1), 100);
+}
+
 const PALETTE = [
   CHART_COLORS.brand,
   CHART_COLORS.accent,
@@ -71,7 +78,7 @@ const chartConfig = {
 
 function drawBarChart(containerId, data, options = {}) {
   const el = document.getElementById(containerId);
-  if (!el || typeof Plotly === 'undefined') return;
+  if (!el) return;
 
   const trace = {
     type: 'bar',
@@ -93,12 +100,12 @@ function drawBarChart(containerId, data, options = {}) {
     ...options,
   });
 
-  Plotly.newPlot(el, [trace], layout, chartConfig);
+  _waitForPlotly(() => Plotly.newPlot(el, [trace], layout, chartConfig));
 }
 
 function drawHorizontalBar(containerId, data, options = {}) {
   const el = document.getElementById(containerId);
-  if (!el || typeof Plotly === 'undefined') return;
+  if (!el) return;
 
   const trace = {
     type: 'bar',
@@ -121,12 +128,12 @@ function drawHorizontalBar(containerId, data, options = {}) {
     ...options,
   });
 
-  Plotly.newPlot(el, [trace], layout, chartConfig);
+  _waitForPlotly(() => Plotly.newPlot(el, [trace], layout, chartConfig));
 }
 
 function drawDonut(containerId, data, options = {}) {
   const el = document.getElementById(containerId);
-  if (!el || typeof Plotly === 'undefined') return;
+  if (!el) return;
 
   const trace = {
     type: 'pie',
@@ -153,12 +160,12 @@ function drawDonut(containerId, data, options = {}) {
     ...options,
   });
 
-  Plotly.newPlot(el, [trace], layout, chartConfig);
+  _waitForPlotly(() => Plotly.newPlot(el, [trace], layout, chartConfig));
 }
 
 function drawLineChart(containerId, series, options = {}) {
   const el = document.getElementById(containerId);
-  if (!el || typeof Plotly === 'undefined') return;
+  if (!el) return;
 
   const traces = series.map((s, i) => ({
     type: 'scatter',
@@ -174,12 +181,12 @@ function drawLineChart(containerId, series, options = {}) {
   }));
 
   const layout = chartLayout(options);
-  Plotly.newPlot(el, traces, layout, chartConfig);
+  _waitForPlotly(() => Plotly.newPlot(el, traces, layout, chartConfig));
 }
 
 function drawGauge(containerId, value, options = {}) {
   const el = document.getElementById(containerId);
-  if (!el || typeof Plotly === 'undefined') return;
+  if (!el) return;
 
   const color = value >= 75 ? CHART_COLORS.brand
               : value >= 55 ? CHART_COLORS.warning
@@ -214,12 +221,12 @@ function drawGauge(containerId, value, options = {}) {
     ...options,
   });
 
-  Plotly.newPlot(el, [trace], layout, chartConfig);
+  _waitForPlotly(() => Plotly.newPlot(el, [trace], layout, chartConfig));
 }
 
 function drawRadarChart(containerId, data, options = {}) {
   const el = document.getElementById(containerId);
-  if (!el || typeof Plotly === 'undefined') return;
+  if (!el) return;
 
   const trace = {
     type: 'scatterpolar',
@@ -254,12 +261,12 @@ function drawRadarChart(containerId, data, options = {}) {
     ...options,
   };
 
-  Plotly.newPlot(el, [trace], layout, chartConfig);
+  _waitForPlotly(() => Plotly.newPlot(el, [trace], layout, chartConfig));
 }
 
 function drawStackedBar(containerId, series, xLabels, options = {}) {
   const el = document.getElementById(containerId);
-  if (!el || typeof Plotly === 'undefined') return;
+  if (!el) return;
 
   const traces = series.map((s, i) => ({
     type: 'bar',
@@ -275,7 +282,7 @@ function drawStackedBar(containerId, series, xLabels, options = {}) {
     ...options,
   });
 
-  Plotly.newPlot(el, traces, layout, chartConfig);
+  _waitForPlotly(() => Plotly.newPlot(el, traces, layout, chartConfig));
 }
 
 function scoreColorHex(pct) {

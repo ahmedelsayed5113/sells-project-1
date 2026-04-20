@@ -150,17 +150,17 @@ function render() {
       : '<span class="badge badge-pending">' + t("common.inactive") + '</span>'}</td>
     <td>
       <div class="flex gap-1">
-        <button class="btn btn-sm" onclick="openEdit(${u.id})" data-i18n="common.edit">تعديل</button>
+        <button class="btn btn-sm" onclick="openEdit(${u.id})" data-i18n="common.edit">${t("common.edit")}</button>
         <button class="btn btn-sm" onclick="toggleActive(${u.id}, ${!u.active})">
           ${u.active ? t("admin.deactivate") : t("admin.activate")}
         </button>
         ${u.id != {{ user.id }}
-          ? `<button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id})" data-i18n="common.delete">حذف</button>`
+          ? `<button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id})" data-i18n="common.delete">${t("common.delete")}</button>`
           : ''}
       </div>
     </td>
   </tr>`).join("");
-  applyLang();
+  applyLang(true);
 }
 
 function openNew() {
@@ -170,7 +170,7 @@ function openNew() {
   document.getElementById("mPassword").required = true;
   document.getElementById("mPwHint").setAttribute("data-i18n", "admin.pw_hint_new");
   document.getElementById("mError").classList.remove("show");
-  applyLang();
+  applyLang(true);
   openModal("userModal");
 }
 
@@ -188,7 +188,7 @@ function openEdit(id) {
   document.getElementById("mPassword").required = false;
   document.getElementById("mPwHint").setAttribute("data-i18n", "admin.pw_hint_edit");
   document.getElementById("mError").classList.remove("show");
-  applyLang();
+  applyLang(true);
   openModal("userModal");
 }
 

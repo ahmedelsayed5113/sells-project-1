@@ -213,24 +213,34 @@ function t(key) {
   return (I18N[lang] && I18N[lang][key]) || I18N.ar[key] || key;
 }
 
-function applyLang() {
-  const lang = getLang();
-  document.documentElement.lang = lang;
-  document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
-  document.body.classList.toggle("lang-en", lang === "en");
-  document.body.classList.toggle("lang-ar", lang === "ar");
-  document.querySelectorAll("[data-i18n]").forEach(el => {
-    el.textContent = t(el.getAttribute("data-i18n"));
-  });
-  document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
-    el.setAttribute("placeholder", t(el.getAttribute("data-i18n-placeholder")));
-  });
-  document.querySelectorAll("[data-i18n-title]").forEach(el => {
-    el.setAttribute("title", t(el.getAttribute("data-i18n-title")));
-  });
-  const btn = document.getElementById("langToggleBtn");
-  if (btn) btn.textContent = lang === "ar" ? "EN" : "ع";
-  if (typeof onLangChange === "function") onLangChange(lang);
+let _applyLangRunning = false;
+
+function applyLang(skipCallback) {
+  if (_applyLangRunning) return;
+  _applyLangRunning = true;
+  try {
+    const lang = getLang();
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
+    document.body.classList.toggle("lang-en", lang === "en");
+    document.body.classList.toggle("lang-ar", lang === "ar");
+    document.querySelectorAll("[data-i18n]").forEach(el => {
+      el.textContent = t(el.getAttribute("data-i18n"));
+    });
+    document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
+      el.setAttribute("placeholder", t(el.getAttribute("data-i18n-placeholder")));
+    });
+    document.querySelectorAll("[data-i18n-title]").forEach(el => {
+      el.setAttribute("title", t(el.getAttribute("data-i18n-title")));
+    });
+    const btn = document.getElementById("langToggleBtn");
+    if (btn) btn.textContent = lang === "ar" ? "EN" : "ع";
+    if (!skipCallback && typeof onLangChange === "function") {
+      onLangChange(lang);
+    }
+  } finally {
+    _applyLangRunning = false;
+  }
 }
 
-document.addEventListener("DOMContentLoaded", applyLang);
+document.addEventListener("DOMContentLoaded", () => applyLang());
