@@ -85,7 +85,7 @@ function render() {
             </div>
           </div>`;
       }).join("");
-  applyI18n();
+  applyLang();
 }
 
 async function openModal(tlId, tlName, month) {
@@ -93,7 +93,7 @@ async function openModal(tlId, tlName, month) {
   document.getElementById("modalTitle").textContent = tlName;
   document.getElementById("modalBody").innerHTML = `<div data-i18n="common.loading">جاري التحميل...</div>`;
   document.getElementById("evalModal").classList.remove("hidden");
-  applyI18n();
+  applyLang();
 
   try {
     tlKpiData = await api(`/api/kpi/tl-kpi/${tlId}/${month}`).catch(() => null);
@@ -170,7 +170,7 @@ function renderForm(entry, autoHtml) {
         <textarea id="f_notes" rows="2" style="width:100%">${entry.notes||""}</textarea>
       </div>
     </div>`;
-  applyI18n();
+  applyLang();
 }
 
 function passfailField(id, label, val) {

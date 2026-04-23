@@ -73,7 +73,7 @@ function render() {
 
   if (!teams.length) {
     container.innerHTML = `<div class="empty-state"><div data-i18n="teams.no_teams">لا توجد فرق بعد</div></div>`;
-    applyI18n(); return;
+    applyLang(); return;
   }
 
   container.innerHTML = teams.map(team => {
@@ -106,7 +106,7 @@ function render() {
         </div>
       </div>`;
   }).join("");
-  applyI18n();
+  applyLang();
 }
 
 function buildLeaderOptions(selectedId) {
@@ -142,7 +142,7 @@ async function openNew() {
   document.getElementById("mError").classList.remove("show");
   buildLeaderOptions(null);
   buildMembersCheckboxes([]);
-  applyI18n();
+  applyLang();
   openModal("teamModal");
 }
 
@@ -156,7 +156,7 @@ async function openEdit(teamId) {
     document.getElementById("mError").classList.remove("show");
     buildLeaderOptions(team.leader_id);
     buildMembersCheckboxes((team.members || []).map(m => m.id));
-    applyI18n();
+    applyLang();
     openModal("teamModal");
   } catch (e) { toast(e.message, "error"); }
 }
