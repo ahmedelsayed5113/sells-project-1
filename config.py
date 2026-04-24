@@ -60,7 +60,11 @@ class Config:
     # Sync control
     DISABLE_SYNC = _env_bool("DISABLE_SYNC", False)
 
-    # ─── SMTP / mailer ─────────────────────────────────────────────────────
+    # ─── Mailer ────────────────────────────────────────────────────────────
+    # Resend HTTPS API (preferred on Railway / Fly / Vercel — they block SMTP).
+    RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+
+    # SMTP fallback — used automatically if RESEND_API_KEY is empty.
     SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
     SMTP_PORT = int(os.environ.get("SMTP_PORT", 587))
     SMTP_USER = os.environ.get("SMTP_USER", "")

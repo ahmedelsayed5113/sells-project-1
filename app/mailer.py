@@ -1,9 +1,12 @@
 """
-SMTP mailer — bilingual transactional emails.
+Transactional mailer — bilingual (AR+EN) emails.
 
-Safe-by-default: if SMTP is not configured (no SMTP_USER), send_mail logs a
-warning and returns False instead of raising. This lets local dev continue
-without SMTP credentials while preventing silent data-loss in production.
+Uses Resend's HTTPS API (works on Railway/Fly/Vercel where outbound SMTP
+is blocked at the network level). Falls back to SMTP via smtplib when
+RESEND_API_KEY is not set but SMTP_USER/SMTP_PASSWORD are.
+
+Safe-by-default: if neither is configured, send_mail logs a warning and
+returns False instead of raising, so local dev keeps working.
 """
 import logging
 import smtplib
@@ -12,14 +15,28 @@ from email.message import EmailMessage
 from email.utils import formataddr
 from typing import Optional
 
+import requests
+
 from config import Config
 
 log = logging.getLogger(__name__)
 
 
-def smtp_is_configured() -> bool:
+# ─── Backend detection ──────────────────────────────────────────────────
+
+def _resend_is_configured() -> bool:
+    return bool(getattr(Config, "RESEND_API_KEY", "") and Config.MAIL_FROM)
+
+
+def _smtp_is_configured() -> bool:
     return bool(Config.SMTP_HOST and Config.SMTP_USER and Config.SMTP_PASSWORD)
 
+
+def mailer_is_configured() -> bool:
+    return _resend_is_configured() or _smtp_is_configured()
+
+
+# ─── Public API ─────────────────────────────────────────────────────────
 
 def send_mail(
     to: str,
@@ -30,10 +47,55 @@ def send_mail(
     """Send a transactional email. Returns True on success, False otherwise."""
     if not to:
         return False
-    if not smtp_is_configured():
-        log.warning("SMTP not configured — would have sent to %s: %s", to, subject)
+
+    if _resend_is_configured():
+        return _send_resend(to, subject, text_body, html_body)
+    if _smtp_is_configured():
+        return _send_smtp(to, subject, text_body, html_body)
+
+    log.warning("Mailer not configured — would have sent to %s: %s", to, subject)
+    return False
+
+
+# ─── Resend HTTPS API backend ──────────────────────────────────────────
+
+def _send_resend(to, subject, text_body, html_body) -> bool:
+    from_field = (
+        formataddr((Config.MAIL_FROM_NAME, Config.MAIL_FROM))
+        if Config.MAIL_FROM_NAME
+        else Config.MAIL_FROM
+    )
+    payload = {
+        "from": from_field,
+        "to": [to],
+        "subject": subject,
+        "text": text_body,
+    }
+    if html_body:
+        payload["html"] = html_body
+    try:
+        r = requests.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {Config.RESEND_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=20,
+        )
+        if r.status_code >= 400:
+            log.error("❌ Resend send failed for %s: %s %s", to, r.status_code, r.text[:200])
+            return False
+        log.info("✅ Email sent via Resend to %s", to)
+        return True
+    except Exception as e:
+        log.error("❌ Resend request failed for %s: %s", to, e)
         return False
 
+
+# ─── SMTP fallback backend ──────────────────────────────────────────────
+
+def _send_smtp(to, subject, text_body, html_body) -> bool:
     msg = EmailMessage()
     msg["From"] = formataddr((Config.MAIL_FROM_NAME, Config.MAIL_FROM))
     msg["To"] = to
@@ -44,7 +106,6 @@ def send_mail(
 
     try:
         if Config.SMTP_PORT == 465:
-            # SSL on connect
             ctx = ssl.create_default_context()
             with smtplib.SMTP_SSL(Config.SMTP_HOST, Config.SMTP_PORT, context=ctx, timeout=20) as s:
                 s.login(Config.SMTP_USER, Config.SMTP_PASSWORD)
@@ -58,14 +119,14 @@ def send_mail(
                     s.ehlo()
                 s.login(Config.SMTP_USER, Config.SMTP_PASSWORD)
                 s.send_message(msg)
-        log.info("✅ Email sent to %s", to)
+        log.info("✅ Email sent via SMTP to %s", to)
         return True
     except Exception as e:
         log.error("❌ SMTP send failed for %s: %s", to, e)
         return False
 
 
-# ─── Templates ──────────────────────────────────────────────────────────────
+# ─── Templates ──────────────────────────────────────────────────────────
 
 def password_reset_email(full_name: str, reset_url: str, ttl_minutes: int) -> tuple:
     """Returns (subject, text, html) — bilingual (AR + EN) in one email."""
