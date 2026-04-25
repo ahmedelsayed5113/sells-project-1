@@ -46,11 +46,18 @@ def list_users():
     try:
         conn = get_conn()
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            # team_id/team_name surface "the team they lead" (if any),
+            # falling back to "the team they belong to". This way TLs
+            # always show their own team even when users.team_id wasn't
+            # written when the team was created.
             q = """SELECT u.id, u.username, u.full_name, u.role, u.email, u.phone,
-                          u.active, u.team_id, t.name AS team_name,
+                          u.active,
+                          COALESCE(tl.id,   u.team_id) AS team_id,
+                          COALESCE(tl.name, tm.name)   AS team_name,
                           u.created_at, u.updated_at, u.last_login
                    FROM users u
-                   LEFT JOIN teams t ON t.id = u.team_id
+                   LEFT JOIN teams tm ON tm.id        = u.team_id
+                   LEFT JOIN teams tl ON tl.leader_id = u.id
                    WHERE 1=1"""
             params = []
             if role_filter:
@@ -60,10 +67,10 @@ def list_users():
                 q += " AND u.active = true"
             if team_filter:
                 if team_filter == "none":
-                    q += " AND u.team_id IS NULL"
+                    q += " AND COALESCE(tl.id, u.team_id) IS NULL"
                 else:
                     try:
-                        q += " AND u.team_id = %s"
+                        q += " AND COALESCE(tl.id, u.team_id) = %s"
                         params.append(int(team_filter))
                     except ValueError:
                         return error_response("invalid_team_id", 400)
