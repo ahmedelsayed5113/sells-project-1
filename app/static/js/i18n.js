@@ -58,6 +58,13 @@ const I18N = {
     "common.none": "—",
     "common.deleted": "تم الحذف",
 
+    /* ─── shared filter UI ─── */
+    "filters.team": "الفريق",
+    "filters.no_team": "بدون فريق",
+    "filters.reset": "مسح الفلاتر",
+    "filters.shown": "المعروض:",
+    "filters.search_user_ph": "ابحث بالاسم أو اليوزر...",
+
     /* ─── errors (mapped from backend error_code) ─── */
     "errors.invalid_credentials": "بيانات الدخول غير صحيحة",
     "errors.required_fields_missing": "بعض الحقول المطلوبة فارغة",
@@ -73,6 +80,7 @@ const I18N = {
     "errors.forbidden": "ليس لديك صلاحية للوصول",
     "errors.not_found": "غير موجود",
     "errors.invalid_role": "الدور غير صحيح",
+    "errors.invalid_team_id": "رقم الفريق غير صحيح",
     "errors.cannot_delete_last_admin": "لا يمكن حذف آخر مدير للنظام",
     "errors.wrong_current_password": "كلمة المرور الحالية غير صحيحة",
     "errors.passwords_do_not_match": "كلمتا المرور غير متطابقتين",
@@ -561,6 +569,13 @@ const I18N = {
     "common.none": "—",
     "common.deleted": "Deleted",
 
+    /* ─── shared filter UI ─── */
+    "filters.team": "Team",
+    "filters.no_team": "No team",
+    "filters.reset": "Reset filters",
+    "filters.shown": "Shown:",
+    "filters.search_user_ph": "Search by name or username...",
+
     /* ─── errors ─── */
     "errors.invalid_credentials": "Invalid username or password",
     "errors.required_fields_missing": "Some required fields are empty",
@@ -576,6 +591,7 @@ const I18N = {
     "errors.forbidden": "You don't have permission",
     "errors.not_found": "Not found",
     "errors.invalid_role": "Invalid role",
+    "errors.invalid_team_id": "Invalid team id",
     "errors.cannot_delete_last_admin": "Cannot delete the last system admin",
     "errors.wrong_current_password": "Current password is incorrect",
     "errors.passwords_do_not_match": "Passwords don't match",

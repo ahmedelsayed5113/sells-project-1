@@ -31,17 +31,30 @@
       <option value="inactive" data-i18n="common.inactive"></option>
     </select>
   </div>
+  <div class="field">
+    <label data-i18n="filters.team"></label>
+    <select id="teamFilter" onchange="render()">
+      <option value="" data-i18n="common.all"></option>
+      <option value="none" data-i18n="filters.no_team"></option>
+    </select>
+  </div>
   <div class="field" style="flex:1">
     <label data-i18n="common.search"></label>
     <input type="text" id="searchBox" data-i18n-placeholder="admin.search_ph" oninput="render()">
   </div>
+  <div class="field" style="align-self:flex-end">
+    <button class="btn btn-ghost btn-sm" onclick="resetFilters()" data-i18n="filters.reset"></button>
+  </div>
 </div>
+
+<div id="chipsRow" class="pf-chips" style="margin-bottom:12px"></div>
 
 <div class="table-wrap reveal">
   <table>
     <thead><tr>
       <th data-i18n="admin.user"></th>
       <th data-i18n="admin.role"></th>
+      <th data-i18n="filters.team"></th>
       <th data-i18n="admin.contact"></th>
       <th data-i18n="common.active"></th>
       <th data-i18n="admin.actions"></th>
@@ -112,29 +125,98 @@
 {% block scripts %}
 <script>
 let users = [];
+let teams = [];
 let editingId = null;
 
 async function loadUsers() {
-  try { users = await api("/api/users"); render(); }
+  try {
+    const [u, ts] = await Promise.all([
+      api("/api/users"),
+      teams.length ? Promise.resolve(teams) : api("/api/teams").catch(() => []),
+    ]);
+    users = u;
+    teams = ts || [];
+    populateTeamFilter();
+    render();
+  }
   catch (e) { toastError(e); }
+}
+
+function populateTeamFilter() {
+  const sel = document.getElementById("teamFilter");
+  if (!sel) return;
+  const prev = sel.value;
+  const opts = [
+    `<option value="">${t("common.all")}</option>`,
+    `<option value="none">${t("filters.no_team")}</option>`,
+  ];
+  teams.forEach(team => {
+    opts.push(`<option value="${team.id}">${escapeHTML(team.name)}</option>`);
+  });
+  sel.innerHTML = opts.join("");
+  if (prev) sel.value = prev;
+}
+
+function resetFilters() {
+  document.getElementById("roleFilter").value = "all";
+  document.getElementById("statusFilter").value = "all";
+  document.getElementById("teamFilter").value = "";
+  document.getElementById("searchBox").value = "";
+  render();
+}
+
+function clearChip(id, val) {
+  const el = document.getElementById(id);
+  if (el) { el.value = val; render(); }
+}
+
+function renderChips() {
+  const role = document.getElementById("roleFilter").value;
+  const status = document.getElementById("statusFilter").value;
+  const teamVal = document.getElementById("teamFilter").value;
+  const search = document.getElementById("searchBox").value.trim();
+  const chips = [];
+  if (role && role !== "all")
+    chips.push(`<span class="pf-chip">${t("admin.role")}: ${escapeHTML(t("role." + role))}<button onclick="clearChip('roleFilter','all')">✕</button></span>`);
+  if (status && status !== "all") {
+    const lbl = status === "active" ? t("common.active") : t("common.inactive");
+    chips.push(`<span class="pf-chip">${t("admin.filter_status")}: ${escapeHTML(lbl)}<button onclick="clearChip('statusFilter','all')">✕</button></span>`);
+  }
+  if (teamVal) {
+    let label = t("filters.no_team");
+    if (teamVal !== "none") {
+      const tm = teams.find(x => String(x.id) === teamVal);
+      label = tm ? tm.name : teamVal;
+    }
+    chips.push(`<span class="pf-chip">${t("filters.team")}: ${escapeHTML(label)}<button onclick="clearChip('teamFilter','')">✕</button></span>`);
+  }
+  if (search)
+    chips.push(`<span class="pf-chip">${t("common.search")}: ${escapeHTML(search)}<button onclick="clearChip('searchBox','')">✕</button></span>`);
+  document.getElementById("chipsRow").innerHTML = chips.join("");
 }
 
 function render() {
   const role = document.getElementById("roleFilter").value;
   const status = document.getElementById("statusFilter").value;
+  const teamVal = document.getElementById("teamFilter").value;
   const search = (document.getElementById("searchBox").value || "").trim().toLowerCase();
 
   let rows = [...users];
   if (role !== "all") rows = rows.filter(u => u.role === role);
   if (status !== "all") rows = rows.filter(u => status === "active" ? u.active : !u.active);
+  if (teamVal === "none") rows = rows.filter(u => u.team_id == null);
+  else if (teamVal) rows = rows.filter(u => String(u.team_id || "") === teamVal);
   if (search) rows = rows.filter(u =>
     (u.full_name || "").toLowerCase().includes(search) ||
     (u.username || "").toLowerCase().includes(search) ||
-    (u.email || "").toLowerCase().includes(search));
+    (u.email || "").toLowerCase().includes(search) ||
+    (u.team_name || "").toLowerCase().includes(search));
+
+  renderChips();
 
   const tbody = document.getElementById("tbody");
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="5" class="table-empty">' + t("admin.no_users") + '</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="table-empty">' + t("admin.no_users") + '</td></tr>';
     return;
   }
 
@@ -149,6 +231,7 @@ function render() {
       </div>
     </td>
     <td><span class="badge badge-role-${u.role}">${t("role." + u.role)}</span></td>
+    <td class="text-muted" style="font-size:12px">${u.team_name ? escapeHTML(u.team_name) : '—'}</td>
     <td class="text-muted" style="font-size:12px">
       ${escapeHTML(u.email || "—")}${u.phone ? "<br>" + escapeHTML(u.phone) : ""}
     </td>

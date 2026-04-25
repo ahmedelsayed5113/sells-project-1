@@ -23,13 +23,25 @@
       <option value="no-sales" data-i18n="de.missing_sales"></option>
     </select>
   </div>
+  <div class="field">
+    <label data-i18n="filters.team"></label>
+    <select id="teamFilter" onchange="render()">
+      <option value="" data-i18n="common.all"></option>
+      <option value="none" data-i18n="filters.no_team"></option>
+    </select>
+  </div>
   <div class="field" style="flex:1;min-width:180px">
     <label data-i18n="common.search"></label>
-    <input type="text" id="searchBox" oninput="render()">
+    <input type="text" id="searchBox" oninput="render()" data-i18n-placeholder="filters.search_user_ph">
+  </div>
+  <div class="field" style="align-self:flex-end">
+    <button class="btn btn-ghost btn-sm" onclick="resetFilters()" data-i18n="filters.reset"></button>
   </div>
   <div class="spacer"></div>
   <div id="progress" class="text-muted" style="font-size:13px"></div>
 </div>
+
+<div id="chipsRow" class="pf-chips" style="margin-bottom:12px"></div>
 
 <div id="list" class="stagger"></div>
 {% endblock %}
@@ -38,6 +50,7 @@
 <script>
 let users = [];
 let entries = {};
+let teams = [];
 const NUMERIC = ["fresh_leads", "calls", "meetings", "crm_pct", "deals",
                  "reports", "reservations", "followup_pct", "attendance_pct"];
 const PASSFAIL = ["attitude", "presentation", "behaviour", "appearance", "hr_roles"];
@@ -53,16 +66,77 @@ async function loadAll() {
   const month = document.getElementById("month").value;
   if (!month) return;
   try {
-    users = await api("/api/users?role=sales&active_only=true");
-    const report = await api(`/api/kpi/report?month=${month}`);
+    const [u, report, ts] = await Promise.all([
+      api("/api/users?role=sales&active_only=true"),
+      api(`/api/kpi/report?month=${month}`),
+      teams.length ? Promise.resolve(teams) : api("/api/teams").catch(() => []),
+    ]);
+    users = u;
+    teams = ts || [];
+    populateTeamFilter();
     entries = {};
     report.forEach(r => { entries[r.user_id] = r; });
     render();
   } catch (e) { toastError(e); }
 }
 
+function populateTeamFilter() {
+  const sel = document.getElementById("teamFilter");
+  if (!sel) return;
+  const prev = sel.value;
+  const opts = [
+    `<option value="">${t("common.all")}</option>`,
+    `<option value="none">${t("filters.no_team")}</option>`,
+  ];
+  teams.forEach(team => {
+    opts.push(`<option value="${team.id}">${escapeHTML(team.name)}</option>`);
+  });
+  sel.innerHTML = opts.join("");
+  if (prev) sel.value = prev;
+}
+
+function resetFilters() {
+  document.getElementById("filterStatus").value = "all";
+  document.getElementById("teamFilter").value = "";
+  document.getElementById("searchBox").value = "";
+  render();
+}
+
+function renderChips() {
+  const status = document.getElementById("filterStatus").value;
+  const teamVal = document.getElementById("teamFilter").value;
+  const search = document.getElementById("searchBox").value.trim();
+  const chips = [];
+  if (status && status !== "all") {
+    const lbl = {
+      pending: t("de.waiting_eval"),
+      done: t("de.evaluated"),
+      "no-sales": t("de.missing_sales"),
+    }[status] || status;
+    chips.push(`<span class="pf-chip">${t("common.filter")}: ${escapeHTML(lbl)}<button onclick="clearChip('filterStatus','all')">✕</button></span>`);
+  }
+  if (teamVal) {
+    let label = t("filters.no_team");
+    if (teamVal !== "none") {
+      const tm = teams.find(x => String(x.id) === teamVal);
+      label = tm ? tm.name : teamVal;
+    }
+    chips.push(`<span class="pf-chip">${t("filters.team")}: ${escapeHTML(label)}<button onclick="clearChip('teamFilter','')">✕</button></span>`);
+  }
+  if (search) {
+    chips.push(`<span class="pf-chip">${t("common.search")}: ${escapeHTML(search)}<button onclick="clearChip('searchBox','')">✕</button></span>`);
+  }
+  document.getElementById("chipsRow").innerHTML = chips.join("");
+}
+
+function clearChip(id, val) {
+  const el = document.getElementById(id);
+  if (el) { el.value = val; render(); }
+}
+
 function render() {
   const filter = document.getElementById("filterStatus").value;
+  const teamVal = document.getElementById("teamFilter").value;
   const search = (document.getElementById("searchBox").value || "").trim().toLowerCase();
   const container = document.getElementById("list");
 
@@ -72,13 +146,18 @@ function render() {
   else if (filter === "done") rows = rows.filter(r => r.entry && r.entry.dataentry_submitted_at);
   else if (filter === "no-sales") rows = rows.filter(r => !r.entry || !r.entry.sales_submitted_at);
 
+  if (teamVal === "none") rows = rows.filter(r => r.user.team_id == null);
+  else if (teamVal) rows = rows.filter(r => String(r.user.team_id || "") === teamVal);
+
   if (search) rows = rows.filter(r =>
     (r.user.full_name || "").toLowerCase().includes(search) ||
     (r.user.username || "").toLowerCase().includes(search));
 
   const done = users.filter(u => entries[u.id] && entries[u.id].dataentry_submitted_at).length;
   document.getElementById("progress").textContent =
-    `${t("de.progress")} ${done} ${t("de.of")} ${users.length}`;
+    `${t("de.progress")} ${done} ${t("de.of")} ${users.length}  ·  ${t("filters.shown")} ${rows.length}`;
+
+  renderChips();
 
   if (!rows.length) {
     container.innerHTML = `<div class="card text-center text-muted">${t("admin.no_users")}</div>`;

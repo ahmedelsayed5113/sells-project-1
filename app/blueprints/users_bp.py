@@ -38,6 +38,7 @@ def _user_to_dict(row):
 def list_users():
     role_filter = request.args.get("role")
     active_only = request.args.get("active_only") == "true"
+    team_filter = request.args.get("team_id")
     if role_filter and role_filter not in ROLES:
         return error_response("invalid_role", 400)
 
@@ -45,16 +46,28 @@ def list_users():
     try:
         conn = get_conn()
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            q = """SELECT id, username, full_name, role, email, phone, active,
-                          created_at, updated_at, last_login
-                   FROM users WHERE 1=1"""
+            q = """SELECT u.id, u.username, u.full_name, u.role, u.email, u.phone,
+                          u.active, u.team_id, t.name AS team_name,
+                          u.created_at, u.updated_at, u.last_login
+                   FROM users u
+                   LEFT JOIN teams t ON t.id = u.team_id
+                   WHERE 1=1"""
             params = []
             if role_filter:
-                q += " AND role = %s"
+                q += " AND u.role = %s"
                 params.append(role_filter)
             if active_only:
-                q += " AND active = true"
-            q += " ORDER BY role DESC, full_name ASC"
+                q += " AND u.active = true"
+            if team_filter:
+                if team_filter == "none":
+                    q += " AND u.team_id IS NULL"
+                else:
+                    try:
+                        q += " AND u.team_id = %s"
+                        params.append(int(team_filter))
+                    except ValueError:
+                        return error_response("invalid_team_id", 400)
+            q += " ORDER BY u.role DESC, u.full_name ASC"
             cur.execute(q, params)
             users = [_user_to_dict(r) for r in cur.fetchall()]
         return jsonify(users)

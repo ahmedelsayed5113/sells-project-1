@@ -21,7 +21,7 @@ def _team_dict(row):
 # ─── List all teams with leader + member info ──────────────────────────────────
 
 @teams_bp.route("", methods=["GET"])
-@role_required("admin", "manager")
+@role_required("admin", "manager", "dataentry")
 def list_teams():
     try:
         conn = get_conn()
