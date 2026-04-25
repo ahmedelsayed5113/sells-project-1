@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Ain KPI{% endblock %}
+{% block title %}PropFinder{% endblock %}
 
 {% block content %}
 <div class="page-header">
@@ -28,37 +28,137 @@
 </div>
 {% endif %}
 
-<!-- Filters (shown to everyone, useful for sales) -->
-<div class="controls reveal">
-  <div class="field" style="flex:1;min-width:220px">
-    <label data-i18n="common.search"></label>
-    <input type="text" id="searchBox" oninput="applyFilters()"
-           data-i18n-placeholder="pf.search_ph">
+<!-- Advanced filter bar -->
+<div class="pf-filter-bar reveal">
+  <div class="pf-filter-head">
+    <div class="pf-title-row" data-i18n="pf.filters_title"></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div class="view-toggle" id="viewToggle">
+        <button data-view="grid" class="active" title="Grid">▦ <span data-i18n="pf.view_grid"></span></button>
+        <button data-view="table" title="Table">☰ <span data-i18n="pf.view_table"></span></button>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="resetFilters()" data-i18n="pf.clear_filters"></button>
+    </div>
   </div>
-  <div class="field">
-    <label data-i18n="pf.col_city"></label>
-    <select id="cityFilter" onchange="applyFilters()">
-      <option value="" data-i18n="common.all"></option>
-    </select>
+
+  <div class="pf-filter-grid">
+    <div class="field" style="grid-column: span 2; min-width: 240px">
+      <label data-i18n="common.search"></label>
+      <input type="text" id="searchBox" oninput="applyFilters()" data-i18n-placeholder="pf.search_ph">
+    </div>
+
+    <div class="field">
+      <label data-i18n="pf.col_city"></label>
+      <select id="cityFilter" onchange="applyFilters()">
+        <option value="" data-i18n="common.all"></option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label data-i18n="pf.col_developer"></label>
+      <select id="devFilter" onchange="applyFilters()">
+        <option value="" data-i18n="common.all"></option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label data-i18n="pf.col_compound"></label>
+      <select id="compoundFilter" onchange="applyFilters()">
+        <option value="" data-i18n="common.all"></option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label data-i18n="pf.phase"></label>
+      <select id="phaseFilter" onchange="applyFilters()">
+        <option value="" data-i18n="common.all"></option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label data-i18n="pf.col_type"></label>
+      <select id="typeFilter" onchange="applyFilters()">
+        <option value="" data-i18n="common.all"></option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label data-i18n="pf.col_bedrooms"></label>
+      <select id="bedroomsFilter" onchange="applyFilters()">
+        <option value="" data-i18n="common.all"></option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label data-i18n="pf.finishing"></label>
+      <select id="finishingFilter" onchange="applyFilters()">
+        <option value="" data-i18n="common.all"></option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label data-i18n="pf.delivery"></label>
+      <select id="deliveryFilter" onchange="applyFilters()">
+        <option value="" data-i18n="common.all"></option>
+        <option value="ready" data-i18n="pf.delivery_ready"></option>
+        <option value="0-12" data-i18n="pf.delivery_0_12"></option>
+        <option value="12-24" data-i18n="pf.delivery_12_24"></option>
+        <option value="24-36" data-i18n="pf.delivery_24_36"></option>
+        <option value="36-60" data-i18n="pf.delivery_36_60"></option>
+        <option value="60+" data-i18n="pf.delivery_60p"></option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label data-i18n="pf.outdoor_filter"></label>
+      <select id="outdoorFilter" onchange="applyFilters()">
+        <option value="" data-i18n="common.all"></option>
+        <option value="any" data-i18n="pf.has_outdoor"></option>
+        <option value="none" data-i18n="pf.no_outdoor"></option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label data-i18n="pf.discount_filter"></label>
+      <select id="discountFilter" onchange="applyFilters()">
+        <option value="" data-i18n="common.all"></option>
+        <option value="10" data-i18n="pf.discount_10"></option>
+        <option value="20" data-i18n="pf.discount_20"></option>
+        <option value="30" data-i18n="pf.discount_30"></option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label data-i18n="pf.price_range"></label>
+      <div class="range-row">
+        <input type="number" id="priceMin" placeholder="Min" oninput="applyFiltersDebounced()">
+        <input type="number" id="priceMax" placeholder="Max" oninput="applyFiltersDebounced()">
+      </div>
+    </div>
+
+    <div class="field">
+      <label data-i18n="pf.area_range"></label>
+      <div class="range-row">
+        <input type="number" id="areaMin" placeholder="Min" oninput="applyFiltersDebounced()">
+        <input type="number" id="areaMax" placeholder="Max" oninput="applyFiltersDebounced()">
+      </div>
+    </div>
+
+    <div class="field">
+      <label data-i18n="pf.sort_by"></label>
+      <select id="sortBy" onchange="applyFilters()">
+        <option value="default" data-i18n="pf.sort_default"></option>
+        <option value="price_asc" data-i18n="pf.sort_price_asc"></option>
+        <option value="price_desc" data-i18n="pf.sort_price_desc"></option>
+        <option value="area_asc" data-i18n="pf.sort_area_asc"></option>
+        <option value="area_desc" data-i18n="pf.sort_area_desc"></option>
+        <option value="delivery_asc" data-i18n="pf.sort_delivery_asc"></option>
+        <option value="discount_desc" data-i18n="pf.sort_discount_desc"></option>
+      </select>
+    </div>
   </div>
-  <div class="field">
-    <label data-i18n="pf.col_developer"></label>
-    <select id="devFilter" onchange="applyFilters()">
-      <option value="" data-i18n="common.all"></option>
-    </select>
-  </div>
-  <div class="field">
-    <label data-i18n="pf.col_type"></label>
-    <select id="typeFilter" onchange="applyFilters()">
-      <option value="" data-i18n="common.all"></option>
-    </select>
-  </div>
-  <div class="field" id="bedroomsFilterWrap">
-    <label data-i18n="pf.col_bedrooms"></label>
-    <select id="bedroomsFilter" onchange="applyFilters()">
-      <option value="" data-i18n="common.all"></option>
-    </select>
-  </div>
+
+  <div class="pf-chips" id="chipsRow"></div>
 </div>
 
 <div class="card reveal">
@@ -66,7 +166,14 @@
     <span data-i18n="{% if user.role == 'sales' %}pf.available_title{% else %}pf.units_latest{% endif %}"></span>
     <span id="countBadge" class="text-muted" style="font-size:11px;margin-inline-start:8px"></span>
   </div>
-  <div class="table-wrap" style="max-height:640px;overflow:auto">
+
+  <!-- Card grid view (default) -->
+  <div id="gridView" class="pf-grid">
+    <div class="pf-empty"><span class="loading"></span></div>
+  </div>
+
+  <!-- Table view -->
+  <div id="tableView" class="pf-table-wrap" style="display:none;max-height:640px;overflow:auto">
     <table>
       <thead><tr>
         <th data-i18n="pf.col_compound"></th>
@@ -76,9 +183,7 @@
         <th data-i18n="pf.col_bedrooms"></th>
         <th data-i18n="pf.col_bua"></th>
         <th data-i18n="pf.col_price"></th>
-        {% if user.role != 'sales' %}
-        <th data-i18n="pf.col_status"></th>
-        {% endif %}
+        {% if user.role != 'sales' %}<th data-i18n="pf.col_status"></th>{% endif %}
         <th></th>
       </tr></thead>
       <tbody id="unitsBody">
@@ -88,9 +193,9 @@
   </div>
 </div>
 
-<!-- Unit detail modal (sales-friendly) -->
+<!-- Comprehensive unit detail modal -->
 <div class="modal-backdrop" id="unitModal">
-  <div class="modal" style="max-width:620px">
+  <div class="modal modal-wide">
     <div class="modal-header">
       <div class="modal-title" id="uTitle"></div>
       <button class="modal-close" onclick="closeModal('unitModal')">✕</button>
@@ -107,11 +212,22 @@
 <script>
 const IS_SALES = {{ 'true' if user.role == 'sales' else 'false' }};
 let _allUnits = [];
+let _filtered = [];
+let _view = (typeof localStorage !== "undefined" && localStorage.getItem("pf_view")) || "grid";
 
 function escapeHTML(s) {
   return String(s == null ? "" : s).replace(/[&<>"']/g, c => (
     {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]
   ));
+}
+
+function fmtCompactMoney(n) {
+  if (n == null || isNaN(n)) return "—";
+  const v = Number(n);
+  const lang = getLang();
+  if (v >= 1e6) return (v / 1e6).toFixed(v >= 10e6 ? 1 : 2) + (lang === "ar" ? "م" : "M");
+  if (v >= 1e3) return (v / 1e3).toFixed(0) + (lang === "ar" ? "ك" : "K");
+  return fmtMoney(v);
 }
 
 async function loadStats() {
@@ -129,7 +245,7 @@ async function loadStats() {
       `<div class="stat success"><div class="stat-label">${t("pf.total_units")}</div><div class="stat-value">${fmtNum(s.total)}</div></div>`,
       IS_SALES ? "" : `<div class="stat warn"><div class="stat-label">${t("pf.sold")}</div><div class="stat-value">${fmtNum(s.sold)}</div></div>`,
       `<div class="stat accent"><div class="stat-label">${t("pf.compounds")}</div><div class="stat-value">${fmtNum(s.compounds)}</div></div>`,
-      `<div class="stat"><div class="stat-label">${t("pf.avg_price")}</div><div class="stat-value sm money">${s.avg_price ? fmtMoney(s.avg_price) : '—'}</div></div>`,
+      `<div class="stat"><div class="stat-label">${t("pf.avg_price")}</div><div class="stat-value sm money">${s.avg_price ? fmtCompactMoney(s.avg_price) : '—'}</div></div>`,
     ].filter(Boolean).join("");
     document.getElementById("stats").innerHTML = html;
   } catch (e) {
@@ -145,63 +261,251 @@ async function loadUnits() {
     populateFilters();
     applyFilters();
   } catch (e) {
+    document.getElementById("gridView").innerHTML =
+      `<div class="pf-empty text-danger">${escapeHTML(tError(e))}</div>`;
     document.getElementById("unitsBody").innerHTML =
       `<tr><td colspan="9" class="table-empty text-danger">${escapeHTML(tError(e))}</td></tr>`;
   }
 }
 
 function populateFilters() {
-  const unique = (arr) => [...new Set(arr.filter(Boolean))].sort();
-  const fillSelect = (id, values) => {
+  const unique = (arr) => [...new Set(arr.filter(v => v != null && v !== "" && v !== "0"))].sort((a, b) => {
+    const an = Number(a), bn = Number(b);
+    if (!isNaN(an) && !isNaN(bn)) return an - bn;
+    return String(a).localeCompare(String(b));
+  });
+
+  const fillSelect = (id, values, formatter) => {
     const sel = document.getElementById(id);
+    if (!sel) return;
     const prev = sel.value;
     const opts = ['<option value="">' + t("common.all") + '</option>']
-      .concat(values.map(v => `<option value="${escapeHTML(v)}">${escapeHTML(v)}</option>`));
+      .concat(values.map(v => `<option value="${escapeHTML(v)}">${escapeHTML(formatter ? formatter(v) : v)}</option>`));
     sel.innerHTML = opts.join("");
     if (prev) sel.value = prev;
   };
+
   fillSelect("cityFilter",      unique(_allUnits.map(u => u.city_name)));
   fillSelect("devFilter",       unique(_allUnits.map(u => u.developer_name)));
+  fillSelect("compoundFilter",  unique(_allUnits.map(u => u.compound_name)));
+  fillSelect("phaseFilter",     unique(_allUnits.map(u => u.phase_name)));
   fillSelect("typeFilter",      unique(_allUnits.map(u => u.unit_type)));
   fillSelect("bedroomsFilter",  unique(_allUnits.map(u => u.bedrooms ? String(u.bedrooms) : null)));
+  fillSelect("finishingFilter", unique(_allUnits.map(u => u.finishing_type ? String(u.finishing_type) : null)),
+             v => finishingLabel(v));
+}
+
+function finishingLabel(v) {
+  // finishing_type stored as int — best-effort labels
+  const map = {
+    "1": t("pf.finishing_core"),   // shell / core
+    "2": t("pf.finishing_semi"),   // semi-finished
+    "3": t("pf.finishing_full"),   // fully finished
+    "4": t("pf.finishing_super"),  // super lux
+  };
+  return map[String(v)] || v;
+}
+
+function deliveryBucket(months) {
+  if (months == null) return null;
+  const m = Number(months);
+  if (isNaN(m)) return null;
+  if (m <= 0) return "ready";
+  if (m <= 12) return "0-12";
+  if (m <= 24) return "12-24";
+  if (m <= 36) return "24-36";
+  if (m <= 60) return "36-60";
+  return "60+";
+}
+
+let _debounceT = null;
+function applyFiltersDebounced() {
+  clearTimeout(_debounceT);
+  _debounceT = setTimeout(applyFilters, 250);
+}
+
+function readFilters() {
+  return {
+    q:        (document.getElementById("searchBox").value || "").trim().toLowerCase(),
+    city:     document.getElementById("cityFilter").value,
+    dev:      document.getElementById("devFilter").value,
+    compound: document.getElementById("compoundFilter").value,
+    phase:    document.getElementById("phaseFilter").value,
+    type:     document.getElementById("typeFilter").value,
+    bed:      document.getElementById("bedroomsFilter").value,
+    finishing:document.getElementById("finishingFilter").value,
+    delivery: document.getElementById("deliveryFilter").value,
+    outdoor:  document.getElementById("outdoorFilter").value,
+    discount: document.getElementById("discountFilter").value,
+    priceMin: parseFloat(document.getElementById("priceMin").value) || null,
+    priceMax: parseFloat(document.getElementById("priceMax").value) || null,
+    areaMin:  parseFloat(document.getElementById("areaMin").value) || null,
+    areaMax:  parseFloat(document.getElementById("areaMax").value) || null,
+    sort:     document.getElementById("sortBy").value || "default",
+  };
 }
 
 function applyFilters() {
-  const q    = (document.getElementById("searchBox").value || "").trim().toLowerCase();
-  const city = document.getElementById("cityFilter").value;
-  const dev  = document.getElementById("devFilter").value;
-  const typ  = document.getElementById("typeFilter").value;
-  const bed  = document.getElementById("bedroomsFilter").value;
+  const f = readFilters();
+  let rows = _allUnits.slice();
 
-  let rows = _allUnits;
-  if (city) rows = rows.filter(u => u.city_name === city);
-  if (dev)  rows = rows.filter(u => u.developer_name === dev);
-  if (typ)  rows = rows.filter(u => u.unit_type === typ);
-  if (bed)  rows = rows.filter(u => String(u.bedrooms || "") === bed);
-  if (q)    rows = rows.filter(u =>
-    (u.compound_name || "").toLowerCase().includes(q) ||
-    (u.developer_name || "").toLowerCase().includes(q) ||
-    (u.city_name || "").toLowerCase().includes(q));
+  if (f.city)      rows = rows.filter(u => u.city_name === f.city);
+  if (f.dev)       rows = rows.filter(u => u.developer_name === f.dev);
+  if (f.compound)  rows = rows.filter(u => u.compound_name === f.compound);
+  if (f.phase)     rows = rows.filter(u => u.phase_name === f.phase);
+  if (f.type)      rows = rows.filter(u => u.unit_type === f.type);
+  if (f.bed)       rows = rows.filter(u => String(u.bedrooms || "") === f.bed);
+  if (f.finishing) rows = rows.filter(u => String(u.finishing_type || "") === f.finishing);
+  if (f.delivery)  rows = rows.filter(u => deliveryBucket(u.delivery_from_months) === f.delivery);
+  if (f.outdoor === "any")  rows = rows.filter(u => u.outdoor_area && String(u.outdoor_area).trim() !== "" && String(u.outdoor_area).trim() !== "0");
+  if (f.outdoor === "none") rows = rows.filter(u => !u.outdoor_area || String(u.outdoor_area).trim() === "" || String(u.outdoor_area).trim() === "0");
+  if (f.discount)  rows = rows.filter(u => Number(u.cash_discount_percent || 0) >= Number(f.discount));
+  if (f.priceMin != null) rows = rows.filter(u => Number(u.total_price_egp || 0) >= f.priceMin);
+  if (f.priceMax != null) rows = rows.filter(u => Number(u.total_price_egp || 0) <= f.priceMax);
+  if (f.areaMin  != null) rows = rows.filter(u => Number(u.built_up_area_sqm || 0) >= f.areaMin);
+  if (f.areaMax  != null) rows = rows.filter(u => Number(u.built_up_area_sqm || 0) <= f.areaMax);
+  if (f.q) rows = rows.filter(u =>
+    (u.compound_name || "").toLowerCase().includes(f.q) ||
+    (u.developer_name || "").toLowerCase().includes(f.q) ||
+    (u.city_name || "").toLowerCase().includes(f.q) ||
+    (u.unit_type || "").toLowerCase().includes(f.q) ||
+    (u.phase_name || "").toLowerCase().includes(f.q));
 
+  // Sorting
+  const sortMap = {
+    price_asc:    (a, b) => (a.total_price_egp || 0) - (b.total_price_egp || 0),
+    price_desc:   (a, b) => (b.total_price_egp || 0) - (a.total_price_egp || 0),
+    area_asc:     (a, b) => (a.built_up_area_sqm || 0) - (b.built_up_area_sqm || 0),
+    area_desc:    (a, b) => (b.built_up_area_sqm || 0) - (a.built_up_area_sqm || 0),
+    delivery_asc: (a, b) => (a.delivery_from_months || 0) - (b.delivery_from_months || 0),
+    discount_desc:(a, b) => (b.cash_discount_percent || 0) - (a.cash_discount_percent || 0),
+  };
+  if (sortMap[f.sort]) rows.sort(sortMap[f.sort]);
+
+  _filtered = rows;
   document.getElementById("countBadge").textContent = `(${fmtNum(rows.length)})`;
-  renderRows(rows);
+  renderChips(f);
+  renderActive();
+}
+
+function renderChips(f) {
+  const chips = [];
+  const push = (key, val, labelI18n, fmt) => {
+    if (val === "" || val == null) return;
+    const lbl = labelI18n ? t(labelI18n) : key;
+    const display = fmt ? fmt(val) : val;
+    chips.push(`<span class="pf-chip">${escapeHTML(lbl)}: ${escapeHTML(display)}<button onclick="clearOne('${key}')" aria-label="remove">✕</button></span>`);
+  };
+  push("q", f.q, "common.search");
+  push("city", f.city, "pf.col_city");
+  push("dev", f.dev, "pf.col_developer");
+  push("compound", f.compound, "pf.col_compound");
+  push("phase", f.phase, "pf.phase");
+  push("type", f.type, "pf.col_type");
+  push("bed", f.bed, "pf.col_bedrooms");
+  push("finishing", f.finishing, "pf.finishing", finishingLabel);
+  push("delivery", f.delivery, "pf.delivery", v => t("pf.delivery_" + v.replace("-", "_").replace("+", "p")));
+  push("outdoor", f.outdoor, "pf.outdoor_filter", v => v === "any" ? t("pf.has_outdoor") : t("pf.no_outdoor"));
+  push("discount", f.discount, "pf.discount_filter", v => "≥ " + v + "%");
+  if (f.priceMin != null) push("priceMin", f.priceMin, "pf.price_min", fmtCompactMoney);
+  if (f.priceMax != null) push("priceMax", f.priceMax, "pf.price_max", fmtCompactMoney);
+  if (f.areaMin  != null) push("areaMin",  f.areaMin,  "pf.area_min",  v => v + " m²");
+  if (f.areaMax  != null) push("areaMax",  f.areaMax,  "pf.area_max",  v => v + " m²");
+  document.getElementById("chipsRow").innerHTML = chips.join("");
+}
+
+function clearOne(key) {
+  const map = {
+    q: "searchBox", city: "cityFilter", dev: "devFilter", compound: "compoundFilter",
+    phase: "phaseFilter", type: "typeFilter", bed: "bedroomsFilter",
+    finishing: "finishingFilter", delivery: "deliveryFilter", outdoor: "outdoorFilter",
+    discount: "discountFilter", priceMin: "priceMin", priceMax: "priceMax",
+    areaMin: "areaMin", areaMax: "areaMax",
+  };
+  const el = document.getElementById(map[key]);
+  if (el) { el.value = ""; applyFilters(); }
+}
+
+function resetFilters() {
+  ["searchBox","cityFilter","devFilter","compoundFilter","phaseFilter","typeFilter",
+   "bedroomsFilter","finishingFilter","deliveryFilter","outdoorFilter","discountFilter",
+   "priceMin","priceMax","areaMin","areaMax"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+  document.getElementById("sortBy").value = "default";
+  applyFilters();
+}
+
+function renderActive() {
+  if (_view === "grid") {
+    document.getElementById("gridView").style.display = "";
+    document.getElementById("tableView").style.display = "none";
+    renderGrid(_filtered);
+  } else {
+    document.getElementById("gridView").style.display = "none";
+    document.getElementById("tableView").style.display = "";
+    renderRows(_filtered);
+  }
+}
+
+function renderGrid(rows) {
+  const host = document.getElementById("gridView");
+  if (!rows.length) {
+    host.innerHTML = `<div class="pf-empty">${t("pf.no_match")}</div>`;
+    return;
+  }
+  const display = rows.slice(0, 300);
+  host.innerHTML = display.map((u, idx) => {
+    const sold = u.is_sold;
+    const statusBadge = !IS_SALES
+      ? (sold
+        ? `<span class="badge badge-pending">${t("pf.sold")}</span>`
+        : `<span class="badge badge-excellent">${t("pf.available")}</span>`)
+      : "";
+    const discount = Number(u.cash_discount_percent || 0);
+    const pills = [
+      u.unit_type ? `<span class="pf-pill brand"><span class="pf-pill-icon">▤</span>${escapeHTML(u.unit_type)}</span>` : "",
+      u.bedrooms  ? `<span class="pf-pill"><span class="pf-pill-icon">⛌</span>${u.bedrooms} ${t("pf.beds_short")}</span>` : "",
+      u.built_up_area_sqm ? `<span class="pf-pill"><span class="pf-pill-icon">◰</span>${u.built_up_area_sqm} m²</span>` : "",
+      (u.outdoor_area && String(u.outdoor_area).trim() && String(u.outdoor_area).trim() !== "0") ? `<span class="pf-pill accent"><span class="pf-pill-icon">❀</span>${escapeHTML(u.outdoor_area)}</span>` : "",
+      u.delivery_from_months ? `<span class="pf-pill warn"><span class="pf-pill-icon">⌛</span>${u.delivery_from_months} ${t("pf.months_short")}</span>` : "",
+    ].filter(Boolean).join("");
+    return `<div class="pf-card clickable" onclick="showUnit(${idx})">
+      <div class="pf-card-head">
+        <div>
+          <div class="pf-card-title">${escapeHTML(u.compound_name || "—")}</div>
+          <div class="pf-card-sub">${escapeHTML(u.developer_name || "")} · ${escapeHTML(u.city_name || "")}</div>
+        </div>
+        <div class="pf-card-status">${statusBadge}</div>
+      </div>
+      <div class="pf-card-meta">${pills}</div>
+      <div class="pf-card-price">
+        ${discount > 0 ? `<span class="discount-badge">-${discount}%</span>` : ""}
+        <span class="label">${t("pf.col_price")}</span>
+        <span class="value">${u.total_price_egp ? fmtCompactMoney(u.total_price_egp) + " " + t("fin.egp") : "—"}</span>
+        ${u.cash_price_from_egp && discount > 0 ? `<span class="cash">💰 ${t("pf.cash")}: ${fmtCompactMoney(u.cash_price_from_egp)} ${t("fin.egp")}</span>` : ""}
+      </div>
+    </div>`;
+  }).join("");
+  window._filteredUnits = display;
 }
 
 function renderRows(rows) {
   const body = document.getElementById("unitsBody");
   if (!rows.length) {
-    body.innerHTML = `<tr><td colspan="9" class="table-empty">${t("pf.no_data")}</td></tr>`;
+    body.innerHTML = `<tr><td colspan="9" class="table-empty">${t("pf.no_match")}</td></tr>`;
     return;
   }
-  const display = rows.slice(0, 500); // cap to avoid huge DOM
-  body.innerHTML = display.map((u, idx) => `<tr class="clickable" onclick="showUnit(${idx})" data-idx="${idx}">
+  const display = rows.slice(0, 500);
+  body.innerHTML = display.map((u, idx) => `<tr class="clickable" onclick="showUnit(${idx})">
     <td>${escapeHTML(u.compound_name || "—")}</td>
     <td>${escapeHTML(u.developer_name || "—")}</td>
     <td>${escapeHTML(u.city_name || "—")}</td>
     <td>${escapeHTML(u.unit_type || "—")}</td>
     <td>${u.bedrooms || "—"}</td>
     <td>${u.built_up_area_sqm ? u.built_up_area_sqm + " m²" : "—"}</td>
-    <td>${u.total_price_egp ? fmtMoney(u.total_price_egp) : "—"}</td>
+    <td class="money">${u.total_price_egp ? fmtMoney(u.total_price_egp) : "—"}</td>
     ${IS_SALES ? "" : `<td>${u.is_sold
           ? '<span class="badge badge-pending">' + t("pf.sold") + '</span>'
           : '<span class="badge badge-excellent">' + t("pf.available") + '</span>'}</td>`}
@@ -211,37 +515,115 @@ function renderRows(rows) {
 }
 
 function showUnit(idx) {
-  const u = (window._filteredUnits || _allUnits)[idx];
+  const u = (window._filteredUnits || _filtered)[idx];
   if (!u) return;
-  document.getElementById("uTitle").textContent = u.compound_name || "—";
-  const rows = [
-    ["pf.col_developer", u.developer_name],
-    ["pf.col_city", u.city_name],
-    ["pf.col_type", u.unit_type],
-    ["pf.col_bedrooms", u.bedrooms],
-    ["pf.col_bua", u.built_up_area_sqm ? u.built_up_area_sqm + " m²" : null],
-    ["pf.col_price", u.total_price_egp ? fmtMoney(u.total_price_egp) + " " + t("fin.egp") : null],
-    ["pf.phase", u.phase_name],
-    ["pf.finishing", u.finishing_type],
-    ["pf.delivery", u.delivery_from_months ? (u.delivery_from_months + "-" + (u.delivery_to_months || u.delivery_from_months) + " m") : null],
-    ["pf.payment_plan", u.payment_plan],
-    ["pf.maintenance", u.maintenance ? fmtMoney(u.maintenance) + " " + t("fin.egp") : null],
-    ["pf.club_fees", u.club_fees ? fmtMoney(u.club_fees) + " " + t("fin.egp") : null],
-    ["pf.parking_fees", u.parking_fees ? fmtMoney(u.parking_fees) + " " + t("fin.egp") : null],
-    ["pf.outdoor", u.outdoor_area],
-  ].filter(([, v]) => v != null && v !== "");
 
-  document.getElementById("uBody").innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 24px">
-      ${rows.map(([k, v]) => `
-        <div>
-          <div class="text-muted" style="font-size:11px">${t(k)}</div>
-          <div style="font-weight:500;margin-top:2px">${escapeHTML(v)}</div>
-        </div>
-      `).join("")}
+  document.getElementById("uTitle").textContent = u.compound_name || "—";
+  const discount = Number(u.cash_discount_percent || 0);
+  const has_outdoor = u.outdoor_area && String(u.outdoor_area).trim() && String(u.outdoor_area).trim() !== "0";
+
+  const detail = (k, v) => (v != null && v !== "")
+    ? `<div class="pf-detail-item"><div class="k">${t(k)}</div><div class="v">${escapeHTML(v)}</div></div>`
+    : "";
+
+  // Section: property attributes
+  const propSection = [
+    detail("pf.col_type", u.unit_type),
+    u.sub_type && u.sub_type !== u.unit_type ? detail("pf.sub_type", u.sub_type) : "",
+    detail("pf.col_bedrooms", u.bedrooms),
+    detail("pf.col_bua", u.built_up_area_sqm ? u.built_up_area_sqm + " m²" : null),
+    has_outdoor ? detail("pf.outdoor", u.outdoor_area) : "",
+    detail("pf.finishing", u.finishing_type ? finishingLabel(u.finishing_type) : null),
+  ].filter(Boolean).join("");
+
+  // Section: delivery & payment
+  const payCell = (label, val) => val
+    ? `<div class="pf-detail-item"><div class="k">${t(label)}</div><div class="v">${escapeHTML(val)}</div></div>`
+    : "";
+  const deliveryStr = u.delivery_from_months
+    ? (u.delivery_from_months + (u.delivery_to_months && u.delivery_to_months !== u.delivery_from_months ? "–" + u.delivery_to_months : "") + " " + t("pf.months_short"))
+    : null;
+  const paySection = [
+    payCell("pf.delivery", deliveryStr),
+    payCell("pf.payment_plan", u.payment_plan),
+  ].filter(Boolean).join("");
+
+  // Section: fees
+  const feesSection = [
+    payCell("pf.maintenance", u.maintenance),
+    payCell("pf.club_fees", u.club_fees),
+    payCell("pf.parking_fees", u.parking_fees),
+  ].filter(Boolean).join("");
+
+  // Section: location
+  const locSection = [
+    payCell("pf.col_city", u.city_name),
+    payCell("pf.col_developer", u.developer_name),
+    payCell("pf.phase", u.phase_name),
+    u.detail_id ? payCell("pf.unit_id", u.detail_id) : "",
+  ].filter(Boolean).join("");
+
+  // Pricing hero: total + cash side by side
+  const priceBlock = `
+    <div class="pf-detail-price">
+      <div class="pf-price-card">
+        <div class="label">${t("pf.col_price")}</div>
+        <div class="value">${u.total_price_egp ? fmtMoney(u.total_price_egp) + " " + t("fin.egp") : "—"}</div>
+        ${u.price_per_sqm_egp ? `<div class="sub">${fmtMoney(u.price_per_sqm_egp)} ${t("fin.egp")} / m²</div>` : ""}
+      </div>
+      <div class="pf-price-card cash">
+        <div class="label">${t("pf.cash_price")} ${discount ? `<span style="color:var(--warning);font-weight:700">(-${discount}%)</span>` : ""}</div>
+        <div class="value">${u.cash_price_from_egp ? fmtMoney(u.cash_price_from_egp) + " " + t("fin.egp") : "—"}</div>
+        ${u.cash_price_to_egp && u.cash_price_to_egp !== u.cash_price_from_egp ? `<div class="sub">${t("pf.up_to")} ${fmtMoney(u.cash_price_to_egp)}</div>` : ""}
+      </div>
     </div>
   `;
+
+  document.getElementById("uBody").innerHTML = `
+    <div class="pf-detail-hero">
+      <div class="pf-hero-name">${escapeHTML(u.compound_name || "—")}</div>
+      <div class="pf-hero-sub">
+        <span>🏗 ${escapeHTML(u.developer_name || "—")}</span>
+        <span>📍 ${escapeHTML(u.city_name || "—")}</span>
+        ${u.phase_name ? `<span>◇ ${escapeHTML(u.phase_name)}</span>` : ""}
+        ${!IS_SALES ? (u.is_sold
+          ? `<span><span class="badge badge-pending">${t("pf.sold")}</span></span>`
+          : `<span><span class="badge badge-excellent">${t("pf.available")}</span></span>`) : ""}
+      </div>
+    </div>
+
+    ${priceBlock}
+
+    <div class="pf-section">
+      <div class="pf-section-title">${t("pf.section_property")}</div>
+      <div class="pf-detail-grid">${propSection}</div>
+    </div>
+
+    ${paySection ? `<div class="pf-section">
+      <div class="pf-section-title">${t("pf.section_payment")}</div>
+      <div class="pf-detail-grid">${paySection}</div>
+    </div>` : ""}
+
+    ${feesSection ? `<div class="pf-section">
+      <div class="pf-section-title">${t("pf.section_fees")}</div>
+      <div class="pf-detail-grid">${feesSection}</div>
+    </div>` : ""}
+
+    ${locSection ? `<div class="pf-section">
+      <div class="pf-section-title">${t("pf.section_location")}</div>
+      <div class="pf-detail-grid">${locSection}</div>
+    </div>` : ""}
+  `;
   openModal("unitModal");
+}
+
+function setView(v) {
+  _view = v;
+  try { localStorage.setItem("pf_view", v); } catch {}
+  document.querySelectorAll("#viewToggle button").forEach(b => {
+    b.classList.toggle("active", b.dataset.view === v);
+  });
+  renderActive();
 }
 
 async function loadSyncStatus() {
@@ -283,6 +665,14 @@ async function triggerSync() {
 }
 
 function onLangChange() { loadStats(); applyFilters(); loadSyncStatus(); }
+
+// Wire up view toggle
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll("#viewToggle button").forEach(b => {
+    b.addEventListener("click", () => setView(b.dataset.view));
+  });
+  setView(_view);
+});
 
 loadStats();
 loadUnits();

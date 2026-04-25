@@ -14,12 +14,16 @@
   <div class="app-shell">
     {% if user %}
     <nav class="topnav">
+      <button class="topnav-burger" id="navBurger" aria-label="Menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+
       <a href="/" class="topnav-brand">
         <div class="topnav-brand-icon">A</div>
         <span data-i18n="app.name">Ain Real Estate</span>
       </a>
 
-      <div class="topnav-links">
+      <div class="topnav-links" id="navLinks">
         {# Sales role is scoped to PropFinder only — no other nav items. #}
         {% if user.role != 'sales' %}
           {% if user.role in ['marketing', 'manager', 'admin'] %}

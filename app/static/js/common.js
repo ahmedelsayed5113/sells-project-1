@@ -114,6 +114,31 @@ function initUserDropdown() {
   document.addEventListener("click", () => dropdown.classList.remove("open"));
 }
 
+function initBurger() {
+  const btn = document.getElementById("navBurger");
+  const links = document.getElementById("navLinks");
+  if (!btn || !links) return;
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const open = links.classList.toggle("open");
+    btn.classList.toggle("open", open);
+    btn.setAttribute("aria-expanded", open ? "true" : "false");
+  });
+  // Auto-close when a link is clicked or screen resizes back up
+  links.querySelectorAll("a").forEach(a => a.addEventListener("click", () => {
+    links.classList.remove("open");
+    btn.classList.remove("open");
+    btn.setAttribute("aria-expanded", "false");
+  }));
+  window.addEventListener("resize", () => {
+    if (window.innerWidth > 768) {
+      links.classList.remove("open");
+      btn.classList.remove("open");
+      btn.setAttribute("aria-expanded", "false");
+    }
+  });
+}
+
 function initLangToggle() {
   const btn = document.getElementById("langToggleBtn");
   if (!btn) return;
@@ -215,6 +240,7 @@ function initReveal() {
 
 document.addEventListener("DOMContentLoaded", () => {
   initUserDropdown();
+  initBurger();
   initLangToggle();
   attachRipples();
   initReveal();
