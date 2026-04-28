@@ -114,6 +114,12 @@ function initUserDropdown() {
   document.addEventListener("click", () => dropdown.classList.remove("open"));
 }
 
+// Track the element that had focus before the drawer opened, so we can
+// return focus on close (a11y requirement for modal dialogs).
+let _sidebarReturnFocus = null;
+
+function _isMobileViewport() { return window.innerWidth <= 1024; }
+
 function toggleSidebar(force) {
   const sb = document.getElementById("sidebar");
   const backdrop = document.getElementById("sidebarBackdrop");
@@ -127,8 +133,48 @@ function toggleSidebar(force) {
     burger.setAttribute("aria-expanded", willOpen ? "true" : "false");
   }
   document.body.style.overflow = willOpen ? "hidden" : "";
+
+  // Modal dialog behavior only applies when the sidebar acts as a drawer (mobile).
+  if (_isMobileViewport()) {
+    if (willOpen) {
+      _sidebarReturnFocus = document.activeElement;
+      // Move focus to the first focusable element inside the drawer.
+      const first = sb.querySelector("a, button, [tabindex]:not([tabindex='-1'])");
+      if (first) first.focus();
+    } else if (_sidebarReturnFocus && typeof _sidebarReturnFocus.focus === "function") {
+      _sidebarReturnFocus.focus();
+      _sidebarReturnFocus = null;
+    }
+  }
 }
 window.toggleSidebar = toggleSidebar;
+
+// Trap Tab inside the drawer while it's open on mobile, and close on Escape.
+function _onSidebarKeydown(e) {
+  const sb = document.getElementById("sidebar");
+  if (!sb || !sb.classList.contains("open") || !_isMobileViewport()) return;
+
+  if (e.key === "Escape") {
+    e.preventDefault();
+    toggleSidebar(false);
+    return;
+  }
+
+  if (e.key !== "Tab") return;
+  const focusable = sb.querySelectorAll(
+    "a[href], button:not([disabled]), [tabindex]:not([tabindex='-1'])"
+  );
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  }
+}
 
 function initBurger() {
   const btn = document.getElementById("navBurger");
@@ -148,15 +194,24 @@ function initBurger() {
   });
 }
 
+function _refreshLangToggleLabel() {
+  document.querySelectorAll("#langToggleBtn, .lang-toggle").forEach(btn => {
+    // Show the *target* language: in AR mode → "EN", in EN mode → "AR".
+    btn.textContent = getLang() === "ar" ? "EN" : "AR";
+  });
+}
+
 function initLangToggle() {
-  const btn = document.getElementById("langToggleBtn");
-  if (!btn) return;
-  btn.addEventListener("click", () => {
-    btn.classList.remove("spin-once"); void btn.offsetWidth;
-    btn.classList.add("spin-once");
-    const current = getLang();
-    setLang(current === "ar" ? "en" : "ar");
-    if (typeof onLangChange === "function") onLangChange(getLang());
+  _refreshLangToggleLabel();
+  document.querySelectorAll("#langToggleBtn, .lang-toggle").forEach(btn => {
+    btn.addEventListener("click", () => {
+      btn.classList.remove("spin-once"); void btn.offsetWidth;
+      btn.classList.add("spin-once");
+      const current = getLang();
+      setLang(current === "ar" ? "en" : "ar");
+      _refreshLangToggleLabel();
+      if (typeof onLangChange === "function") onLangChange(getLang());
+    });
   });
 }
 
@@ -216,20 +271,19 @@ function closeModal(id) {
   if (m) m.classList.remove("open");
 }
 
-// ─── Hyper-motion ripple on .hyper-btn / .btn-primary ──────────────
-function attachRipples() {
-  document.addEventListener("click", (e) => {
-    const btn = e.target.closest(".hyper-btn, .btn-primary");
-    if (!btn || btn.disabled) return;
-    const rect = btn.getBoundingClientRect();
-    const r = document.createElement("span");
-    r.className = "ripple";
-    const size = Math.max(rect.width, rect.height);
-    r.style.width = r.style.height = size + "px";
-    r.style.left = (e.clientX - rect.left - size / 2) + "px";
-    r.style.top = (e.clientY - rect.top - size / 2) + "px";
-    btn.appendChild(r);
-    setTimeout(() => r.remove(), 650);
+// ─── Password visibility toggles ───────────────────────────────────
+function initPasswordToggles() {
+  document.querySelectorAll(".pw-toggle").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-target");
+      const input = id ? document.getElementById(id) : null;
+      if (!input) return;
+      const showing = input.getAttribute("type") === "text";
+      input.setAttribute("type", showing ? "password" : "text");
+      const icon = btn.querySelector(".material-symbols-outlined");
+      if (icon) icon.textContent = showing ? "visibility" : "visibility_off";
+      btn.setAttribute("aria-label", t(showing ? "common.show_password" : "common.hide_password"));
+    });
   });
 }
 
@@ -251,8 +305,9 @@ document.addEventListener("DOMContentLoaded", () => {
   initUserDropdown();
   initBurger();
   initLangToggle();
-  attachRipples();
   initReveal();
+  initPasswordToggles();
+  document.addEventListener("keydown", _onSidebarKeydown);
   document.querySelectorAll(".modal-backdrop").forEach(m => {
     m.addEventListener("click", (e) => {
       if (e.target === m) m.classList.remove("open");

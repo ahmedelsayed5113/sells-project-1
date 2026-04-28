@@ -2,16 +2,14 @@
 {% block title %}PropFinder{% endblock %}
 
 {% block content %}
-<div class="hero-ribbon">
-  <div class="page-header" style="margin-bottom:0">
-    <div>
-      <h1 class="page-title" data-i18n="pf.title"></h1>
-      <p class="page-subtitle" data-i18n="pf.subtitle"></p>
-    </div>
-    {% if user.role != 'sales' %}
-    <button class="btn btn-primary hyper-btn" onclick="triggerSync()" id="syncBtn" data-i18n="pf.trigger_sync"></button>
-    {% endif %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title" data-i18n="pf.title"></h1>
+    <p class="page-subtitle" data-i18n="pf.subtitle"></p>
   </div>
+  {% if user.role != 'sales' %}
+  <button class="btn btn-primary" onclick="triggerSync()" id="syncBtn" data-i18n="pf.trigger_sync"></button>
+  {% endif %}
 </div>
 
 <div class="stats-grid stagger" id="stats">
@@ -34,21 +32,36 @@
 <div class="pf-filter-bar reveal">
   <div class="pf-filter-head">
     <div class="pf-title-row" data-i18n="pf.filters_title"></div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <div class="pf-filter-head-actions">
       <div class="view-toggle" id="viewToggle">
-        <button data-view="grid" class="active" title="Grid">▦ <span data-i18n="pf.view_grid"></span></button>
-        <button data-view="table" title="Table">☰ <span data-i18n="pf.view_table"></span></button>
+        <button data-view="grid" class="active" title="Grid"><span class="material-symbols-outlined" aria-hidden="true">view_module</span><span data-i18n="pf.view_grid"></span></button>
+        <button data-view="table" title="Table"><span class="material-symbols-outlined" aria-hidden="true">view_list</span><span data-i18n="pf.view_table"></span></button>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="resetFilters()" data-i18n="pf.clear_filters"></button>
     </div>
   </div>
 
-  <div class="pf-filter-grid">
-    <div class="field" style="grid-column: span 2; min-width: 240px">
-      <label data-i18n="common.search"></label>
-      <input type="text" id="searchBox" oninput="applyFilters()" data-i18n-placeholder="pf.search_ph">
+  <!-- Always-visible search with inline clear button -->
+  <div class="pf-search-field field">
+    <label data-i18n="common.search" for="searchBox"></label>
+    <div class="pf-search-input-wrap">
+      <span class="material-symbols-outlined pf-search-icon" aria-hidden="true">search</span>
+      <input type="text" id="searchBox" oninput="onSearchInput()" data-i18n-placeholder="pf.search_ph">
+      <button type="button" class="pf-search-clear" id="pfSearchClear" onclick="clearSearchBox()" data-i18n-aria-label="common.clear" hidden>
+        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+      </button>
     </div>
+  </div>
 
+  <!-- Collapsible advanced filters (closed by default on mobile, opened by JS on desktop) -->
+  <details class="pf-filters-details" id="pfFiltersDetails">
+    <summary class="pf-filters-summary">
+      <span class="material-symbols-outlined" aria-hidden="true">tune</span>
+      <span data-i18n="pf.more_filters"></span>
+      <span class="material-symbols-outlined pf-filters-chevron" aria-hidden="true">expand_more</span>
+    </summary>
+
+    <div class="pf-filter-grid">
     <div class="field">
       <label data-i18n="pf.col_city"></label>
       <select id="cityFilter" onchange="applyFilters()">
@@ -133,16 +146,16 @@
     <div class="field">
       <label data-i18n="pf.price_range"></label>
       <div class="range-row">
-        <input type="number" id="priceMin" placeholder="Min" oninput="applyFiltersDebounced()">
-        <input type="number" id="priceMax" placeholder="Max" oninput="applyFiltersDebounced()">
+        <input type="number" id="priceMin" data-i18n-placeholder="common.min" oninput="applyFiltersDebounced()">
+        <input type="number" id="priceMax" data-i18n-placeholder="common.max" oninput="applyFiltersDebounced()">
       </div>
     </div>
 
     <div class="field">
       <label data-i18n="pf.area_range"></label>
       <div class="range-row">
-        <input type="number" id="areaMin" placeholder="Min" oninput="applyFiltersDebounced()">
-        <input type="number" id="areaMax" placeholder="Max" oninput="applyFiltersDebounced()">
+        <input type="number" id="areaMin" data-i18n-placeholder="common.min" oninput="applyFiltersDebounced()">
+        <input type="number" id="areaMax" data-i18n-placeholder="common.max" oninput="applyFiltersDebounced()">
       </div>
     </div>
 
@@ -158,7 +171,8 @@
         <option value="discount_desc" data-i18n="pf.sort_discount_desc"></option>
       </select>
     </div>
-  </div>
+    </div>
+  </details>
 
   <div class="pf-chips" id="chipsRow"></div>
 </div>
@@ -167,11 +181,19 @@
   <div class="card-title">
     <span data-i18n="{% if user.role == 'sales' %}pf.available_title{% else %}pf.units_latest{% endif %}"></span>
     <span id="countBadge" class="text-muted" style="font-size:11px;margin-inline-start:8px"></span>
+    {% if user.role == 'sales' %}
+    <span id="freshnessPill" class="pf-freshness" hidden></span>
+    {% endif %}
   </div>
 
   <!-- Card grid view (default) -->
   <div id="gridView" class="pf-grid">
-    <div class="pf-empty"><span class="loading"></span></div>
+    <div class="pf-skel"><div class="pf-skel-head"></div><div class="pf-skel-meta"></div><div class="pf-skel-price"></div></div>
+    <div class="pf-skel"><div class="pf-skel-head"></div><div class="pf-skel-meta"></div><div class="pf-skel-price"></div></div>
+    <div class="pf-skel"><div class="pf-skel-head"></div><div class="pf-skel-meta"></div><div class="pf-skel-price"></div></div>
+    <div class="pf-skel"><div class="pf-skel-head"></div><div class="pf-skel-meta"></div><div class="pf-skel-price"></div></div>
+    <div class="pf-skel"><div class="pf-skel-head"></div><div class="pf-skel-meta"></div><div class="pf-skel-price"></div></div>
+    <div class="pf-skel"><div class="pf-skel-head"></div><div class="pf-skel-meta"></div><div class="pf-skel-price"></div></div>
   </div>
 
   <!-- Table view -->
@@ -454,7 +476,13 @@ function renderActive() {
 function renderGrid(rows) {
   const host = document.getElementById("gridView");
   if (!rows.length) {
-    host.innerHTML = `<div class="pf-empty">${t("pf.no_match")}</div>`;
+    host.innerHTML = `<div class="pf-empty">
+      <div>${t("pf.no_match")}</div>
+      <button type="button" class="btn btn-sm" style="margin-top:14px" onclick="resetFilters()">
+        <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
+        <span>${t("pf.clear_filters")}</span>
+      </button>
+    </div>`;
     return;
   }
   const display = rows.slice(0, 300);
@@ -467,13 +495,14 @@ function renderGrid(rows) {
       : "";
     const discount = Number(u.cash_discount_percent || 0);
     const pills = [
-      u.unit_type ? `<span class="pf-pill brand"><span class="pf-pill-icon">▤</span>${escapeHTML(u.unit_type)}</span>` : "",
-      u.bedrooms  ? `<span class="pf-pill"><span class="pf-pill-icon">⛌</span>${u.bedrooms} ${t("pf.beds_short")}</span>` : "",
-      u.built_up_area_sqm ? `<span class="pf-pill"><span class="pf-pill-icon">◰</span>${u.built_up_area_sqm} m²</span>` : "",
-      (u.outdoor_area && String(u.outdoor_area).trim() && String(u.outdoor_area).trim() !== "0") ? `<span class="pf-pill accent"><span class="pf-pill-icon">❀</span>${escapeHTML(u.outdoor_area)}</span>` : "",
-      u.delivery_from_months ? `<span class="pf-pill warn"><span class="pf-pill-icon">⌛</span>${u.delivery_from_months} ${t("pf.months_short")}</span>` : "",
+      u.unit_type ? `<span class="pf-pill brand"><span class="material-symbols-outlined pf-pill-icon" aria-hidden="true">chair_alt</span>${escapeHTML(u.unit_type)}</span>` : "",
+      u.bedrooms  ? `<span class="pf-pill"><span class="material-symbols-outlined pf-pill-icon" aria-hidden="true">bed</span>${u.bedrooms} ${t("pf.beds_short")}</span>` : "",
+      u.built_up_area_sqm ? `<span class="pf-pill"><span class="material-symbols-outlined pf-pill-icon" aria-hidden="true">square_foot</span>${u.built_up_area_sqm} m²</span>` : "",
+      (u.outdoor_area && String(u.outdoor_area).trim() && String(u.outdoor_area).trim() !== "0") ? `<span class="pf-pill accent"><span class="material-symbols-outlined pf-pill-icon" aria-hidden="true">deck</span>${escapeHTML(u.outdoor_area)}</span>` : "",
+      u.delivery_from_months ? `<span class="pf-pill warn"><span class="material-symbols-outlined pf-pill-icon" aria-hidden="true">schedule</span>${u.delivery_from_months} ${t("pf.months_short")}</span>` : "",
     ].filter(Boolean).join("");
-    return `<div class="pf-card clickable" onclick="showUnit(${idx})">
+    const uid = u.id || u.detail_id || ("idx-" + idx);
+    return `<div class="pf-card clickable" data-unit-id="${escapeHTML(String(uid))}">
       <div class="pf-card-head">
         <div>
           <div class="pf-card-title">${escapeHTML(u.compound_name || "—")}</div>
@@ -486,11 +515,12 @@ function renderGrid(rows) {
         ${discount > 0 ? `<span class="discount-badge">-${discount}%</span>` : ""}
         <span class="label">${t("pf.col_price")}</span>
         <span class="value">${u.total_price_egp ? fmtCompactMoney(u.total_price_egp) + " " + t("fin.egp") : "—"}</span>
-        ${u.cash_price_from_egp && discount > 0 ? `<span class="cash">💰 ${t("pf.cash")}: ${fmtCompactMoney(u.cash_price_from_egp)} ${t("fin.egp")}</span>` : ""}
+        ${u.cash_price_from_egp && discount > 0 ? `<span class="cash">${t("pf.cash")}: ${fmtCompactMoney(u.cash_price_from_egp)}</span>` : ""}
       </div>
     </div>`;
   }).join("");
   window._filteredUnits = display;
+  _wireCardClicks(host);
 }
 
 function renderRows(rows) {
@@ -500,7 +530,9 @@ function renderRows(rows) {
     return;
   }
   const display = rows.slice(0, 500);
-  body.innerHTML = display.map((u, idx) => `<tr class="clickable" onclick="showUnit(${idx})">
+  body.innerHTML = display.map((u, idx) => {
+    const uid = u.id || u.detail_id || ("idx-" + idx);
+    return `<tr class="clickable" data-unit-id="${escapeHTML(String(uid))}">
     <td>${escapeHTML(u.compound_name || "—")}</td>
     <td>${escapeHTML(u.developer_name || "—")}</td>
     <td>${escapeHTML(u.city_name || "—")}</td>
@@ -511,9 +543,37 @@ function renderRows(rows) {
     ${IS_SALES ? "" : `<td>${u.is_sold
           ? '<span class="badge badge-pending">' + t("pf.sold") + '</span>'
           : '<span class="badge badge-excellent">' + t("pf.available") + '</span>'}</td>`}
-    <td><button class="btn btn-sm" onclick="event.stopPropagation();showUnit(${idx})">${t("common.details")}</button></td>
-  </tr>`).join("");
+    <td><button class="btn btn-sm" data-row-details="${escapeHTML(String(uid))}">${t("common.details")}</button></td>
+  </tr>`;
+  }).join("");
   window._filteredUnits = display;
+  _wireCardClicks(body);
+}
+
+function _wireCardClicks(host) {
+  if (!host) return;
+  host.querySelectorAll("[data-unit-id]").forEach(el => {
+    el.addEventListener("click", (e) => {
+      // Ignore clicks that originated on the explicit "Details" button so we don't fire twice.
+      if (e.target.closest("[data-row-details]")) return;
+      showUnitById(el.getAttribute("data-unit-id"));
+    });
+  });
+  host.querySelectorAll("[data-row-details]").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      showUnitById(btn.getAttribute("data-row-details"));
+    });
+  });
+}
+
+function showUnitById(uid) {
+  const u = (window._filteredUnits || _filtered).find(
+    x => String(x.id || x.detail_id || "") === String(uid)
+  ) || (window._filteredUnits || _filtered)[Number(String(uid).replace("idx-", ""))];
+  if (!u) return;
+  const idx = (window._filteredUnits || _filtered).indexOf(u);
+  if (idx >= 0) showUnit(idx);
 }
 
 function showUnit(idx) {
@@ -585,9 +645,9 @@ function showUnit(idx) {
     <div class="pf-detail-hero">
       <div class="pf-hero-name">${escapeHTML(u.compound_name || "—")}</div>
       <div class="pf-hero-sub">
-        <span>🏗 ${escapeHTML(u.developer_name || "—")}</span>
-        <span>📍 ${escapeHTML(u.city_name || "—")}</span>
-        ${u.phase_name ? `<span>◇ ${escapeHTML(u.phase_name)}</span>` : ""}
+        <span><span class="material-symbols-outlined" aria-hidden="true">apartment</span>${escapeHTML(u.developer_name || "—")}</span>
+        <span><span class="material-symbols-outlined" aria-hidden="true">location_on</span>${escapeHTML(u.city_name || "—")}</span>
+        ${u.phase_name ? `<span><span class="material-symbols-outlined" aria-hidden="true">tag</span>${escapeHTML(u.phase_name)}</span>` : ""}
         ${!IS_SALES ? (u.is_sold
           ? `<span><span class="badge badge-pending">${t("pf.sold")}</span></span>`
           : `<span><span class="badge badge-excellent">${t("pf.available")}</span></span>`) : ""}
@@ -668,19 +728,53 @@ async function triggerSync() {
 
 function onLangChange() { loadStats(); applyFilters(); loadSyncStatus(); }
 
-// Wire up view toggle
+function onSearchInput() {
+  const sb = document.getElementById("searchBox");
+  const clr = document.getElementById("pfSearchClear");
+  if (clr) clr.hidden = !(sb && sb.value.length);
+  applyFilters();
+}
+
+function clearSearchBox() {
+  const sb = document.getElementById("searchBox");
+  if (sb) { sb.value = ""; sb.focus(); }
+  onSearchInput();
+}
+
+// Wire up view toggle + advanced-filters disclosure default state
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll("#viewToggle button").forEach(b => {
     b.addEventListener("click", () => setView(b.dataset.view));
   });
   setView(_view);
+
+  // On desktop (>768px), advanced filters open by default. On mobile, stay collapsed.
+  const det = document.getElementById("pfFiltersDetails");
+  if (det && window.matchMedia("(min-width: 769px)").matches) det.open = true;
 });
+
+async function loadFreshnessPill() {
+  // Sales-only: show how recent the dataset is. >14 days = warning tone.
+  const el = document.getElementById("freshnessPill");
+  if (!el) return;
+  try {
+    const s = await api("/api/sync/status");
+    if (!s || !s.last_run) { el.hidden = true; return; }
+    const days = Math.floor((Date.now() - new Date(s.last_run).getTime()) / 86400000);
+    el.hidden = false;
+    el.classList.toggle("is-stale", days > 14);
+    const key = days <= 0 ? "pf.fresh_today" : (days === 1 ? "pf.fresh_one_day" : "pf.fresh_n_days");
+    el.textContent = days <= 1 ? t(key) : t(key).replace("{n}", days);
+  } catch { el.hidden = true; }
+}
 
 loadStats();
 loadUnits();
 if (!IS_SALES) {
   loadSyncStatus();
   setInterval(loadSyncStatus, 15000);
+} else {
+  loadFreshnessPill();
 }
 </script>
 {% endblock %}

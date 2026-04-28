@@ -3,7 +3,7 @@
 
 {% block content %}
 <div class="auth-page">
-  <div class="auth-card hyper-pop">
+  <div class="auth-card">
     <div class="auth-logo">
       <div class="auth-logo-icon">A</div>
       <div class="auth-logo-text" data-i18n="app.name">Ain Real Estate</div>
@@ -14,20 +14,23 @@
       <button id="langToggleBtn" class="lang-toggle">EN</button>
     </div>
 
-    <div class="error-msg" id="errorMsg"></div>
+    <div class="error-msg" id="errorMsg" role="alert" aria-live="assertive"></div>
 
     <form id="loginForm" novalidate>
       <div class="field">
-        <label data-i18n="auth.username"></label>
-        <input type="text" id="username" autocomplete="username" required autofocus
-               maxlength="50">
+        <label for="username" data-i18n="auth.username"></label>
+        <input type="text" id="username" autocomplete="username" required maxlength="50">
       </div>
       <div class="field">
-        <label data-i18n="auth.password"></label>
-        <input type="password" id="password" autocomplete="current-password" required
-               maxlength="128">
+        <label for="password" data-i18n="auth.password"></label>
+        <div class="pw-input-wrap">
+          <input type="password" id="password" autocomplete="current-password" required maxlength="128">
+          <button type="button" class="pw-toggle" data-target="password" data-i18n-aria-label="common.show_password">
+            <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+          </button>
+        </div>
       </div>
-      <button type="submit" class="btn btn-primary btn-full hyper-btn" id="loginBtn"
+      <button type="submit" class="btn btn-primary btn-full" id="loginBtn"
               data-i18n="auth.login_btn"></button>
     </form>
 

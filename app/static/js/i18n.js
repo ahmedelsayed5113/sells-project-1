@@ -60,6 +60,12 @@ const I18N = {
     "common.of": "من",
     "common.none": "—",
     "common.deleted": "تم الحذف",
+    "common.clear": "مسح",
+    "common.min": "الحد الأدنى",
+    "common.max": "الحد الأقصى",
+    "common.show_password": "إظهار كلمة المرور",
+    "common.hide_password": "إخفاء كلمة المرور",
+    "common.menu": "القائمة",
 
     /* ─── shared filter UI ─── */
     "filters.team": "الفريق",
@@ -324,6 +330,10 @@ const I18N = {
     "profile.change_btn": "تغيير كلمة المرور",
     "profile.pw_changed": "تم تغيير كلمة المرور",
     "profile.pw_mismatch": "كلمتا المرور غير متطابقتين",
+    "profile.pw_same_as_old": "كلمة المرور الجديدة لا يمكن أن تكون نفس القديمة",
+    "profile.rule_length": "8 حروف على الأقل",
+    "profile.rule_letter": "حرف واحد على الأقل",
+    "profile.rule_digit": "رقم واحد على الأقل",
     "profile.contact_admin": "لتعديل هذه البيانات، تواصل مع الأدمن",
 
     /* ─── teams ─── */
@@ -417,7 +427,11 @@ const I18N = {
     "pf.parking_fees": "رسوم الجراج",
     "pf.outdoor": "مساحة خارجية",
     "pf.filters_title": "الفلاتر المتقدمة",
+    "pf.more_filters": "فلاتر إضافية",
     "pf.clear_filters": "مسح الفلاتر",
+    "pf.fresh_today": "تم التحديث اليوم",
+    "pf.fresh_one_day": "تم التحديث منذ يوم",
+    "pf.fresh_n_days": "تم التحديث منذ {n} يوم",
     "pf.view_grid": "كروت",
     "pf.view_table": "جدول",
     "pf.no_match": "لا توجد وحدات مطابقة لاختياراتك",
@@ -624,6 +638,12 @@ const I18N = {
     "common.of": "of",
     "common.none": "—",
     "common.deleted": "Deleted",
+    "common.clear": "Clear",
+    "common.min": "Min",
+    "common.max": "Max",
+    "common.show_password": "Show password",
+    "common.hide_password": "Hide password",
+    "common.menu": "Menu",
 
     /* ─── shared filter UI ─── */
     "filters.team": "Team",
@@ -888,6 +908,10 @@ const I18N = {
     "profile.change_btn": "Change Password",
     "profile.pw_changed": "Password updated",
     "profile.pw_mismatch": "Passwords don't match",
+    "profile.pw_same_as_old": "New password must differ from the old one",
+    "profile.rule_length": "At least 8 characters",
+    "profile.rule_letter": "At least one letter",
+    "profile.rule_digit": "At least one number",
     "profile.contact_admin": "To edit this info, contact the admin",
 
     /* ─── teams ─── */
@@ -981,7 +1005,11 @@ const I18N = {
     "pf.parking_fees": "Parking Fees",
     "pf.outdoor": "Outdoor Area",
     "pf.filters_title": "Advanced Filters",
+    "pf.more_filters": "More filters",
     "pf.clear_filters": "Clear filters",
+    "pf.fresh_today": "Updated today",
+    "pf.fresh_one_day": "Updated 1 day ago",
+    "pf.fresh_n_days": "Updated {n} days ago",
     "pf.view_grid": "Grid",
     "pf.view_table": "Table",
     "pf.no_match": "No units match your filters",
@@ -1190,6 +1218,9 @@ function applyLang(skipCallback) {
     });
     document.querySelectorAll("[data-i18n-title]").forEach(el => {
       el.setAttribute("title", t(el.getAttribute("data-i18n-title")));
+    });
+    document.querySelectorAll("[data-i18n-aria-label]").forEach(el => {
+      el.setAttribute("aria-label", t(el.getAttribute("data-i18n-aria-label")));
     });
     document.querySelectorAll("[data-i18n-value]").forEach(el => {
       el.value = t(el.getAttribute("data-i18n-value"));

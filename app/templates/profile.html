@@ -12,48 +12,65 @@
 
 <div class="card reveal">
   <div class="card-title" data-i18n="profile.account_info"></div>
-  <div class="field-row">
-    <div class="field">
-      <label data-i18n="auth.full_name"></label>
-      <input type="text" value="{{ user.full_name }}" readonly>
+  <dl class="profile-info">
+    <div class="profile-info-item">
+      <dt data-i18n="auth.full_name"></dt>
+      <dd>{{ user.full_name }}</dd>
     </div>
-    <div class="field">
-      <label data-i18n="auth.username"></label>
-      <input type="text" value="{{ user.username }}" readonly>
+    <div class="profile-info-item">
+      <dt data-i18n="auth.username"></dt>
+      <dd>{{ user.username }}</dd>
     </div>
-  </div>
-  <div class="field-row">
-    <div class="field">
-      <label data-i18n="admin.role"></label>
-      <input type="text" id="roleDisplay" value="{{ user.role }}" readonly>
+    <div class="profile-info-item">
+      <dt data-i18n="admin.role"></dt>
+      <dd id="roleDisplay">{{ user.role }}</dd>
     </div>
-    <div class="field">
-      <label data-i18n="auth.email"></label>
-      <input type="text" value="{{ user.email or '—' }}" readonly>
+    <div class="profile-info-item">
+      <dt data-i18n="auth.email"></dt>
+      <dd>{{ user.email or '—' }}</dd>
     </div>
-  </div>
-  <small class="text-dim" data-i18n="profile.contact_admin"></small>
+  </dl>
+  <small class="text-muted profile-contact-hint" data-i18n="profile.contact_admin"></small>
 </div>
 
 <div class="card reveal">
   <div class="card-title" data-i18n="profile.change_pw"></div>
   <form id="pwForm" novalidate>
     <div class="field">
-      <label data-i18n="profile.old_pw"></label>
-      <input type="password" id="oldPw" required autocomplete="current-password" maxlength="128">
+      <label for="oldPw" data-i18n="profile.old_pw"></label>
+      <div class="pw-input-wrap">
+        <input type="password" id="oldPw" required autocomplete="current-password" maxlength="128">
+        <button type="button" class="pw-toggle" data-target="oldPw" data-i18n-aria-label="common.show_password">
+          <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+        </button>
+      </div>
     </div>
     <div class="field-row">
       <div class="field">
-        <label data-i18n="profile.new_pw"></label>
-        <input type="password" id="newPw" minlength="8" required autocomplete="new-password" maxlength="128">
-        <small class="text-dim" data-i18n="auth.password_hint"></small>
+        <label for="newPw" data-i18n="profile.new_pw"></label>
+        <div class="pw-input-wrap">
+          <input type="password" id="newPw" minlength="8" required autocomplete="new-password" maxlength="128">
+          <button type="button" class="pw-toggle" data-target="newPw" data-i18n-aria-label="common.show_password">
+            <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+          </button>
+        </div>
+        <ul class="pw-rules" id="pwRules" aria-live="polite">
+          <li data-rule="length"><span class="material-symbols-outlined" aria-hidden="true">radio_button_unchecked</span><span data-i18n="profile.rule_length"></span></li>
+          <li data-rule="letter"><span class="material-symbols-outlined" aria-hidden="true">radio_button_unchecked</span><span data-i18n="profile.rule_letter"></span></li>
+          <li data-rule="digit"><span class="material-symbols-outlined" aria-hidden="true">radio_button_unchecked</span><span data-i18n="profile.rule_digit"></span></li>
+        </ul>
       </div>
       <div class="field">
-        <label data-i18n="profile.confirm_pw"></label>
-        <input type="password" id="confirmPw" minlength="8" required autocomplete="new-password" maxlength="128">
+        <label for="confirmPw" data-i18n="profile.confirm_pw"></label>
+        <div class="pw-input-wrap">
+          <input type="password" id="confirmPw" minlength="8" required autocomplete="new-password" maxlength="128">
+          <button type="button" class="pw-toggle" data-target="confirmPw" data-i18n-aria-label="common.show_password">
+            <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+          </button>
+        </div>
       </div>
     </div>
-    <button type="submit" class="btn btn-primary hyper-btn" id="pwBtn"
+    <button type="submit" class="btn btn-primary" id="pwBtn"
             data-i18n="profile.change_btn"></button>
   </form>
 </div>
@@ -63,9 +80,28 @@
 <script>
 function onLangChange() {
   const roleEl = document.getElementById("roleDisplay");
-  if (roleEl) roleEl.value = t("role.{{ user.role }}");
+  if (roleEl) roleEl.textContent = t("role.{{ user.role }}");
 }
 document.addEventListener("DOMContentLoaded", onLangChange);
+
+function checkPwRules() {
+  const v = document.getElementById("newPw").value;
+  const rules = {
+    length: v.length >= 8,
+    letter: /[A-Za-z]/.test(v),
+    digit:  /\d/.test(v),
+  };
+  document.querySelectorAll("#pwRules li").forEach(li => {
+    const r = li.getAttribute("data-rule");
+    const passed = rules[r];
+    li.classList.toggle("passed", passed);
+    const icon = li.querySelector(".material-symbols-outlined");
+    if (icon) icon.textContent = passed ? "check_circle" : "radio_button_unchecked";
+  });
+  return rules.length && rules.letter && rules.digit;
+}
+
+document.getElementById("newPw").addEventListener("input", checkPwRules);
 
 document.getElementById("pwForm").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -74,8 +110,8 @@ document.getElementById("pwForm").addEventListener("submit", async (e) => {
   const confirmPw = document.getElementById("confirmPw").value;
 
   if (newPw !== confirmPw) return toast(t("profile.pw_mismatch"), "error");
-  if (newPw.length < 8 || !/[A-Za-z]/.test(newPw) || !/\d/.test(newPw))
-    return toast(t("errors.weak_password"), "error");
+  if (!checkPwRules()) return toast(t("errors.weak_password"), "error");
+  if (newPw === oldPw) return toast(t("profile.pw_same_as_old"), "error");
 
   const btn = document.getElementById("pwBtn");
   btn.disabled = true;
@@ -86,6 +122,7 @@ document.getElementById("pwForm").addEventListener("submit", async (e) => {
     });
     toast(t("profile.pw_changed"), "success");
     document.getElementById("pwForm").reset();
+    checkPwRules();
   } catch (err) { toastError(err); }
   finally { btn.disabled = false; }
 });
