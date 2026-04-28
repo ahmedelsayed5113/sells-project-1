@@ -232,6 +232,18 @@ function scoreColor(pct) {
   return "danger";
 }
 
+// Six-band rating string from a 0–100 score. Mirrors app/kpi_logic.py RATINGS so
+// the client falls back to the same bands when the server hasn't computed one yet.
+function localRating(score) {
+  const s = Number(score) || 0;
+  if (s >= 90) return "Excellent";
+  if (s >= 75) return "V.Good";
+  if (s >= 55) return "Good";
+  if (s >= 40) return "Medium";
+  if (s >= 25) return "Weak";
+  return "Bad";
+}
+
 function fmtMonth(monthStr) {
   if (!monthStr) return "—";
   const [y, m] = monthStr.split("-");
@@ -262,13 +274,72 @@ function fmtMoney(n) {
   return Number(n).toLocaleString(locale, { maximumFractionDigits: 0 });
 }
 
+// Compact money — use on dense KPI tiles where 50,000,000 wouldn't fit.
+function fmtCompactMoney(n) {
+  if (n == null || isNaN(n)) return "—";
+  const v = Number(n);
+  const lang = getLang();
+  if (v >= 1e6) return (v / 1e6).toFixed(v >= 10e6 ? 1 : 2) + (lang === "ar" ? "م" : "M");
+  if (v >= 1e3) return (v / 1e3).toFixed(0) + (lang === "ar" ? "ك" : "K");
+  return fmtMoney(v);
+}
+
+// ─── Modal dialog (focus trap, Escape, focus return) ──────────────
+const _MODAL_FOCUSABLE = "input:not([type='hidden']):not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), a[href], [tabindex]:not([tabindex='-1'])";
+let _modalReturnFocus = null;
+let _activeModal = null;
+
+function openModalDialog(modalEl) {
+  if (!modalEl) return;
+  _modalReturnFocus = document.activeElement;
+  _activeModal = modalEl;
+  modalEl.classList.add("open");
+  document.body.style.overflow = "hidden";
+  // Focus first focusable inside the modal panel (not the backdrop wrapper).
+  const panel = modalEl.querySelector(".modal") || modalEl;
+  const first = panel.querySelector(_MODAL_FOCUSABLE);
+  if (first) setTimeout(() => first.focus(), 0);
+}
+
+function closeModalDialog(modalEl) {
+  if (!modalEl) return;
+  modalEl.classList.remove("open");
+  if (_activeModal === modalEl) _activeModal = null;
+  if (!document.querySelector(".modal-backdrop.open")) document.body.style.overflow = "";
+  if (_modalReturnFocus && typeof _modalReturnFocus.focus === "function") {
+    _modalReturnFocus.focus();
+    _modalReturnFocus = null;
+  }
+}
+
+function _onModalKeydown(e) {
+  if (!_activeModal || !_activeModal.classList.contains("open")) return;
+  if (e.key === "Escape") {
+    e.preventDefault();
+    closeModalDialog(_activeModal);
+    return;
+  }
+  if (e.key !== "Tab") return;
+  const panel = _activeModal.querySelector(".modal") || _activeModal;
+  const focusable = panel.querySelectorAll(_MODAL_FOCUSABLE);
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  }
+}
+
+// Backwards-compatible by-id wrappers — still used by existing onclick handlers.
 function openModal(id) {
-  const m = document.getElementById(id);
-  if (m) m.classList.add("open");
+  openModalDialog(document.getElementById(id));
 }
 function closeModal(id) {
-  const m = document.getElementById(id);
-  if (m) m.classList.remove("open");
+  closeModalDialog(document.getElementById(id));
 }
 
 // ─── Password visibility toggles ───────────────────────────────────
@@ -308,6 +379,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initReveal();
   initPasswordToggles();
   document.addEventListener("keydown", _onSidebarKeydown);
+  document.addEventListener("keydown", _onModalKeydown);
   document.querySelectorAll(".modal-backdrop").forEach(m => {
     m.addEventListener("click", (e) => {
       if (e.target === m) m.classList.remove("open");

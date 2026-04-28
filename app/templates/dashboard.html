@@ -6,37 +6,34 @@
 {% endblock %}
 
 {% block content %}
-<!-- Hero ribbon: title + summary tiles -->
-<div class="hero-ribbon">
-  <div class="page-header" style="margin-bottom:18px">
-    <div>
-      <h1 class="page-title" data-i18n="dash.title"></h1>
-      <p class="page-subtitle" data-i18n="dash.subtitle"></p>
-    </div>
-    <div class="flex gap-2">
-      <button class="btn" onclick="exportCSV()" data-i18n="common.export"></button>
-      <button class="btn btn-primary hyper-btn" onclick="window.print()" data-i18n="common.print"></button>
-    </div>
+<div class="page-header">
+  <div>
+    <h1 class="page-title" data-i18n="dash.title"></h1>
+    <p class="page-subtitle" data-i18n="dash.subtitle"></p>
   </div>
-
-  <!-- Top KPI tiles -->
-  <div class="bento" id="kpiTiles" style="margin-bottom:0">
-    <div class="kpi-tile tile-brand span-3"><div class="kpi-tile-head">
-      <div class="kpi-tile-icon">👥</div><div class="kpi-tile-label" data-i18n="dash.sales_count"></div>
-    </div><div class="kpi-tile-value" id="tile_n">—</div><div class="kpi-tile-sub" id="tile_n_sub">&nbsp;</div></div>
-
-    <div class="kpi-tile tile-accent span-3"><div class="kpi-tile-head">
-      <div class="kpi-tile-icon">📊</div><div class="kpi-tile-label" data-i18n="dash.avg_kpi"></div>
-    </div><div class="kpi-tile-value" id="tile_avg">—</div><div class="kpi-tile-sub" id="tile_avg_sub">&nbsp;</div></div>
-
-    <div class="kpi-tile tile-coral span-3"><div class="kpi-tile-head">
-      <div class="kpi-tile-icon">🏆</div><div class="kpi-tile-label" data-i18n="dash.top"></div>
-    </div><div class="kpi-tile-value" id="tile_top" style="font-size:22px">—</div><div class="kpi-tile-sub" id="tile_top_sub">&nbsp;</div></div>
-
-    <div class="kpi-tile tile-warm span-3"><div class="kpi-tile-head">
-      <div class="kpi-tile-icon">⚠️</div><div class="kpi-tile-label" data-i18n="dash.needs_attention"></div>
-    </div><div class="kpi-tile-value" id="tile_low">—</div><div class="kpi-tile-sub" data-i18n="dash.below_55"></div></div>
+  <div class="flex gap-2">
+    <button class="btn" onclick="exportCSV()" data-i18n="common.export"></button>
+    <button class="btn btn-primary" onclick="window.print()" data-i18n="common.print"></button>
   </div>
+</div>
+
+<!-- Top KPI tiles -->
+<div class="bento" id="kpiTiles">
+  <div class="kpi-tile tile-brand span-3"><div class="kpi-tile-head">
+    <div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">groups</span></div><div class="kpi-tile-label" data-i18n="dash.sales_count"></div>
+  </div><div class="kpi-tile-value" id="tile_n">—</div><div class="kpi-tile-sub" id="tile_n_sub">&nbsp;</div></div>
+
+  <div class="kpi-tile tile-accent span-3"><div class="kpi-tile-head">
+    <div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">trending_up</span></div><div class="kpi-tile-label" data-i18n="dash.avg_kpi"></div>
+  </div><div class="kpi-tile-value" id="tile_avg">—</div><div class="kpi-tile-sub" id="tile_avg_sub">&nbsp;</div></div>
+
+  <div class="kpi-tile tile-coral span-3"><div class="kpi-tile-head">
+    <div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">emoji_events</span></div><div class="kpi-tile-label" data-i18n="dash.top"></div>
+  </div><div class="kpi-tile-value is-name" id="tile_top">—</div><div class="kpi-tile-sub" id="tile_top_sub">&nbsp;</div></div>
+
+  <div class="kpi-tile tile-warm span-3"><div class="kpi-tile-head">
+    <div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">warning</span></div><div class="kpi-tile-label" data-i18n="dash.needs_attention"></div>
+  </div><div class="kpi-tile-value" id="tile_low">—</div><div class="kpi-tile-sub" data-i18n="dash.below_55"></div></div>
 </div>
 
 <div class="controls">
@@ -73,15 +70,15 @@
 <div class="bento">
   <div class="chart-card span-4">
     <h3 data-i18n="dash.health_score"></h3>
-    <div id="chartHealthGauge" class="plotly-container short"></div>
+    <div id="chartHealthGauge" class="plotly-container short"><div class="chart-skel"></div></div>
   </div>
   <div class="chart-card span-4">
     <h3 data-i18n="dash.metric_pillars"></h3>
-    <div id="chartRadarOverview" class="plotly-container short"></div>
+    <div id="chartRadarOverview" class="plotly-container short"><div class="chart-skel"></div></div>
   </div>
   <div class="chart-card span-4">
     <h3 data-i18n="dash.chart_funnel"></h3>
-    <div id="chartFunnel" class="plotly-container short"></div>
+    <div id="chartFunnel" class="plotly-container short"><div class="chart-skel"></div></div>
   </div>
 </div>
 
@@ -89,36 +86,36 @@
 <div class="bento">
   <div class="chart-card span-4">
     <h3 data-i18n="dash.chart_distribution"></h3>
-    <div id="chartRatings" class="plotly-container"></div>
+    <div id="chartRatings" class="plotly-container"><div class="chart-skel"></div></div>
   </div>
   <div class="chart-card span-8">
     <h3 data-i18n="dash.chart_leaderboard"></h3>
-    <div id="chartTeamPerf" class="plotly-container tall"></div>
+    <div id="chartTeamPerf" class="plotly-container tall"><div class="chart-skel"></div></div>
   </div>
 </div>
 
 <!-- KPI Achievement (full-width: bar + each KPI shown) -->
 <div class="chart-card">
   <h3 data-i18n="dash.chart_breakdown"></h3>
-  <div id="chartBreakdown" class="plotly-container tall"></div>
+  <div id="chartBreakdown" class="plotly-container tall"><div class="chart-skel"></div></div>
 </div>
 
 <!-- Bento row 3: actual-vs-target combo + status split donut -->
 <div class="bento">
   <div class="chart-card span-8">
     <h3 data-i18n="dash.chart_kpi_actual_target"></h3>
-    <div id="chartActualTarget" class="plotly-container"></div>
+    <div id="chartActualTarget" class="plotly-container"><div class="chart-skel"></div></div>
   </div>
   <div class="chart-card span-4">
     <h3 data-i18n="dash.chart_status_split"></h3>
-    <div id="chartStatus" class="plotly-container"></div>
+    <div id="chartStatus" class="plotly-container"><div class="chart-skel"></div></div>
   </div>
 </div>
 
 <!-- Heatmap: rep × KPI achievement -->
 <div class="chart-card">
   <h3 data-i18n="dash.chart_heatmap"></h3>
-  <div id="chartHeatmap" class="plotly-container tall"></div>
+  <div id="chartHeatmap" class="plotly-container tall"><div class="chart-skel"></div></div>
 </div>
 
 <!-- Detailed table -->
@@ -248,30 +245,30 @@ function renderOpStats(rows) {
 
   document.getElementById("opStats").innerHTML = `
     <div class="stat success">
-      <div class="stat-icon">📥</div>
+      <div class="stat-icon"><span class="material-symbols-outlined" aria-hidden="true">inbox</span></div>
       <div class="stat-label">${t("dash.total_leads")}</div>
       <div class="stat-value">${fmtNum(totalLeads)}</div>
     </div>
     <div class="stat">
-      <div class="stat-icon">📞</div>
+      <div class="stat-icon"><span class="material-symbols-outlined" aria-hidden="true">call</span></div>
       <div class="stat-label">${t("dash.total_calls")}</div>
       <div class="stat-value">${fmtNum(totalCalls)}</div>
       <div class="stat-sub">${callsPerLead.toFixed(1)} ${t("dash.calls_per_lead")}</div>
     </div>
     <div class="stat accent">
-      <div class="stat-icon">💼</div>
+      <div class="stat-icon"><span class="material-symbols-outlined" aria-hidden="true">business_center</span></div>
       <div class="stat-label">${t("dash.total_deals")}</div>
       <div class="stat-value">${fmtNum(totalDeals)}</div>
       <div class="stat-sub">${(rows.length ? totalDeals / rows.length : 0).toFixed(1)} ${t("dash.deals_per_rep")}</div>
     </div>
     <div class="stat warn">
-      <div class="stat-icon">🤝</div>
+      <div class="stat-icon"><span class="material-symbols-outlined" aria-hidden="true">handshake</span></div>
       <div class="stat-label">${t("dash.total_reservations")}</div>
       <div class="stat-value">${fmtNum(totalRes)}</div>
       <div class="stat-sub">${fmtNum(totalMeetings)} ${t("kpi.meetings")}</div>
     </div>
     <div class="stat ${convRate >= 3 ? 'success' : convRate >= 1.5 ? 'warn' : 'danger'}">
-      <div class="stat-icon">⚡</div>
+      <div class="stat-icon"><span class="material-symbols-outlined" aria-hidden="true">bolt</span></div>
       <div class="stat-label">${t("dash.conv_rate")}</div>
       <div class="stat-value">${convRate.toFixed(2)}%</div>
       <div class="stat-sub">${t("dash.lead_to_deal")}</div>
@@ -426,18 +423,18 @@ function renderTable(rows) {
     return `<tr class="clickable" onclick="showDetail(${r.user_id},'${r.month}')">
       <td><span class="rank ${rankCls}">${i + 1}</span></td>
       <td>
-        <div style="display:flex;align-items:center;gap:10px">
-          <div class="avatar" style="width:32px;height:32px;font-size:13px">${(r.user_name||'?')[0]}</div>
+        <div class="row-actor">
+          <div class="avatar avatar-sm">${(r.user_name||'?')[0]}</div>
           <div>
-            <div style="font-weight:600">${r.user_name}</div>
-            <div class="text-dim" style="font-size:11px">${t("dash.fresh_leads_short")}: ${fresh}</div>
+            <div class="row-actor-name">${r.user_name}</div>
+            <div class="row-actor-sub">${t("dash.fresh_leads_short")}: ${fresh}</div>
           </div>
         </div>
       </td>
       <td>
-        <div style="display:flex;align-items:center;gap:10px">
-          <span style="font-weight:700;min-width:50px;font-family:Inter">${score.toFixed(1)}%</span>
-          <div class="bar" style="flex:1"><div class="bar-fill ${scoreColor(score)}" style="width:${score}%"></div></div>
+        <div class="score-cell">
+          <span class="score-cell-num">${score.toFixed(1)}%</span>
+          <div class="bar score-cell-bar"><div class="bar-fill ${scoreColor(score)}" style="width:${score}%"></div></div>
         </div>
       </td>
       <td><span class="badge ${ratingClass(rating)}">${t("rating." + rating)}</span></td>
@@ -445,16 +442,26 @@ function renderTable(rows) {
       <td>${fmtCell(bd.deals)}</td>
       <td>${fmtCell(bd.meetings)}</td>
       <td>${fmtCell(bd.crm_pct)}</td>
-      <td class="text-muted" style="font-size:11px">
+      <td class="weakest-cell">
         ${kpiLabel(worstKey)} <span class="${worstPct < 50 ? 'text-danger' : 'text-muted'}">(${worstPct.toFixed(0)}%)</span>
       </td>
-      <td style="font-size:11px">
-        ${r.sales_submitted_at ? '<span class="text-success" title="Sales submitted">S✓</span>' : '<span class="text-dim">S✕</span>'}
-        ${r.dataentry_submitted_at ? ' <span class="text-success" title="Evaluated">D✓</span>' : ' <span class="text-dim">D✕</span>'}
+      <td>
+        ${statusPill('sales', !!r.sales_submitted_at)}
+        ${statusPill('eval',  !!r.dataentry_submitted_at)}
       </td>
       <td><button class="btn btn-sm" onclick="event.stopPropagation();showDetail(${r.user_id},'${r.month}')">${t("common.details")}</button></td>
     </tr>`;
   }).join("");
+}
+
+function statusPill(kind, done) {
+  // kind: 'sales' (the rep submitted their KPI) or 'eval' (data entry evaluated them)
+  const label = kind === 'sales' ? t("dash.status_sales") : t("dash.status_eval");
+  const icon  = done ? "check_circle" : "radio_button_unchecked";
+  const cls   = done ? "is-done" : "is-pending";
+  return `<span class="status-pill ${cls}">
+    <span class="material-symbols-outlined" aria-hidden="true">${icon}</span>${label}
+  </span>`;
 }
 
 function fmtCell(kpi) {
@@ -505,8 +512,8 @@ function showDetail(userId, month) {
       </div>
     </div>
     <div class="bento" style="margin-bottom:18px">
-      <div class="chart-card span-6" style="margin:0"><h3>${t("dash.chart_breakdown")}</h3><div id="detailRadar" class="plotly-container short"></div></div>
-      <div class="chart-card span-6" style="margin:0"><h3>${t("dash.chart_performance")}</h3><div id="detailGauge" class="plotly-container short"></div></div>
+      <div class="chart-card span-6" style="margin:0"><h3>${t("dash.chart_breakdown")}</h3><div id="detailRadar" class="plotly-container short"><div class="chart-skel"></div></div></div>
+      <div class="chart-card span-6" style="margin:0"><h3>${t("dash.chart_performance")}</h3><div id="detailGauge" class="plotly-container short"><div class="chart-skel"></div></div></div>
     </div>
     <div class="kpi-grid stagger">${kpiHTML}</div>
   </div>`;

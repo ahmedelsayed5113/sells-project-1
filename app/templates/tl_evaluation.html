@@ -6,12 +6,10 @@
 {% endblock %}
 
 {% block content %}
-<div class="hero-ribbon">
-  <div class="page-header" style="margin-bottom:0">
-    <div>
-      <h1 class="page-title" data-i18n="tl_eval.title"></h1>
-      <p class="page-subtitle" data-i18n="tl_eval.subtitle"></p>
-    </div>
+<div class="page-header">
+  <div>
+    <h1 class="page-title" data-i18n="tl_eval.title"></h1>
+    <p class="page-subtitle" data-i18n="tl_eval.subtitle"></p>
   </div>
 </div>
 
@@ -77,15 +75,15 @@
 <div id="list" class="stagger"></div>
 
 <!-- Modal -->
-<div class="modal-backdrop" id="evalModal">
+<div class="modal-backdrop" id="evalModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
   <div class="modal modal-wide">
     <div class="modal-header">
       <div class="modal-title" id="modalTitle"></div>
-      <button class="modal-close" onclick="closeModal('evalModal')">✕</button>
+      <button class="modal-close" onclick="closeModal('evalModal')" data-i18n-aria-label="common.close">✕</button>
     </div>
     <div class="modal-body" id="modalBody"></div>
     <div class="modal-footer">
-      <button class="btn btn-primary hyper-btn" onclick="saveEval()" data-i18n="tl_eval.save"></button>
+      <button class="btn btn-primary" onclick="saveEval()" data-i18n="tl_eval.save"></button>
       <button class="btn btn-ghost" onclick="closeModal('evalModal')" data-i18n="common.cancel"></button>
     </div>
   </div>
@@ -184,7 +182,8 @@ function renderTeamsPerf() {
     const top = p.top_performer
       ? `${escapeHTML(p.top_performer.name)} <span class="text-muted">(${p.top_performer.score}%)</span>`
       : `<span class="text-muted">—</span>`;
-    return `<div class="pf-card" style="cursor:default">
+    const teamRating = localRating(score);
+    return `<div class="surface-card team-perf-card">
       <div class="pf-card-head">
         <div>
           <div class="pf-card-title">
@@ -193,7 +192,7 @@ function renderTeamsPerf() {
           </div>
           <div class="pf-card-sub">${t("tl_eval.tl")}: ${escapeHTML(p.leader_name || '—')} · ${ldScore}</div>
         </div>
-        <span class="badge badge-${col === 'success' ? 'excellent' : col === 'warn' ? 'good' : 'weak'}">${score.toFixed(1)}%</span>
+        <span class="badge ${ratingClass(teamRating)}">${score.toFixed(1)}%</span>
       </div>
 
       <div>
@@ -204,15 +203,16 @@ function renderTeamsPerf() {
       </div>
 
       <div class="pf-card-meta">
-        <span class="pf-pill"><span class="pf-pill-icon">👥</span>${p.member_count} ${t("tl_eval.members")}</span>
-        <span class="pf-pill ${submittedPct >= 80 ? 'brand' : ''}"><span class="pf-pill-icon">✓</span>${p.members_evaluated}/${p.member_count} ${t("tl_eval.evaluated_short")}</span>
-        ${p.total_leads ? `<span class="pf-pill"><span class="pf-pill-icon">📥</span>${fmtNum(p.total_leads)} ${t("kpi.fresh_leads")}</span>` : ''}
-        ${p.total_deals ? `<span class="pf-pill accent"><span class="pf-pill-icon">💼</span>${p.total_deals} ${t("kpi.deals")}</span>` : ''}
-        ${p.total_calls ? `<span class="pf-pill"><span class="pf-pill-icon">📞</span>${fmtNum(p.total_calls)} ${t("kpi.calls")}</span>` : ''}
+        <span class="pf-pill"><span class="material-symbols-outlined pf-pill-icon" aria-hidden="true">groups</span>${p.member_count} ${t("tl_eval.members")}</span>
+        <span class="pf-pill ${submittedPct >= 80 ? 'brand' : ''}"><span class="material-symbols-outlined pf-pill-icon" aria-hidden="true">check_circle</span>${p.members_evaluated}/${p.member_count} ${t("tl_eval.evaluated_short")}</span>
+        ${p.total_leads ? `<span class="pf-pill"><span class="material-symbols-outlined pf-pill-icon" aria-hidden="true">inbox</span>${fmtNum(p.total_leads)} ${t("kpi.fresh_leads")}</span>` : ''}
+        ${p.total_deals ? `<span class="pf-pill accent"><span class="material-symbols-outlined pf-pill-icon" aria-hidden="true">business_center</span>${p.total_deals} ${t("kpi.deals")}</span>` : ''}
+        ${p.total_calls ? `<span class="pf-pill"><span class="material-symbols-outlined pf-pill-icon" aria-hidden="true">call</span>${fmtNum(p.total_calls)} ${t("kpi.calls")}</span>` : ''}
       </div>
 
-      <div style="font-size:11px;color:var(--text-muted);font-weight:500">
-        🏆 ${t("tl_eval.top_performer")}: ${top}
+      <div class="team-perf-top">
+        <span class="material-symbols-outlined" aria-hidden="true">emoji_events</span>
+        <span>${t("tl_eval.top_performer")}: ${top}</span>
       </div>
     </div>`;
   }).join("");
@@ -297,7 +297,7 @@ function render() {
   renderChips();
 
   document.getElementById("list").innerHTML = rows.length === 0
-    ? `<div class="empty-state"><div class="empty-state-icon">👤</div><div>${t("tl_eval.no_tl")}</div></div>`
+    ? `<div class="empty-state"><div class="empty-state-icon"><span class="material-symbols-outlined" aria-hidden="true">person_off</span></div><div>${t("tl_eval.no_tl")}</div></div>`
     : rows.map(l => {
         const done = !!l.dataentry_submitted_at;
         const teamName = l.team_name || t("tl_eval.no_team");
@@ -307,7 +307,7 @@ function render() {
         const teamPerf = teamsPerf.find(p => p.team_id === l.team_id);
         const teamScore = teamPerf ? teamPerf.avg_member_score : null;
         const teamScoreBadge = teamScore != null
-          ? `<span class="badge badge-${teamScore >= 75 ? 'vgood' : teamScore >= 55 ? 'good' : 'weak'}" title="${t('tl_eval.team_avg')}">${t('tl_eval.team_avg')}: ${teamScore.toFixed(1)}%</span>`
+          ? `<span class="badge ${ratingClass(localRating(teamScore))}" title="${t('tl_eval.team_avg')}">${t('tl_eval.team_avg')}: ${teamScore.toFixed(1)}%</span>`
           : "";
         return `
           <div class="card" style="margin-bottom:14px">
@@ -319,7 +319,7 @@ function render() {
               </div>
               ${teamScoreBadge}
               <span class="badge ${statusCls}">${statusTxt}</span>
-              <button class="btn btn-sm btn-primary hyper-btn" onclick="openEval(${l.id}, '${escapeHTML(l.full_name)}', '${month}')">
+              <button class="btn btn-sm btn-primary" onclick="openEval(${l.id}, '${escapeHTML(l.full_name)}', '${month}')">
                 ${btnTxt}
               </button>
             </div>
@@ -439,15 +439,32 @@ function renderForm(entry, autoHtml) {
 }
 
 function passfailField(id, label, val) {
+  const isPass = Number(val) === 100;
   return `
     <div class="field">
       <label>${label}</label>
-      <select id="${id}">
-        <option value="100" ${val==100?"selected":""}>${t("common.pass")}</option>
-        <option value="0" ${val!=100?"selected":""}>${t("common.fail")}</option>
-      </select>
+      <div class="passfail-toggle" role="radiogroup" aria-label="${escapeHTML(label)}">
+        <button type="button" role="radio" aria-checked="${isPass}" data-pf-target="${id}" data-pf-value="100" class="${isPass ? 'is-active' : ''}">${t("common.pass")}</button>
+        <button type="button" role="radio" aria-checked="${!isPass}" data-pf-target="${id}" data-pf-value="0" class="${!isPass ? 'is-active' : ''}">${t("common.fail")}</button>
+      </div>
+      <input type="hidden" id="${id}" value="${isPass ? 100 : 0}">
     </div>`;
 }
+
+// Delegate clicks for any pass/fail segmented control rendered inside the modal.
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".passfail-toggle button[data-pf-target]");
+  if (!btn) return;
+  const id  = btn.getAttribute("data-pf-target");
+  const val = btn.getAttribute("data-pf-value");
+  const input = document.getElementById(id);
+  if (input) input.value = val;
+  btn.parentElement.querySelectorAll("button").forEach(b => {
+    const active = b === btn;
+    b.classList.toggle("is-active", active);
+    b.setAttribute("aria-checked", active ? "true" : "false");
+  });
+});
 
 async function saveEval() {
   if (!currentTL) return;

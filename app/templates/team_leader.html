@@ -6,25 +6,23 @@
 {% endblock %}
 
 {% block content %}
-<div class="hero-ribbon">
-  <div class="page-header" style="margin-bottom:14px">
-    <div>
-      <h1 class="page-title" data-i18n="tl.title"></h1>
-      <p class="page-subtitle" data-i18n="tl.subtitle"></p>
+<div class="page-header">
+  <div>
+    <h1 class="page-title" data-i18n="tl.title"></h1>
+    <p class="page-subtitle" data-i18n="tl.subtitle"></p>
+  </div>
+  <div class="flex items-center gap-2">
+    <div class="field" style="margin-bottom:0">
+      <label data-i18n="common.month"></label>
+      <input type="month" id="month" onchange="loadKPI()">
     </div>
-    <div class="flex items-center gap-2">
-      <div class="field" style="margin-bottom:0">
-        <label data-i18n="common.month"></label>
-        <input type="month" id="month" onchange="loadKPI()">
-      </div>
-      <div id="teamBadge" class="badge badge-pending"></div>
-    </div>
+    <div id="teamBadge" class="text-muted" style="font-size:12px;font-weight:600"></div>
   </div>
 </div>
 
 <div id="noTeam" class="hidden">
   <div class="empty-state">
-    <div class="empty-state-icon">⚠️</div>
+    <div class="empty-state-icon"><span class="material-symbols-outlined" aria-hidden="true">group_off</span></div>
     <div data-i18n="tl.no_team"></div>
   </div>
 </div>
@@ -34,15 +32,15 @@
   <div class="bento">
     <div class="chart-card span-4">
       <h3 data-i18n="tl.score"></h3>
-      <div id="chartScoreGauge" class="plotly-container short"></div>
+      <div id="chartScoreGauge" class="plotly-container short"><div class="chart-skel"></div></div>
     </div>
     <div class="chart-card span-4">
       <h3 data-i18n="dash.metric_pillars"></h3>
-      <div id="chartScoreRadar" class="plotly-container short"></div>
+      <div id="chartScoreRadar" class="plotly-container short"><div class="chart-skel"></div></div>
     </div>
     <div class="chart-card span-4">
       <h3 data-i18n="dash.chart_breakdown"></h3>
-      <div id="chartScoreBars" class="plotly-container short"></div>
+      <div id="chartScoreBars" class="plotly-container short"><div class="chart-skel"></div></div>
     </div>
   </div>
 
@@ -143,7 +141,7 @@ function render(data) {
   const manualKeys = (cfg && cfg.tl_manual_fields) || [];
   const isPending = !data.tl_entry || !data.tl_entry.dataentry_submitted_at;
   document.getElementById("manualRows").innerHTML = isPending
-    ? `<div class="status-bar pending"><span style="font-size:18px">⏳</span><span>${t("tl.pending_eval")}</span></div>`
+    ? `<div class="status-bar pending"><span class="material-symbols-outlined" aria-hidden="true">hourglass_empty</span><span>${t("tl.pending_eval")}</span></div>`
     : manualKeys.map(key => {
         const b = data.breakdown[key];
         if (!b) return "";

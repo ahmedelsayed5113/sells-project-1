@@ -6,21 +6,19 @@
 {% endblock %}
 
 {% block content %}
-<div class="hero-ribbon">
-  <div class="page-header" style="margin-bottom:14px">
-    <div>
-      <h1 class="page-title" data-i18n="fin.title"></h1>
-      <p class="page-subtitle" data-i18n="fin.subtitle"></p>
-    </div>
-    <div class="flex gap-2">
-      <button class="btn" onclick="window.print()" data-i18n="common.print"></button>
-      <button class="btn btn-primary hyper-btn" onclick="exportCSV()" data-i18n="common.export"></button>
-    </div>
+<div class="page-header">
+  <div>
+    <h1 class="page-title" data-i18n="fin.title"></h1>
+    <p class="page-subtitle" data-i18n="fin.subtitle"></p>
   </div>
-
-  <!-- Top financial tiles (powered by computed totals) -->
-  <div class="bento" id="topTotals" style="margin-bottom:0"></div>
+  <div class="flex gap-2">
+    <button class="btn" onclick="window.print()" data-i18n="common.print"></button>
+    <button class="btn btn-primary" onclick="exportCSV()" data-i18n="common.export"></button>
+  </div>
 </div>
+
+<!-- Top financial tiles (powered by computed totals) -->
+<div class="bento" id="topTotals"></div>
 
 <div class="controls">
   <div class="field">
@@ -29,11 +27,11 @@
   </div>
   <div class="field">
     <label data-i18n="fin.avg_deal"></label>
-    <input type="number" id="avgDeal" value="2500000" onchange="loadAll()" style="width:180px">
+    <input type="number" id="avgDeal" onchange="loadAll()" style="width:180px">
   </div>
   <div class="field">
     <label data-i18n="fin.commission_rate"></label>
-    <input type="number" id="commissionRate" value="2.5" step="0.1" onchange="loadAll()" style="width:140px">
+    <input type="number" id="commissionRate" step="0.1" onchange="loadAll()" style="width:140px">
   </div>
   <div class="spacer"></div>
 </div>
@@ -119,11 +117,26 @@ async function initMonths() {
   } catch (e) { console.error(e); }
 }
 
+// Persist user-tuned defaults across visits — these are org-wide constants
+// the manager rarely changes, but should not have to retype every load.
+const FIN_AVGDEAL_KEY = "ain_fin_avgDeal";
+const FIN_COMMRATE_KEY = "ain_fin_commRate";
+
+function _seedFinanceDefaults() {
+  const avg = document.getElementById("avgDeal");
+  const rate = document.getElementById("commissionRate");
+  if (avg && !avg.value)  avg.value  = localStorage.getItem(FIN_AVGDEAL_KEY)  || "2500000";
+  if (rate && !rate.value) rate.value = localStorage.getItem(FIN_COMMRATE_KEY) || "2.5";
+}
+
 async function loadAll() {
+  _seedFinanceDefaults();
   const month = document.getElementById("selMonth").value;
   const avgDeal = parseFloat(document.getElementById("avgDeal").value) || 2500000;
   const commRate = (parseFloat(document.getElementById("commissionRate").value) || 2.5) / 100;
   if (avgDeal <= 0 || commRate < 0) return toast(t("errors.invalid_input"), "error");
+  try { localStorage.setItem(FIN_AVGDEAL_KEY,  String(avgDeal)); } catch {}
+  try { localStorage.setItem(FIN_COMMRATE_KEY, String(commRate * 100)); } catch {}
   try {
     const qs = `month=${month}&avg_deal_value_egp=${avgDeal}&commission_rate=${commRate}`;
     reportData = await api(`/api/finance/report?${qs}`);
@@ -148,22 +161,22 @@ function renderTopTiles(totals) {
   const totalRes   = totals.total_reservations || 0;
   document.getElementById("topTotals").innerHTML = `
     <div class="kpi-tile tile-brand span-3">
-      <div class="kpi-tile-head"><div class="kpi-tile-icon">💰</div><div class="kpi-tile-label" data-i18n="fin.total_revenue"></div></div>
-      <div class="kpi-tile-value" style="font-size:26px">${fmtMoney(totals.total_revenue)}</div>
+      <div class="kpi-tile-head"><div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">payments</span></div><div class="kpi-tile-label" data-i18n="fin.total_revenue"></div></div>
+      <div class="kpi-tile-value money-compact">${fmtCompactMoney(totals.total_revenue)}</div>
       <div class="kpi-tile-sub">${t("fin.egp")}</div>
     </div>
     <div class="kpi-tile tile-accent span-3">
-      <div class="kpi-tile-head"><div class="kpi-tile-icon">🎯</div><div class="kpi-tile-label" data-i18n="fin.total_commission"></div></div>
-      <div class="kpi-tile-value" style="font-size:26px">${fmtMoney(totals.total_commission)}</div>
+      <div class="kpi-tile-head"><div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">track_changes</span></div><div class="kpi-tile-label" data-i18n="fin.total_commission"></div></div>
+      <div class="kpi-tile-value money-compact">${fmtCompactMoney(totals.total_commission)}</div>
       <div class="kpi-tile-sub">${t("fin.egp")}</div>
     </div>
     <div class="kpi-tile tile-coral span-3">
-      <div class="kpi-tile-head"><div class="kpi-tile-icon">💼</div><div class="kpi-tile-label" data-i18n="fin.total_deals"></div></div>
+      <div class="kpi-tile-head"><div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">business_center</span></div><div class="kpi-tile-label" data-i18n="fin.total_deals"></div></div>
       <div class="kpi-tile-value">${totalDeals}</div>
-      <div class="kpi-tile-sub">${totalDeals ? fmtMoney(totals.total_revenue / totalDeals) + " " + t("fin.deal_value") : ''}</div>
+      <div class="kpi-tile-sub">${totalDeals ? fmtCompactMoney(totals.total_revenue / totalDeals) + " " + t("fin.deal_value") : ''}</div>
     </div>
     <div class="kpi-tile tile-violet span-3">
-      <div class="kpi-tile-head"><div class="kpi-tile-icon">🤝</div><div class="kpi-tile-label" data-i18n="fin.total_reservations"></div></div>
+      <div class="kpi-tile-head"><div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">handshake</span></div><div class="kpi-tile-label" data-i18n="fin.total_reservations"></div></div>
       <div class="kpi-tile-value">${totalRes}</div>
       <div class="kpi-tile-sub">&nbsp;</div>
     </div>
@@ -175,15 +188,15 @@ function renderTopTiles(totals) {
 function renderTotals(totals) {
   document.getElementById("totals").innerHTML = `
     <div class="stat success">
-      <div class="stat-icon">📈</div>
+      <div class="stat-icon"><span class="material-symbols-outlined" aria-hidden="true">trending_up</span></div>
       <div class="stat-label">${t("fin.commission_yield")}</div>
       <div class="stat-value sm money">${(totals.total_revenue ? (totals.total_commission/totals.total_revenue*100) : 0).toFixed(2)}%</div>
-      <div class="stat-sub">${t("fin.commission_per_lead")}: ${fmtMoney(totals.avg_commission_per_sales)}</div>
+      <div class="stat-sub">${t("fin.commission_per_lead")}: ${fmtCompactMoney(totals.avg_commission_per_sales)}</div>
     </div>
     <div class="stat accent">
-      <div class="stat-icon">💎</div>
+      <div class="stat-icon"><span class="material-symbols-outlined" aria-hidden="true">diamond</span></div>
       <div class="stat-label">${t("fin.avg_commission_per_sales")}</div>
-      <div class="stat-value sm money">${fmtMoney(totals.avg_commission_per_sales)}</div>
+      <div class="stat-value sm money">${fmtCompactMoney(totals.avg_commission_per_sales)}</div>
       <div class="stat-sub">${t("fin.egp")}</div>
     </div>
   `;
@@ -231,7 +244,7 @@ function renderCharts(rows) {
   const restSum = sortedByRev.slice(12).reduce((a, r) => a + (r.total_revenue || 0), 0);
   const treeLabels = top12.map(r => r.user_name);
   const treeVals   = top12.map(r => r.total_revenue || 0);
-  if (restSum > 0) { treeLabels.push("Others"); treeVals.push(restSum); }
+  if (restSum > 0) { treeLabels.push(t("fin.others")); treeVals.push(restSum); }
   Charts.drawTreemap("chartTreemap", {
     labels: treeLabels,
     values: treeVals,
@@ -295,8 +308,8 @@ function renderTable(rows) {
       <td>${r.reservations_count}</td>
       <td class="money">${fmtMoney(r.deal_revenue)}</td>
       <td class="money">${fmtMoney(r.reservation_revenue)}</td>
-      <td class="money text-success" style="font-weight:700">${fmtMoney(r.total_revenue)}</td>
-      <td class="money" style="color:var(--brand);font-weight:700">${fmtMoney(r.total_commission)}</td>
+      <td class="money fin-key-num">${fmtMoney(r.total_revenue)}</td>
+      <td class="money fin-key-num">${fmtMoney(r.total_commission)}</td>
     </tr>`;
   }).join("");
 }

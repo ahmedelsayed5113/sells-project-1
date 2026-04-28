@@ -87,8 +87,10 @@ def teams_page():
 
 
 @pages_bp.route("/team-leader")
-@role_required("team_leader", "manager", "admin")
+@role_required("team_leader")
 def team_leader_page():
+    # Manager/admin see TL data via /tl-evaluation; this page is the TL's own KPI view.
+    # @role_required always lets admin through, so admin retains access for support.
     return render_template("team_leader.html", user=current_user())
 
 

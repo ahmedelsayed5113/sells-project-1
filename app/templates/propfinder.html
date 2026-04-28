@@ -218,11 +218,11 @@
 </div>
 
 <!-- Comprehensive unit detail modal -->
-<div class="modal-backdrop" id="unitModal">
+<div class="modal-backdrop" id="unitModal" role="dialog" aria-modal="true" aria-labelledby="uTitle">
   <div class="modal modal-wide">
     <div class="modal-header">
       <div class="modal-title" id="uTitle"></div>
-      <button class="modal-close" onclick="closeModal('unitModal')">✕</button>
+      <button class="modal-close" onclick="closeModal('unitModal')" data-i18n-aria-label="common.close">✕</button>
     </div>
     <div class="modal-body" id="uBody"></div>
     <div class="modal-footer">
@@ -243,15 +243,6 @@ function escapeHTML(s) {
   return String(s == null ? "" : s).replace(/[&<>"']/g, c => (
     {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]
   ));
-}
-
-function fmtCompactMoney(n) {
-  if (n == null || isNaN(n)) return "—";
-  const v = Number(n);
-  const lang = getLang();
-  if (v >= 1e6) return (v / 1e6).toFixed(v >= 10e6 ? 1 : 2) + (lang === "ar" ? "م" : "M");
-  if (v >= 1e3) return (v / 1e3).toFixed(0) + (lang === "ar" ? "ك" : "K");
-  return fmtMoney(v);
 }
 
 async function loadStats() {

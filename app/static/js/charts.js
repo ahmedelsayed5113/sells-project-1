@@ -1,7 +1,7 @@
 /* ════════════════════════════════════════════════════════════════════
-   Plotly chart helpers — Premium Glassmorphism palette.
-   Periwinkle primary, Coral secondary, Teal tertiary, soft Yellow.
-   Light theme: transparent bg, soft grids, smooth splines, rounded bars.
+   Plotly chart helpers — Ain Real Estate flat design system.
+   Periwinkle primary, Teal accent, Coral support.
+   Solid backgrounds, neutral grids, straight lines by default.
    ════════════════════════════════════════════════════════════════════ */
 
 const CHART_COLORS = {
@@ -21,10 +21,26 @@ const CHART_COLORS = {
   muted:       '#767685',
   text:        '#181b24',
   textMuted:   '#464653',
-  bg:          'transparent',
-  grid:        'rgba(124,131,253,0.10)',
-  gridStrong:  'rgba(71,77,197,0.18)',
+  bg:          '#ffffff',
+  surface2:    '#f5f6fc',
+  border:      '#e5e7ef',
+  grid:        '#eef0f6',
+  gridStrong:  '#d8dbe8',
 };
+
+// Honored across all chart fns. Read once at module load.
+const _PREFERS_REDUCED_MOTION = !!(window.matchMedia &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+function _isRTL() { return document.documentElement.dir === 'rtl'; }
+function _chartLocale() {
+  return (typeof getLang === 'function' && getLang() === 'ar') ? 'ar' : 'en';
+}
+function _chartFontFamily() {
+  return _isRTL()
+    ? 'IBM Plex Sans Arabic, system-ui, sans-serif'
+    : 'Inter, system-ui, sans-serif';
+}
 
 // Wait for Plotly to load (up to 5 seconds), then call the drawer function.
 function _waitForPlotly(fn, attempt = 0) {
@@ -46,14 +62,12 @@ const PALETTE = [
 ];
 
 function chartLayout(opts = {}) {
-  const isRTL = document.documentElement.dir === 'rtl';
+  const fontFamily = _chartFontFamily();
   return {
     paper_bgcolor: 'transparent',
     plot_bgcolor: 'transparent',
     font: {
-      family: isRTL
-        ? 'IBM Plex Sans Arabic, system-ui, sans-serif'
-        : 'Inter, system-ui, sans-serif',
+      family: fontFamily,
       color: CHART_COLORS.textMuted,
       size: 12,
     },
@@ -81,8 +95,8 @@ function chartLayout(opts = {}) {
     showlegend: opts.showlegend !== false,
     legend: {
       font: { color: CHART_COLORS.textMuted, size: 11 },
-      bgcolor: 'rgba(255,255,255,0.5)',
-      bordercolor: 'rgba(124,131,253,0.18)',
+      bgcolor: CHART_COLORS.bg,
+      bordercolor: CHART_COLORS.border,
       borderwidth: 0,
       orientation: opts.legendOrientation || 'h',
       y: opts.legendY != null ? opts.legendY : -0.18,
@@ -91,19 +105,30 @@ function chartLayout(opts = {}) {
       ...opts.legend,
     },
     hoverlabel: {
-      bgcolor: 'rgba(255, 255, 255, 0.95)',
-      bordercolor: 'rgba(71, 77, 197, 0.30)',
-      font: { color: '#181b24', size: 12, family: 'Inter, system-ui' },
+      bgcolor: CHART_COLORS.bg,
+      bordercolor: CHART_COLORS.gridStrong,
+      font: { color: CHART_COLORS.text, size: 12, family: fontFamily },
     },
+    transition: { duration: _PREFERS_REDUCED_MOTION ? 0 : 300 },
     ...opts.layout,
   };
 }
 
-const chartConfig = {
-  displayModeBar: false,
-  responsive: true,
-  locale: 'en',
-};
+// Default chart config — show modebar on hover (export to PNG, autoscale).
+// drawGauge overrides this since modebar makes no sense on a single indicator.
+function _chartConfig(overrides = {}) {
+  return {
+    displayModeBar: 'hover',
+    displaylogo: false,
+    modeBarButtonsToRemove: ['lasso2d', 'select2d', 'autoScale2d'],
+    responsive: true,
+    locale: _chartLocale(),
+    ...overrides,
+  };
+}
+
+// Backwards-compat global — anything that imports chartConfig still gets the defaults.
+const chartConfig = _chartConfig();
 
 function drawBarChart(containerId, data, options = {}) {
   const el = document.getElementById(containerId);
@@ -119,7 +144,7 @@ function drawBarChart(containerId, data, options = {}) {
     },
     text: data.labels || data.y.map(v => typeof v === 'number' ? v.toFixed(1) : v),
     textposition: 'outside',
-    textfont: { color: CHART_COLORS.text, size: 11, family: 'Inter, system-ui' },
+    textfont: { color: CHART_COLORS.text, size: 11, family: _chartFontFamily() },
     cliponaxis: false,
     hovertemplate: (options.hovertemplate || '<b>%{x}</b><br>%{y}<extra></extra>'),
   };
@@ -131,7 +156,7 @@ function drawBarChart(containerId, data, options = {}) {
     ...options,
   });
 
-  _waitForPlotly(() => Plotly.newPlot(el, [trace], layout, chartConfig));
+  _waitForPlotly(() => Plotly.newPlot(el, [trace], layout, _chartConfig()));
 }
 
 function drawHorizontalBar(containerId, data, options = {}) {
@@ -149,7 +174,7 @@ function drawHorizontalBar(containerId, data, options = {}) {
     },
     text: data.labels || data.x.map(v => typeof v === 'number' ? v.toFixed(1) + '%' : v),
     textposition: 'outside',
-    textfont: { color: CHART_COLORS.text, size: 11, family: 'Inter, system-ui' },
+    textfont: { color: CHART_COLORS.text, size: 11, family: _chartFontFamily() },
     cliponaxis: false,
     hovertemplate: '<b>%{y}</b><br>%{x}<extra></extra>',
   };
@@ -161,7 +186,7 @@ function drawHorizontalBar(containerId, data, options = {}) {
     ...options,
   });
 
-  _waitForPlotly(() => Plotly.newPlot(el, [trace], layout, chartConfig));
+  _waitForPlotly(() => Plotly.newPlot(el, [trace], layout, _chartConfig()));
 }
 
 function drawDonut(containerId, data, options = {}) {
@@ -178,7 +203,7 @@ function drawDonut(containerId, data, options = {}) {
       line: { color: '#ffffff', width: 3 },
     },
     textinfo: options.textinfo || 'label+percent',
-    textfont: { size: 12, color: CHART_COLORS.text, family: 'Inter, system-ui' },
+    textfont: { size: 12, color: CHART_COLORS.text, family: _chartFontFamily() },
     insidetextorientation: 'horizontal',
     hovertemplate: '<b>%{label}</b><br>%{value} (%{percent})<extra></extra>',
     sort: false,
@@ -191,21 +216,25 @@ function drawDonut(containerId, data, options = {}) {
     annotations: options.centerText ? [{
       text: options.centerText,
       showarrow: false,
-      font: { size: 22, color: CHART_COLORS.text, family: 'Inter, system-ui', weight: 700 },
+      font: { size: 22, color: CHART_COLORS.text, family: _chartFontFamily(), weight: 700 },
     }] : [],
     ...options,
   });
 
-  _waitForPlotly(() => Plotly.newPlot(el, [trace], layout, chartConfig));
+  _waitForPlotly(() => Plotly.newPlot(el, [trace], layout, _chartConfig()));
 }
 
 function drawLineChart(containerId, series, options = {}) {
   const el = document.getElementById(containerId);
   if (!el) return;
 
+  // Real-data trends should default to linear lines — splines invent values
+  // between data points, which contradicts "trust through legibility".
+  // Pass options.shape: 'spline' explicitly when smoothing is intentional.
+  const lineShape = options.shape || 'linear';
+
   const traces = series.map((s, i) => {
     const color = s.color || PALETTE[i % PALETTE.length];
-    // Convert hex to rgba for fillcolor
     const fillColor = hexToRgba(color, 0.14);
     return {
       type: 'scatter',
@@ -213,11 +242,11 @@ function drawLineChart(containerId, series, options = {}) {
       name: s.name,
       x: s.x,
       y: s.y,
-      line: { color, width: 3, shape: 'spline', smoothing: 1.0 },
+      line: { color, width: 2.5, shape: lineShape, smoothing: lineShape === 'spline' ? 1.0 : undefined },
       marker: {
-        size: 8,
-        color: '#fff',
-        line: { color, width: 2.5 },
+        size: 7,
+        color: CHART_COLORS.bg,
+        line: { color, width: 2 },
       },
       fill: s.fill ? 'tozeroy' : 'none',
       fillcolor: s.fill ? fillColor : undefined,
@@ -230,7 +259,7 @@ function drawLineChart(containerId, series, options = {}) {
     legendY: -0.15,
     ...options,
   });
-  _waitForPlotly(() => Plotly.newPlot(el, traces, layout, chartConfig));
+  _waitForPlotly(() => Plotly.newPlot(el, traces, layout, _chartConfig()));
 }
 
 function drawAreaChart(containerId, series, options = {}) {
@@ -253,11 +282,11 @@ function drawGauge(containerId, value, options = {}) {
     type: 'indicator',
     mode: 'gauge+number',
     value: value,
-    number: { suffix: '%', font: { color: CHART_COLORS.text, size: 36, family: 'Inter, system-ui' } },
+    number: { suffix: '%', font: { color: CHART_COLORS.text, size: 36, family: _chartFontFamily() } },
     gauge: {
       axis: { range: [0, 100], tickcolor: CHART_COLORS.muted, tickfont: { size: 10 } },
       bar: { color: color, thickness: 0.78 },
-      bgcolor: 'rgba(241,243,255,0.6)',
+      bgcolor: CHART_COLORS.surface2,
       borderwidth: 0,
       steps: [
         { range: [0, 25],   color: 'rgba(186, 26, 26, 0.10)' },
@@ -279,7 +308,8 @@ function drawGauge(containerId, value, options = {}) {
     ...options,
   });
 
-  _waitForPlotly(() => Plotly.newPlot(el, [trace], layout, chartConfig));
+  // Single-indicator gauges don't need the export modebar.
+  _waitForPlotly(() => Plotly.newPlot(el, [trace], layout, _chartConfig({ displayModeBar: false })));
 }
 
 function drawRadarChart(containerId, data, options = {}) {
@@ -293,7 +323,7 @@ function drawRadarChart(containerId, data, options = {}) {
     fill: 'toself',
     fillcolor: 'rgba(71, 77, 197, 0.18)',
     line: { color: CHART_COLORS.brand, width: 2.5, shape: 'spline', smoothing: 0.6 },
-    marker: { size: 7, color: '#fff', line: { color: CHART_COLORS.brand, width: 2 } },
+    marker: { size: 7, color: CHART_COLORS.bg, line: { color: CHART_COLORS.brand, width: 2 } },
     hovertemplate: '<b>%{theta}</b><br>%{r}%<extra></extra>',
   };
 
@@ -301,16 +331,14 @@ function drawRadarChart(containerId, data, options = {}) {
     paper_bgcolor: 'transparent',
     plot_bgcolor: 'transparent',
     font: {
-      family: document.documentElement.dir === 'rtl'
-        ? 'IBM Plex Sans Arabic, system-ui, sans-serif'
-        : 'Inter, system-ui, sans-serif',
+      family: _chartFontFamily(),
       color: CHART_COLORS.textMuted,
       size: 11,
     },
     margin: { t: 30, r: 60, b: 30, l: 60 },
     showlegend: false,
     polar: {
-      bgcolor: 'rgba(255,255,255,0.4)',
+      bgcolor: 'transparent',
       radialaxis: {
         visible: true,
         range: [0, 100],
@@ -325,10 +353,11 @@ function drawRadarChart(containerId, data, options = {}) {
         tickfont: { size: 11, color: CHART_COLORS.text },
       },
     },
+    transition: { duration: _PREFERS_REDUCED_MOTION ? 0 : 300 },
     ...options,
   };
 
-  _waitForPlotly(() => Plotly.newPlot(el, [trace], layout, chartConfig));
+  _waitForPlotly(() => Plotly.newPlot(el, [trace], layout, _chartConfig()));
 }
 
 function drawStackedBar(containerId, series, xLabels, options = {}) {
@@ -353,7 +382,7 @@ function drawStackedBar(containerId, series, xLabels, options = {}) {
     ...options,
   });
 
-  _waitForPlotly(() => Plotly.newPlot(el, traces, layout, chartConfig));
+  _waitForPlotly(() => Plotly.newPlot(el, traces, layout, _chartConfig()));
 }
 
 function drawGroupedBar(containerId, series, xLabels, options = {}) {
@@ -372,11 +401,13 @@ function drawHeatmap(containerId, data, options = {}) {
     z: data.z,
     x: data.x,
     y: data.y,
+    // Sequential scale with stronger lightness drop at the low end so cold cells
+    // visibly stand out at a glance — pastel-pink-vs-pastel-periwinkle wasn't enough.
     colorscale: [
-      [0,    '#ffd1d6'],  // soft coral (worst)
-      [0.4,  '#ffe9c2'],  // soft yellow
+      [0,    '#fbe4e6'],  // very light coral (worst)
+      [0.30, '#fdebcb'],  // soft yellow
       [0.55, '#dfe3ff'],  // soft periwinkle
-      [0.75, '#bfc2ff'],  // periwinkle
+      [0.80, '#9aa1ee'],  // mid periwinkle
       [1,    '#474dc5'],  // primary periwinkle (best)
     ],
     colorbar: {
@@ -396,7 +427,7 @@ function drawHeatmap(containerId, data, options = {}) {
     ...options,
   });
 
-  _waitForPlotly(() => Plotly.newPlot(el, [trace], layout, chartConfig));
+  _waitForPlotly(() => Plotly.newPlot(el, [trace], layout, _chartConfig()));
 }
 
 /**
@@ -414,9 +445,9 @@ function drawTreemap(containerId, data, options = {}) {
     branchvalues: 'total',
     marker: {
       colors: data.colors || PALETTE,
-      line: { color: '#fff', width: 2 },
+      line: { color: CHART_COLORS.bg, width: 2 },
     },
-    textfont: { color: '#fff', size: 13, family: 'Inter, system-ui' },
+    textfont: { color: CHART_COLORS.bg, size: 13, family: _chartFontFamily() },
     textinfo: 'label+value+percent parent',
     hovertemplate: '<b>%{label}</b><br>%{value}<extra></extra>',
   };
@@ -427,7 +458,7 @@ function drawTreemap(containerId, data, options = {}) {
     ...options,
   });
 
-  _waitForPlotly(() => Plotly.newPlot(el, [trace], layout, chartConfig));
+  _waitForPlotly(() => Plotly.newPlot(el, [trace], layout, _chartConfig()));
 }
 
 /**
@@ -443,7 +474,7 @@ function drawFunnel(containerId, data, options = {}) {
     x: data.x,
     text: data.labels || data.x.map(v => typeof v === 'number' ? v.toLocaleString() : v),
     textposition: 'inside',
-    textfont: { color: '#fff', size: 13, family: 'Inter, system-ui' },
+    textfont: { color: CHART_COLORS.bg, size: 13, family: _chartFontFamily() },
     marker: {
       color: data.colors || [
         CHART_COLORS.brand3,
@@ -464,7 +495,7 @@ function drawFunnel(containerId, data, options = {}) {
     ...options,
   });
 
-  _waitForPlotly(() => Plotly.newPlot(el, [trace], layout, chartConfig));
+  _waitForPlotly(() => Plotly.newPlot(el, [trace], layout, _chartConfig()));
 }
 
 /**
@@ -485,7 +516,7 @@ function drawScatter(containerId, data, options = {}) {
       sizemode: 'diameter',
       sizeref: data.sizeref || 1,
       color: data.colors || CHART_COLORS.brand,
-      line: { color: '#fff', width: 2 },
+      line: { color: CHART_COLORS.bg, width: 2 },
       opacity: 0.85,
     },
     hovertemplate: '<b>%{text}</b><br>%{xaxis.title.text}: %{x}<br>%{yaxis.title.text}: %{y}<extra></extra>',
@@ -496,7 +527,7 @@ function drawScatter(containerId, data, options = {}) {
     ...options,
   });
 
-  _waitForPlotly(() => Plotly.newPlot(el, [trace], layout, chartConfig));
+  _waitForPlotly(() => Plotly.newPlot(el, [trace], layout, _chartConfig()));
 }
 
 /**
@@ -523,7 +554,7 @@ function drawComboBarLine(containerId, barSeries, lineSeries, xLabels, options =
       x: xLabels,
       y: lineSeries.values,
       line: { color: lineSeries.color || CHART_COLORS.brand, width: 3, shape: 'spline' },
-      marker: { size: 8, color: '#fff', line: { color: lineSeries.color || CHART_COLORS.brand, width: 2 } },
+      marker: { size: 8, color: CHART_COLORS.bg, line: { color: lineSeries.color || CHART_COLORS.brand, width: 2 } },
       yaxis: 'y2',
       hovertemplate: '<b>%{x}</b><br>' + lineSeries.name + ': %{y}<extra></extra>',
     },
@@ -544,7 +575,7 @@ function drawComboBarLine(containerId, barSeries, lineSeries, xLabels, options =
     ...options,
   });
 
-  _waitForPlotly(() => Plotly.newPlot(el, traces, layout, chartConfig));
+  _waitForPlotly(() => Plotly.newPlot(el, traces, layout, _chartConfig()));
 }
 
 function scoreColorHex(pct) {

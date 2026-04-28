@@ -529,6 +529,13 @@ html[dir="ltr"] .dropdown { right: 0; }
 
 .dropdown.open { display: block; }
 
+/* On desktop the sidebar always shows Profile + Logout, so the avatar dropdown
+   would be redundant. Disable click-to-open on screens with the sidebar. */
+@media (min-width: 1025px) {
+  .app-shell.has-sidebar .topnav-user .dropdown { display: none !important; }
+  .app-shell.has-sidebar .topnav-user { cursor: default; }
+}
+
 .dropdown-item {
   padding: 10px 14px;
   border-radius: var(--radius-sm);
@@ -621,15 +628,22 @@ html[lang="ar"] .page-title, html[dir="rtl"] .page-title {
 .stat-value.lg { font-size: 38px; }
 .stat-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; font-weight: 500; }
 
+.stat {
+  position: relative;
+}
 .stat-icon {
   position: absolute;
   top: 18px; inset-inline-end: 18px;
   width: 38px; height: 38px;
   border-radius: 50%;
-  background: rgba(124, 131, 253, 0.12);
+  background: var(--brand-soft);
   display: flex; align-items: center; justify-content: center;
   font-size: 18px;
   color: var(--brand);
+}
+.stat-icon .material-symbols-outlined {
+  font-size: 22px;
+  font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
 }
 
 .stat.accent  .stat-icon { background: rgba(0, 103, 98, 0.10);  color: var(--accent-2); }
@@ -941,6 +955,77 @@ html[dir="rtl"] tbody tr.clickable:hover { transform: translateX(-2px); }
 .badge-role-dataentry{ background: rgba(255, 184, 77, 0.16);  color: #b97000;          border-color: rgba(255, 184, 77, 0.30); }
 .badge-role-sales    { background: rgba(71, 77, 197, 0.10);   color: var(--brand);     border-color: rgba(71, 77, 197, 0.22); }
 
+/* Dashboard table row utility classes — replaces inline styles in renderTable */
+.row-actor {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.row-actor-name {
+  font-weight: 600;
+  font-size: 13px;
+}
+.row-actor-sub {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+.avatar.avatar-sm {
+  width: 32px;
+  height: 32px;
+  font-size: 13px;
+}
+.score-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.score-cell-num {
+  font-family: var(--font-display);
+  font-weight: 700;
+  min-width: 50px;
+}
+.score-cell-bar { flex: 1; }
+.weakest-cell {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.fin-key-num {
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* Status pill — used in dashboard table to show submitted/evaluated state.
+   Carries icon + text so the signal isn't color-only. */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--outline-variant);
+  margin-inline-end: 4px;
+  margin-bottom: 2px;
+  white-space: nowrap;
+}
+.status-pill .material-symbols-outlined {
+  font-size: 14px;
+  font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 20;
+}
+.status-pill.is-done {
+  background: var(--accent-soft);
+  color: var(--accent-2);
+  border-color: rgba(0, 131, 124, 0.20);
+}
+.status-pill.is-pending {
+  background: transparent;
+  color: var(--text-dim);
+}
+.status-pill.is-pending .material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
 /* ──────────────────────────────────────────────────────────────────
    PROGRESS BARS
    ────────────────────────────────────────────────────────────────── */
@@ -1059,6 +1144,43 @@ html[dir="ltr"] .toast.show { transform: translateX(-50%) translateY(0); }
 @media (hover: none), (pointer: coarse) {
   .pw-toggle { width: 44px; height: 44px; }
   .pw-input-wrap input { padding-inline-end: 52px; }
+}
+
+/* Pass/Fail segmented control — used in TL evaluation behavioral fields.
+   One tap per field instead of two-click <select>. Pair with a hidden input
+   to feed the existing form-submit handler. */
+.passfail-toggle {
+  display: inline-flex;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-recessed);
+  padding: 3px;
+  gap: 2px;
+  width: 100%;
+}
+.passfail-toggle button {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  min-height: 36px;
+}
+.passfail-toggle button:hover:not(.is-active) { color: var(--text); }
+.passfail-toggle button.is-active {
+  background: var(--surface-solid);
+  color: var(--brand);
+  box-shadow: var(--shadow-xs);
+}
+.passfail-toggle button[data-pf-value="0"].is-active { color: var(--danger); }
+@media (hover: none), (pointer: coarse) {
+  .passfail-toggle button { min-height: 44px; }
 }
 
 /* Live password rule checklist */
@@ -1402,6 +1524,10 @@ html[dir="ltr"] .toast.show { transform: translateX(-50%) translateY(0); }
   display: flex; align-items: center; justify-content: center;
   font-size: 30px;
 }
+.empty-state-icon .material-symbols-outlined {
+  font-size: 36px;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 40;
+}
 
 /* ──────────────────────────────────────────────────────────────────
    SCORE DISPLAY
@@ -1467,6 +1593,25 @@ html[dir="ltr"] .toast.show { transform: translateX(-50%) translateY(0); }
 .status-bar.pending { background: rgba(255, 184, 77, 0.10); border-color: rgba(255, 184, 77, 0.32); color: #b97000; }
 .status-bar.done    { background: rgba(0, 131, 124, 0.08);  border-color: rgba(0, 131, 124, 0.30);  color: var(--accent-2); }
 .status-bar.info    { background: rgba(90, 124, 255, 0.10); border-color: rgba(90, 124, 255, 0.30); color: var(--info); }
+.status-bar .material-symbols-outlined {
+  font-size: 18px;
+  font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 20;
+}
+
+/* Team-perf card "top performer" line */
+.team-perf-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.team-perf-top .material-symbols-outlined {
+  font-size: 14px;
+  color: var(--warning);
+  font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 20;
+}
 
 /* ──────────────────────────────────────────────────────────────────
    FORM SECTIONS
@@ -1883,6 +2028,35 @@ html[dir="ltr"] .toast.show { transform: translateX(-50%) translateY(0); }
   color: var(--text-muted);
 }
 
+/* Non-interactive card surface — same shape as .pf-card but no hover/cursor */
+.surface-card {
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  background: var(--surface-solid);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-xs);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Chart-card skeleton — sits inside .plotly-container until Plotly mounts.
+   Plotly.newPlot replaces the container's children, so no JS removal needed. */
+.chart-skel {
+  width: 100%;
+  height: 100%;
+  min-height: 240px;
+  border-radius: var(--radius);
+  background: var(--surface-3);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .chart-skel {
+    background: linear-gradient(90deg, var(--surface-3) 0%, var(--surface-2) 50%, var(--surface-3) 100%);
+    background-size: 200% 100%;
+    animation: skelShimmer 1.6s linear infinite;
+  }
+}
+
 /* Skeleton placeholder cards while /api/units is loading */
 .pf-skel {
   border-radius: var(--radius-lg);
@@ -2114,12 +2288,9 @@ html[dir="ltr"] { text-align: left; }
   overflow: hidden;
   transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease);
 }
-.kpi-tile:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
-.kpi-tile.tile-brand    { background: linear-gradient(135deg, rgba(124,131,253,0.18), rgba(255,255,255,0.65)); }
-.kpi-tile.tile-accent   { background: linear-gradient(135deg, rgba(64,220,209,0.20), rgba(255,255,255,0.65)); }
-.kpi-tile.tile-warm     { background: linear-gradient(135deg, rgba(255,184,77,0.20), rgba(255,255,255,0.65)); }
-.kpi-tile.tile-coral    { background: linear-gradient(135deg, rgba(255,180,162,0.32), rgba(255,255,255,0.65)); }
-.kpi-tile.tile-violet   { background: linear-gradient(135deg, rgba(198,191,255,0.32), rgba(255,255,255,0.65)); }
+.kpi-tile:hover { box-shadow: var(--shadow-sm); }
+/* tile-brand / tile-accent / tile-warm / tile-coral / tile-violet variants now
+   carry state via the icon color/background only — body stays flat surface. */
 
 .kpi-tile-head {
   display: flex; align-items: center; gap: 10px;
@@ -2127,17 +2298,20 @@ html[dir="ltr"] { text-align: left; }
 }
 .kpi-tile-icon {
   width: 38px; height: 38px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.65);
+  border-radius: 10px;
+  background: var(--brand-soft);
   display: flex; align-items: center; justify-content: center;
   font-size: 18px;
   color: var(--brand);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.6);
 }
-.tile-accent  .kpi-tile-icon { color: var(--accent-2); }
-.tile-warm    .kpi-tile-icon { color: #b97000; }
-.tile-coral   .kpi-tile-icon { color: var(--secondary); }
-.tile-violet  .kpi-tile-icon { color: #5d4eb6; }
+.kpi-tile-icon .material-symbols-outlined {
+  font-size: 22px;
+  font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+}
+.tile-accent  .kpi-tile-icon { background: var(--accent-soft);    color: var(--accent-2); }
+.tile-warm    .kpi-tile-icon { background: var(--warning-soft);   color: #b97000; }
+.tile-coral   .kpi-tile-icon { background: var(--secondary-soft); color: var(--secondary); }
+.tile-violet  .kpi-tile-icon { background: rgba(198,191,255,0.30); color: #5d4eb6; }
 
 .kpi-tile-label {
   font-size: 11px;
@@ -2154,6 +2328,14 @@ html[dir="ltr"] { text-align: left; }
   color: var(--text);
   line-height: 1;
 }
+.kpi-tile-value.is-name {
+  font-size: 18px;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kpi-tile-value.money-compact { font-size: 26px; }
 
 .kpi-tile-sub {
   font-size: 12px;
