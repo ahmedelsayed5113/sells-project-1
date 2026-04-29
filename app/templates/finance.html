@@ -110,6 +110,7 @@
 let reportData = null;
 let trendData = null;
 let _drCtrl = null;
+let _drFallbackArmed = true;  // auto-widen to YTD on empty first load
 
 // Persist user-tuned defaults across visits — these are org-wide constants
 // the manager rarely changes, but should not have to retype every load.
@@ -141,10 +142,18 @@ async function loadAll() {
       api(`/api/finance/report?${qs}`),
       api("/api/finance/trend?months_back=6"),
     ]);
+    if (_drFallbackArmed
+        && (!report || !report.totals || (report.totals.sales_count || 0) === 0)
+        && _drCtrl.getRange().preset !== "ytd") {
+      _drFallbackArmed = false;
+      _drCtrl.setRange({ preset: "ytd" });
+      return;
+    }
+    _drFallbackArmed = false;
     reportData = report;
     trendData = trend;
     render();
-  } catch (e) { toastError(e); }
+  } catch (e) { _drFallbackArmed = false; toastError(e); }
 }
 
 function render() {

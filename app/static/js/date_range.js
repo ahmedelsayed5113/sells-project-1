@@ -508,10 +508,21 @@
     return {
       getRange: () => Object.assign({}, range),
       setRange: (partial) => {
-        const fromD = parseYMD(partial.from || range.from);
-        const toD = parseYMD(partial.to || range.to);
+        // Preset-key shortcut: setRange({preset: "ytd"}) resolves the dates
+        // server-side (today). Lets pages programmatically widen the picker
+        // (e.g. fall back to ytd when the default range returns empty).
+        if (partial && partial.preset && partial.preset !== "custom"
+            && ALL_PRESETS.indexOf(partial.preset) >= 0
+            && !partial.from && !partial.to) {
+          if (!presetIsAllowed(partial.preset, currentMode)) return;
+          const r = resolvePreset(partial.preset);
+          if (r) setInternal(rangeFromDates(r.from, r.to, partial.preset));
+          return;
+        }
+        const fromD = parseYMD((partial && partial.from) || range.from);
+        const toD = parseYMD((partial && partial.to) || range.to);
         if (!fromD || !toD || toD < fromD) return;
-        setInternal(rangeFromDates(fromD, toD, partial.preset || "custom"));
+        setInternal(rangeFromDates(fromD, toD, (partial && partial.preset) || "custom"));
       },
       setMode: (m) => {
         if (m !== "full" && m !== "month-only") return;

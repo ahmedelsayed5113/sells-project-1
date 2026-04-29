@@ -172,6 +172,11 @@
 <script>
 let allData = [];
 let _drCtrl = null;
+// One-shot fallback: if the default range (last_30) returns empty on first
+// paint, the page programmatically widens to YTD so the user always sees
+// data on first open. Honors localStorage / URL state — only fires when
+// neither was already set.
+let _drFallbackArmed = true;
 
 const KPI_KEYS = ["calls","meetings","crm_pct","deals","reports","reservations","attitude","presentation","followup_pct","behaviour","appearance","attendance_pct","hr_roles"];
 
@@ -184,8 +189,17 @@ async function loadAll() {
     // funnel, per-KPI bar, actual-vs-target) and the table both consume.
     const qs = _drCtrl.toQueryString({ detail: 1 });
     allData = await api(`/api/kpi/report?${qs}`);
+    if (_drFallbackArmed && allData.length === 0
+        && _drCtrl.getRange().preset !== "ytd") {
+      // Empty result on first paint → widen to YTD once. setRange triggers
+      // onChange → loadAll, but the flag is now disarmed so we won't loop.
+      _drFallbackArmed = false;
+      _drCtrl.setRange({ preset: "ytd" });
+      return;
+    }
+    _drFallbackArmed = false;
     render();
-  } catch (e) { toastError(e); }
+  } catch (e) { _drFallbackArmed = false; toastError(e); }
 }
 
 function render() {

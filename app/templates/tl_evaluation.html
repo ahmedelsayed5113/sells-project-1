@@ -109,6 +109,7 @@ let unassignedSummary = { member_count: 0, members_submitted: 0, members_evaluat
 let currentTL = null;
 let tlKpiData = null;
 let _drCtrl = null;
+let _drFallbackArmed = true;  // auto-widen to YTD on empty first load
 
 async function loadAll() {
   if (!_drCtrl) return;
@@ -119,10 +120,22 @@ async function loadAll() {
       teams.length ? Promise.resolve(teams) : api("/api/teams").catch(() => []),
       api(`/api/kpi/teams-summary?${qs}`).catch(() => ({ teams: [], unassigned: null })),
     ]);
+    // Empty signal: no leader evaluated AND no team has activity in range.
+    // Falls back to YTD once on first paint so the page isn't blank.
+    const evaluatedAny = Array.isArray(ls) && ls.some(l => l.dataentry_submitted_at);
+    const tpArr = Array.isArray(tp) ? tp : (tp.teams || []);
+    const activityAny = tpArr.some(p => (p.members_evaluated || 0) > 0 || (p.total_deals || 0) > 0);
+    if (_drFallbackArmed && !evaluatedAny && !activityAny
+        && _drCtrl.getRange().preset !== "ytd") {
+      _drFallbackArmed = false;
+      _drCtrl.setRange({ preset: "ytd" });
+      return;
+    }
+    _drFallbackArmed = false;
     leaders = ls;
     teams = ts || [];
     // teams-summary now returns {teams, unassigned}; tolerate either shape.
-    teamsPerf = Array.isArray(tp) ? tp : (tp.teams || []);
+    teamsPerf = tpArr;
     unassignedSummary = (!Array.isArray(tp) && tp.unassigned)
       ? tp.unassigned
       : { member_count: 0, members_submitted: 0, members_evaluated: 0, members: [] };
@@ -130,7 +143,7 @@ async function loadAll() {
     renderTeamsCharts();
     renderTeamsPerf();
     render();
-  } catch (e) { toastError(e); }
+  } catch (e) { _drFallbackArmed = false; toastError(e); }
 }
 
 function scoreColorFromScore(score) {

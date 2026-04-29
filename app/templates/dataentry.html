@@ -103,6 +103,8 @@ let entries = {};
 let teams = [];
 let kpiConfig = null;  // Loaded once from /api/kpi/config; powers live score preview + soft validation.
 let _drCtrl = null;
+// Auto-widen to YTD if the default (last_30) returns no entries on first paint.
+let _drFallbackArmed = true;
 const NUMERIC = ["fresh_leads", "calls", "meetings", "crm_pct", "deals",
                  "reports", "reservations", "followup_pct", "attendance_pct"];
 const PASSFAIL = ["attitude", "presentation", "behaviour", "appearance", "hr_roles"];
@@ -131,6 +133,13 @@ async function loadAll() {
       teams.length ? Promise.resolve(teams) : api("/api/teams").catch(() => []),
       kpiConfig ? Promise.resolve(kpiConfig) : api("/api/kpi/config").catch(() => null),
     ]);
+    if (_drFallbackArmed && Array.isArray(report) && report.length === 0
+        && _drCtrl.getRange().preset !== "ytd") {
+      _drFallbackArmed = false;
+      _drCtrl.setRange({ preset: "ytd" });
+      return;
+    }
+    _drFallbackArmed = false;
     users = u;
     teams = ts || [];
     kpiConfig = cfg || kpiConfig;
@@ -138,7 +147,7 @@ async function loadAll() {
     entries = {};
     report.forEach(r => { entries[r.user_id] = r; });
     renderAll();
-  } catch (e) { toastError(e); }
+  } catch (e) { _drFallbackArmed = false; toastError(e); }
 }
 
 function populateTeamFilter() {
