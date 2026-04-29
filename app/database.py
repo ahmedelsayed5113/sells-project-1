@@ -400,6 +400,45 @@ def init_all_tables():
                 );
             """)
 
+            # Section 05 — Marketing redesign: campaign timeline columns
+            # for Time Pacing dashboard. Additive — defaults are NULL so
+            # existing campaigns stay valid.
+            for col, ddl in [
+                ("start_date",  "ALTER TABLE marketing_campaigns ADD COLUMN IF NOT EXISTS start_date DATE"),
+                ("end_date",    "ALTER TABLE marketing_campaigns ADD COLUMN IF NOT EXISTS end_date DATE"),
+                ("review_date", "ALTER TABLE marketing_campaigns ADD COLUMN IF NOT EXISTS review_date DATE"),
+            ]:
+                if not column_exists(conn, "marketing_campaigns", col):
+                    cur.execute(ddl)
+
+            # Section 05 — period actuals (Daily / 5-Day / Weekly / Monthly).
+            # period_kind tags the bucket type; period_index orders within a
+            # campaign (1, 2, 3, ...). period_label is the human-readable
+            # range — "2026-04-15" for daily, "Days 1-5" or "Week 3" or
+            # "April 2026" for the larger buckets.
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS marketing_period_actuals (
+                    id            SERIAL PRIMARY KEY,
+                    campaign_id   INTEGER NOT NULL REFERENCES marketing_campaigns(id) ON DELETE CASCADE,
+                    period_kind   VARCHAR(10) NOT NULL,
+                    period_index  INTEGER NOT NULL,
+                    period_label  VARCHAR(60) NOT NULL,
+                    period_start  DATE,
+                    period_end    DATE,
+                    spend                  NUMERIC(15,2) DEFAULT 0,
+                    leads                  INTEGER DEFAULT 0,
+                    qualified_leads        INTEGER DEFAULT 0,
+                    meetings               INTEGER DEFAULT 0,
+                    follow_ups             INTEGER DEFAULT 0,
+                    deals                  INTEGER DEFAULT 0,
+                    notes                  TEXT,
+                    created_at             TIMESTAMP DEFAULT NOW(),
+                    updated_at             TIMESTAMP DEFAULT NOW(),
+                    UNIQUE(campaign_id, period_kind, period_index)
+                );
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_mktg_period_camp_kind ON marketing_period_actuals(campaign_id, period_kind, period_index);")
+
             # ═══ QUERY AUDIT — default off, enabled via Config.AUDIT_QUERIES ══
             # One row per request hitting an audit-decorated endpoint. Inserts
             # are best-effort: failures here never break the request itself.
