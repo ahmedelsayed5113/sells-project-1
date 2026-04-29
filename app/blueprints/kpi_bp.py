@@ -5,14 +5,24 @@ import json
 import logging
 import psycopg2.extras
 from decimal import Decimal
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from flask import Blueprint, request, session, Response
+
+# Half-open interval helper for timestamp filters: [from 00:00:00, to+1 00:00:00)
+# captures the full last day without subsecond fudging.
+_ONE_DAY = timedelta(days=1)
 from app.database import get_conn
-from app.auth import login_required, role_required
+from app.auth import login_required, role_required, rate_limit
 from app.kpi_logic import (
     KPI_CONFIG, SALES_FIELDS, DATAENTRY_FIELDS, compute_score,
     TL_KPI_CONFIG, TL_AUTO_FIELDS, TL_MANUAL_FIELDS, compute_tl_score,
 )
+from app.util.audit import audit_query
+from app.util.date_range import parse_range, InvalidRangeError
+
+# Soft cap on response size for range-aware endpoints. Above this, callers
+# get 413 with a clear error code. TODO: paginate when consistently exceeding 5K.
+_RANGE_ROW_CAP = 10_000
 
 log = logging.getLogger(__name__)
 kpi_bp = Blueprint("kpi", __name__, url_prefix="/api/kpi")
@@ -344,16 +354,41 @@ def delete_entry(entry_id):
 
 @kpi_bp.route("/report", methods=["GET"])
 @login_required
+@rate_limit("kpi_range_query", limit=30, window=60)
+@audit_query
 def report():
-    month = request.args.get("month")
+    """
+    KPI report rows.
+
+    Filtering (resolution order — see app.util.date_range.parse_range):
+      ?from=YYYY-MM-DD&to=YYYY-MM-DD     explicit range
+      ?preset=this_month|last_7|...      named preset
+      ?month=YYYY-MM                     legacy compat (single calendar month)
+      (default)                          this_month
+
+    When the resolved range is exactly one calendar month, we keep the existing
+    e.month = %s fastpath. When it's sub-month, we filter by submission
+    timestamp (?ts_field=dataentry|sales, default 'dataentry') because the
+    monthly grain has no day-level data — see CLAUDE.md "monthly grain" note.
+
+    Other params:
+      ?user_id=N           filter to one rep
+      ?detail=1            include compute_score breakdown
+    """
     user_id_filter = request.args.get("user_id")
-    # ?detail=1 → include the full per-KPI breakdown (dashboard charts need this).
-    # Default omits it so the data-entry page (which never reads breakdown) gets
-    # a smaller payload and skips the per-row compute_score work.
     want_detail = request.args.get("detail") in ("1", "true", "yes")
+    ts_field = request.args.get("ts_field", "dataentry").lower()
+    if ts_field not in ("dataentry", "sales"):
+        ts_field = "dataentry"
+    ts_col = "dataentry_submitted_at" if ts_field == "dataentry" else "sales_submitted_at"
 
     if session.get("role") == "sales":
         return _json({"error_code": "forbidden", "error": "forbidden"}, 403)
+
+    try:
+        pr = parse_range(request.args)
+    except InvalidRangeError as e:
+        return _json({"error_code": e.code, "error": e.code}, 400)
 
     try:
         conn = get_conn()
@@ -366,9 +401,22 @@ def report():
                     WHERE u.active = true
                 """
                 params = []
-                if month:
+                if pr.month_str:
+                    # Calendar-month-aligned range → existing fastpath, identical
+                    # to the legacy ?month= behavior. Zero plan regression.
                     q += " AND e.month = %s"
-                    params.append(month)
+                    params.append(pr.month_str)
+                elif pr.is_sub_month:
+                    # Sub-month: filter by submission timestamp on the chosen
+                    # column. Composite index idx_kpi_user_*_submitted picks this up.
+                    q += f" AND e.{ts_col} >= %s AND e.{ts_col} < %s"
+                    params.append(pr.from_date)
+                    params.append(pr.to_date + _ONE_DAY)
+                else:
+                    # Multi-month range → match by month string between bounds.
+                    q += " AND e.month BETWEEN %s AND %s"
+                    params.append(f"{pr.from_date.year:04d}-{pr.from_date.month:02d}")
+                    params.append(f"{pr.to_date.year:04d}-{pr.to_date.month:02d}")
                 if user_id_filter:
                     q += " AND e.user_id = %s"
                     params.append(int(user_id_filter))
@@ -377,6 +425,16 @@ def report():
                 rows = [dict(r) for r in cur.fetchall()]
         finally:
             conn.close()
+
+        # TODO: paginate when consistently exceeding 5K rows.
+        if len(rows) > _RANGE_ROW_CAP:
+            return _json({
+                "error_code": "range_too_large",
+                "error": "range_too_large",
+                "row_count": len(rows),
+                "cap": _RANGE_ROW_CAP,
+            }, 413)
+
         if want_detail:
             for row in rows:
                 _, _, breakdown = compute_score(row)
