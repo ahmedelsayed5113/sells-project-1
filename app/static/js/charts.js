@@ -49,6 +49,44 @@ function _waitForPlotly(fn, attempt = 0) {
   setTimeout(() => _waitForPlotly(fn, attempt + 1), 100);
 }
 
+// Per-container draw tokens — guards against the race where a pending Plotly
+// draw fires AFTER an empty-state innerHTML write (or after a newer draw call
+// has been queued). Each draw call captures its token; if the current token
+// has advanced by the time the deferred callback fires, the draw is skipped.
+const _drawTokens = new Map();
+function _bumpToken(id) {
+  const next = (_drawTokens.get(id) || 0) + 1;
+  _drawTokens.set(id, next);
+  return next;
+}
+
+// Single entry point for every chart mount. Bumps the container's token,
+// waits for Plotly, then on resolution: re-checks the token, purges Plotly
+// internal state on the element, wipes innerHTML (removes .chart-skel and
+// any leftover empty-state), and calls Plotly.newPlot.
+function _drawChart(el, traces, layout, config) {
+  if (!el || !el.id) return;
+  const id = el.id;
+  const myToken = _bumpToken(id);
+  _waitForPlotly(() => {
+    if (_drawTokens.get(id) !== myToken) return; // superseded by a newer call
+    try { if (typeof Plotly !== 'undefined' && Plotly.purge) Plotly.purge(el); } catch (_) {}
+    el.innerHTML = '';
+    Plotly.newPlot(el, traces, layout, config);
+  });
+}
+
+// Empty-state caller-facing helper: invalidate any pending draw + purge Plotly
+// state so the caller can safely set its own innerHTML (e.g., empty-state).
+// Without this, a deferred Plotly.newPlot fires after the empty-state write
+// and renders the chart over the "No data" text.
+function cancelPending(elOrId) {
+  const el = typeof elOrId === 'string' ? document.getElementById(elOrId) : elOrId;
+  if (!el || !el.id) return;
+  _bumpToken(el.id);
+  try { if (typeof Plotly !== 'undefined' && Plotly.purge) Plotly.purge(el); } catch (_) {}
+}
+
 // Sequential palette: periwinkle → teal → coral → yellow → blue → mint
 const PALETTE = [
   CHART_COLORS.brand,
@@ -156,7 +194,7 @@ function drawBarChart(containerId, data, options = {}) {
     ...options,
   });
 
-  _waitForPlotly(() => Plotly.newPlot(el, [trace], layout, _chartConfig()));
+  _drawChart(el, [trace], layout, _chartConfig());
 }
 
 function drawHorizontalBar(containerId, data, options = {}) {
@@ -186,7 +224,7 @@ function drawHorizontalBar(containerId, data, options = {}) {
     ...options,
   });
 
-  _waitForPlotly(() => Plotly.newPlot(el, [trace], layout, _chartConfig()));
+  _drawChart(el, [trace], layout, _chartConfig());
 }
 
 function drawDonut(containerId, data, options = {}) {
@@ -221,7 +259,7 @@ function drawDonut(containerId, data, options = {}) {
     ...options,
   });
 
-  _waitForPlotly(() => Plotly.newPlot(el, [trace], layout, _chartConfig()));
+  _drawChart(el, [trace], layout, _chartConfig());
 }
 
 function drawLineChart(containerId, series, options = {}) {
@@ -259,7 +297,7 @@ function drawLineChart(containerId, series, options = {}) {
     legendY: -0.15,
     ...options,
   });
-  _waitForPlotly(() => Plotly.newPlot(el, traces, layout, _chartConfig()));
+  _drawChart(el, traces, layout, _chartConfig());
 }
 
 function drawAreaChart(containerId, series, options = {}) {
@@ -309,7 +347,7 @@ function drawGauge(containerId, value, options = {}) {
   });
 
   // Single-indicator gauges don't need the export modebar.
-  _waitForPlotly(() => Plotly.newPlot(el, [trace], layout, _chartConfig({ displayModeBar: false })));
+  _drawChart(el, [trace], layout, _chartConfig({ displayModeBar: false }));
 }
 
 function drawRadarChart(containerId, data, options = {}) {
@@ -357,7 +395,7 @@ function drawRadarChart(containerId, data, options = {}) {
     ...options,
   };
 
-  _waitForPlotly(() => Plotly.newPlot(el, [trace], layout, _chartConfig()));
+  _drawChart(el, [trace], layout, _chartConfig());
 }
 
 function drawStackedBar(containerId, series, xLabels, options = {}) {
@@ -382,7 +420,7 @@ function drawStackedBar(containerId, series, xLabels, options = {}) {
     ...options,
   });
 
-  _waitForPlotly(() => Plotly.newPlot(el, traces, layout, _chartConfig()));
+  _drawChart(el, traces, layout, _chartConfig());
 }
 
 function drawGroupedBar(containerId, series, xLabels, options = {}) {
@@ -427,7 +465,7 @@ function drawHeatmap(containerId, data, options = {}) {
     ...options,
   });
 
-  _waitForPlotly(() => Plotly.newPlot(el, [trace], layout, _chartConfig()));
+  _drawChart(el, [trace], layout, _chartConfig());
 }
 
 /**
@@ -458,7 +496,7 @@ function drawTreemap(containerId, data, options = {}) {
     ...options,
   });
 
-  _waitForPlotly(() => Plotly.newPlot(el, [trace], layout, _chartConfig()));
+  _drawChart(el, [trace], layout, _chartConfig());
 }
 
 /**
@@ -495,7 +533,7 @@ function drawFunnel(containerId, data, options = {}) {
     ...options,
   });
 
-  _waitForPlotly(() => Plotly.newPlot(el, [trace], layout, _chartConfig()));
+  _drawChart(el, [trace], layout, _chartConfig());
 }
 
 /**
@@ -527,7 +565,7 @@ function drawScatter(containerId, data, options = {}) {
     ...options,
   });
 
-  _waitForPlotly(() => Plotly.newPlot(el, [trace], layout, _chartConfig()));
+  _drawChart(el, [trace], layout, _chartConfig());
 }
 
 /**
@@ -575,7 +613,7 @@ function drawComboBarLine(containerId, barSeries, lineSeries, xLabels, options =
     ...options,
   });
 
-  _waitForPlotly(() => Plotly.newPlot(el, traces, layout, _chartConfig()));
+  _drawChart(el, traces, layout, _chartConfig());
 }
 
 function scoreColorHex(pct) {
@@ -611,6 +649,7 @@ window.Charts = {
   drawComboBarLine,
   scoreColorHex,
   hexToRgba,
+  cancelPending,
   COLORS: CHART_COLORS,
   PALETTE,
 };

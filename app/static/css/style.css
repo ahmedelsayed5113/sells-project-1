@@ -2587,7 +2587,8 @@ kbd {
 }
 
 /* Chart-card skeleton — sits inside .plotly-container until Plotly mounts.
-   Plotly.newPlot replaces the container's children, so no JS removal needed. */
+   _drawChart() in charts.js purges Plotly state and wipes innerHTML before
+   each Plotly.newPlot call, removing the skeleton + any leftover empty-state. */
 .chart-skel {
   width: 100%;
   height: 100%;

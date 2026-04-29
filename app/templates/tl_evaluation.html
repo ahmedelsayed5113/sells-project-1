@@ -138,7 +138,9 @@ function renderTeamsCharts() {
   if (!teamsPerf.length) {
     ["chartTeamsRanking","chartTeamsComposition"].forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.innerHTML = `<div class="empty-state" style="padding:40px">${t("tl_eval.no_teams_data")}</div>`;
+      if (!el) return;
+      if (Charts.cancelPending) Charts.cancelPending(id);
+      el.innerHTML = `<div class="empty-state" style="padding:40px">${t("tl_eval.no_teams_data")}</div>`;
     });
     return;
   }

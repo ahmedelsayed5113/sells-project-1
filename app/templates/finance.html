@@ -229,7 +229,10 @@ function renderTotals(totals) {
 function renderCharts(rows) {
   if (typeof Plotly === 'undefined' || !rows || !rows.length) {
     ["chartRevenue","chartCommission","chartDealsRes","chartRevenueSplit","chartTreemap"].forEach(id => {
-      const el = document.getElementById(id); if (el) el.innerHTML = `<div class="empty-state" style="padding:30px">${t("dash.no_data")}</div>`;
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (Charts.cancelPending) Charts.cancelPending(id);
+      el.innerHTML = `<div class="empty-state" style="padding:30px">${t("dash.no_data")}</div>`;
     });
     return;
   }
@@ -289,6 +292,7 @@ function renderCharts(rows) {
 
 function renderTrend() {
   if (!trendData || !trendData.length) {
+    if (Charts.cancelPending) Charts.cancelPending("chartTrend");
     document.getElementById("chartTrend").innerHTML = `<div class="empty-state" style="padding:30px">${t("dash.no_data")}</div>`;
     return;
   }

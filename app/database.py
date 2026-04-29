@@ -3,28 +3,117 @@ Database: connection + schema initialization
 Extended schema with Finance, HR, Teams, and more roles
 """
 import logging
+import threading
 import time
 import psycopg2
 import psycopg2.extras
+import psycopg2.pool
 from config import Config
 
 log = logging.getLogger(__name__)
 
+_POOL = None
+_POOL_LOCK = threading.Lock()
+_POOL_MIN = 1
+_POOL_MAX = 10
+
+
+def _build_pool():
+    """Create the connection pool. Threaded so Flask + Gunicorn workers are safe."""
+    if Config.DATABASE_URL:
+        return psycopg2.pool.ThreadedConnectionPool(
+            _POOL_MIN, _POOL_MAX,
+            dsn=Config.DATABASE_URL,
+            connect_timeout=10,
+        )
+    return psycopg2.pool.ThreadedConnectionPool(
+        _POOL_MIN, _POOL_MAX,
+        host=Config.DB_HOST,
+        port=Config.DB_PORT,
+        database=Config.DB_NAME,
+        user=Config.DB_USER,
+        password=Config.DB_PASSWORD,
+        connect_timeout=10,
+    )
+
+
+def _get_pool():
+    global _POOL
+    if _POOL is not None:
+        return _POOL
+    with _POOL_LOCK:
+        if _POOL is None:
+            _POOL = _build_pool()
+    return _POOL
+
+
+class _PooledConnection:
+    """Proxy that returns the underlying connection to the pool on .close().
+
+    All 42 existing call sites use `conn.close()` in a finally block; this
+    wrapper makes that release the connection back to the pool instead of
+    actually closing the socket.
+    """
+
+    def __init__(self, conn, pool):
+        self.__dict__["_conn"] = conn
+        self.__dict__["_pool"] = pool
+        self.__dict__["_returned"] = False
+
+    def close(self):
+        if self.__dict__["_returned"]:
+            return
+        self.__dict__["_returned"] = True
+        conn = self.__dict__["_conn"]
+        pool = self.__dict__["_pool"]
+        try:
+            try:
+                # Clear any aborted-transaction state before recycling.
+                conn.rollback()
+            except Exception:
+                pass
+            pool.putconn(conn)
+        except Exception:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+    def __getattr__(self, name):
+        return getattr(self.__dict__["_conn"], name)
+
+    def __setattr__(self, name, value):
+        setattr(self.__dict__["_conn"], name, value)
+
+    def __enter__(self):
+        # psycopg2 connections used as a context manager commit/rollback the
+        # current transaction but do NOT close the connection. Mirror that.
+        return self.__dict__["_conn"].__enter__()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return self.__dict__["_conn"].__exit__(exc_type, exc_val, exc_tb)
+
 
 def get_conn(retries=2):
+    """Return a pooled connection. .close() returns it to the pool."""
+    pool = _get_pool()
     last_err = None
     for attempt in range(retries + 1):
         try:
-            if Config.DATABASE_URL:
-                return psycopg2.connect(Config.DATABASE_URL, connect_timeout=10)
-            return psycopg2.connect(
-                host=Config.DB_HOST,
-                port=Config.DB_PORT,
-                database=Config.DB_NAME,
-                user=Config.DB_USER,
-                password=Config.DB_PASSWORD,
-                connect_timeout=10
-            )
+            raw = pool.getconn()
+            # Liveness check: pooled connections can go stale (server restart,
+            # idle-timeout). A cheap SELECT 1 catches it before the caller does.
+            try:
+                with raw.cursor() as cur:
+                    cur.execute("SELECT 1")
+                raw.commit()
+            except Exception:
+                try:
+                    pool.putconn(raw, close=True)
+                except Exception:
+                    pass
+                raise psycopg2.OperationalError("stale pooled connection")
+            return _PooledConnection(raw, pool)
         except psycopg2.OperationalError as e:
             last_err = e
             if attempt < retries:
@@ -84,6 +173,9 @@ def init_all_tables():
             """)
             cur.execute("CREATE INDEX IF NOT EXISTS idx_users_username ON users(LOWER(username));")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_users_active ON users(active);")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_users_team_id ON users(team_id);")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_users_team_role_active ON users(team_id, role, active);")
 
             # Migrate old users table
             for col, ddl in [
@@ -128,6 +220,7 @@ def init_all_tables():
                     created_at TIMESTAMP DEFAULT NOW()
                 );
             """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_teams_leader_id ON teams(leader_id);")
 
             # ═══ KPI ENTRIES (extended) ═════════════════════════════════════
             cur.execute("""
@@ -172,6 +265,8 @@ def init_all_tables():
             """)
             cur.execute("CREATE INDEX IF NOT EXISTS idx_kpi_user_month ON kpi_entries(user_id, month);")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_kpi_month ON kpi_entries(month);")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_kpi_dataentry_submitted ON kpi_entries(dataentry_submitted_at);")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_kpi_sales_submitted ON kpi_entries(sales_submitted_at);")
 
             # Migrate kpi_entries if needed
             for col, ddl in [
@@ -321,6 +416,18 @@ def init_all_tables():
                 cur.execute("SELECT COUNT(*) FROM units")
                 units_count = cur.fetchone()[0]
                 log.info(f"📦 `units` table: {units_count:,} rows (from PropFinder)")
+
+            # Indexes for the PropFinder-owned table — only create if the
+            # underlying column actually exists in this deployment.
+            with conn.cursor() as cur:
+                for col, idx in [
+                    ("compound_id", "idx_units_compound_id"),
+                    ("is_sold",     "idx_units_is_sold"),
+                    ("detail_id",   "idx_units_detail_id"),
+                ]:
+                    if column_exists(conn, "units", col):
+                        cur.execute(f"CREATE INDEX IF NOT EXISTS {idx} ON units({col});")
+                conn.commit()
 
         log.info("✅ All tables ensured (users, kpi_entries, salary_config, payroll, hr_records, teams)")
 

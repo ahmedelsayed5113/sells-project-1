@@ -6,7 +6,8 @@
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
       "Bash(python -c ' *)",
-      "Bash(node *)"
+      "Bash(node *)",
+      "Bash(python *)"
     ]
   }
 }

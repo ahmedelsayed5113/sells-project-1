@@ -364,19 +364,93 @@ function renderOpStats(rows) {
   `;
 }
 
+// Deep-dive charts are deferred until the user opens the <details>. Drawing
+// at 0×0 (display:none parent) makes Plotly compute axes against zero pixels
+// and never recover, even after a resize. Track whether they've been drawn
+// for the current dataset.
+let _deepDiveDrawn = false;
+let _lastChartRows = null;
+
+const _NUMERIC_KPI_KEYS = ["calls","meetings","crm_pct","deals","reports","reservations","followup_pct","attendance_pct"];
+
 function renderCharts(rows) {
+  _lastChartRows = rows;
   if (!rows.length || typeof Plotly === 'undefined') {
     ["chartHealthGauge","chartRadarOverview","chartFunnel","chartRatings","chartTeamPerf","chartBreakdown","chartActualTarget","chartStatus","chartHeatmap"].forEach(id => {
-      const el = document.getElementById(id); if (el) el.innerHTML = `<div class="empty-state" style="padding:30px">${t("dash.no_data")}</div>`;
+      const el = document.getElementById(id);
+      if (!el) return;
+      // Cancel any pending Plotly draw before stomping innerHTML, otherwise
+      // the deferred newPlot fires after this and renders chart over "No data".
+      if (Charts.cancelPending) Charts.cancelPending(id);
+      el.innerHTML = `<div class="empty-state" style="padding:30px">${t("dash.no_data")}</div>`;
     });
+    _deepDiveDrawn = false;
     return;
   }
 
+  renderPrimaryCharts(rows);
+
+  // Reset so any prior deep-dive paint is treated as stale for the new dataset.
+  _deepDiveDrawn = false;
+  // If the deep-dive panel is already open (e.g. user opened it before
+  // changing filters or language), redraw immediately so it stays in sync.
+  const detailsEl = document.querySelector('.dash-deep-dive');
+  if (detailsEl && detailsEl.open) {
+    renderDeepDiveCharts(rows);
+    _deepDiveDrawn = true;
+  }
+}
+
+function renderPrimaryCharts(rows) {
   const sorted = [...rows].sort((a,b) => (parseFloat(b.total_score)||0) - (parseFloat(a.total_score)||0));
 
   // 1) Health gauge: avg score across team
   const avg = rows.reduce((a, r) => a + (parseFloat(r.total_score) || 0), 0) / rows.length;
   Charts.drawGauge("chartHealthGauge", avg, { target: 75 });
+
+  // 5) Leaderboard horizontal bar (top 12)
+  const topN = sorted.slice(0, 12);
+  Charts.drawHorizontalBar("chartTeamPerf", {
+    x: topN.map(r => parseFloat(r.total_score) || 0).reverse(),
+    y: topN.map(r => r.user_name).reverse(),
+    colors: topN.map(r => Charts.scoreColorHex(parseFloat(r.total_score) || 0)).reverse(),
+    labels: topN.map(r => (parseFloat(r.total_score)||0).toFixed(1) + "%").reverse(),
+  });
+
+  // 6) Per-KPI achievement bar
+  const kpiAvgs = KPI_KEYS.map(key => {
+    const values = rows.map(r => (r.breakdown && r.breakdown[key]) ? r.breakdown[key].achievement_pct : 0);
+    const a = values.length ? values.reduce((a,b) => a+b, 0) / values.length : 0;
+    return { key, avg: a };
+  });
+  Charts.drawBarChart("chartBreakdown", {
+    x: kpiAvgs.map(k => kpiLabel(k.key)),
+    y: kpiAvgs.map(k => k.avg),
+    colors: kpiAvgs.map(k => Charts.scoreColorHex(k.avg)),
+    labels: kpiAvgs.map(k => k.avg.toFixed(0) + "%"),
+  }, { xangle: -25 });
+
+  // 7) Actual vs Target grouped bars (numeric KPIs)
+  const actuals = _NUMERIC_KPI_KEYS.map(k =>
+    rows.reduce((a, r) => a + (r.breakdown && r.breakdown[k] ? r.breakdown[k].actual : 0), 0)
+  );
+  const targets = _NUMERIC_KPI_KEYS.map(k =>
+    rows.reduce((a, r) => a + (r.breakdown && r.breakdown[k] ? r.breakdown[k].target : 0), 0)
+  );
+  Charts.drawGroupedBar("chartActualTarget",
+    [
+      { name: t("dash.actual"), values: actuals, color: Charts.COLORS.brand },
+      { name: t("dash.target"), values: targets, color: Charts.COLORS.brand3 },
+    ],
+    _NUMERIC_KPI_KEYS.map(k => kpiLabel(k)),
+    { showlegend: true, xaxis: { tickangle: -25 } }
+  );
+}
+
+function renderDeepDiveCharts(rows) {
+  if (!rows || !rows.length || typeof Plotly === 'undefined') return;
+
+  const sorted = [...rows].sort((a,b) => (parseFloat(b.total_score)||0) - (parseFloat(a.total_score)||0));
 
   // 2) Radar: average achievement across all 13 KPI categories
   const radarLabels = KPI_KEYS.map(k => kpiLabel(k));
@@ -419,50 +493,13 @@ function renderCharts(rows) {
       values: filteredCounts,
       colors: filteredColors,
     }, { centerText: rows.length + "" });
+  } else if (Charts.cancelPending) {
+    Charts.cancelPending("chartRatings");
+    const el = document.getElementById("chartRatings");
+    if (el) el.innerHTML = `<div class="empty-state" style="padding:30px">${t("dash.no_data")}</div>`;
   }
 
-  // 5) Leaderboard horizontal bar (top 12)
-  const topN = sorted.slice(0, 12);
-  Charts.drawHorizontalBar("chartTeamPerf", {
-    x: topN.map(r => parseFloat(r.total_score) || 0).reverse(),
-    y: topN.map(r => r.user_name).reverse(),
-    colors: topN.map(r => Charts.scoreColorHex(parseFloat(r.total_score) || 0)).reverse(),
-    labels: topN.map(r => (parseFloat(r.total_score)||0).toFixed(1) + "%").reverse(),
-  });
-
-  // 6) Per-KPI achievement bar
-  const kpiAvgs = KPI_KEYS.map(key => {
-    const values = rows.map(r => (r.breakdown && r.breakdown[key]) ? r.breakdown[key].achievement_pct : 0);
-    const a = values.length ? values.reduce((a,b) => a+b, 0) / values.length : 0;
-    return { key, avg: a };
-  });
-  Charts.drawBarChart("chartBreakdown", {
-    x: kpiAvgs.map(k => kpiLabel(k.key)),
-    y: kpiAvgs.map(k => k.avg),
-    colors: kpiAvgs.map(k => Charts.scoreColorHex(k.avg)),
-    labels: kpiAvgs.map(k => k.avg.toFixed(0) + "%"),
-  }, { xangle: -25 });
-
-  // 7) Actual vs Target grouped bars (numeric KPIs)
-  const numericKeys = ["calls","meetings","crm_pct","deals","reports","reservations","followup_pct","attendance_pct"];
-  const actuals = numericKeys.map(k => {
-    const sum = rows.reduce((a, r) => a + (r.breakdown && r.breakdown[k] ? r.breakdown[k].actual : 0), 0);
-    return sum;
-  });
-  const targets = numericKeys.map(k => {
-    const sum = rows.reduce((a, r) => a + (r.breakdown && r.breakdown[k] ? r.breakdown[k].target : 0), 0);
-    return sum;
-  });
-  Charts.drawGroupedBar("chartActualTarget",
-    [
-      { name: t("dash.actual"), values: actuals, color: Charts.COLORS.brand },
-      { name: t("dash.target"), values: targets, color: Charts.COLORS.brand3 },
-    ],
-    numericKeys.map(k => kpiLabel(k)),
-    { showlegend: true, xaxis: { tickangle: -25 } }
-  );
-
-  // 8) Status donut: completed (data-entry submitted) / in-progress (sales submitted but not eval) / not-started
+  // 8) Status donut: completed / in-progress / not-started
   const completed = rows.filter(r => r.dataentry_submitted_at).length;
   const inProgress = rows.filter(r => r.sales_submitted_at && !r.dataentry_submitted_at).length;
   const notStarted = rows.length - completed - inProgress;
@@ -482,13 +519,36 @@ function renderCharts(rows) {
 
   // 9) Heatmap: top 12 reps × KPI achievement %
   const heatRows = sorted.slice(0, 12);
-  const heatX = numericKeys.map(k => kpiLabel(k));
+  const heatX = _NUMERIC_KPI_KEYS.map(k => kpiLabel(k));
   const heatY = heatRows.map(r => r.user_name).reverse();
   const heatZ = heatRows.slice().reverse().map(r =>
-    numericKeys.map(k => (r.breakdown && r.breakdown[k]) ? r.breakdown[k].achievement_pct : 0)
+    _NUMERIC_KPI_KEYS.map(k => (r.breakdown && r.breakdown[k]) ? r.breakdown[k].achievement_pct : 0)
   );
   Charts.drawHeatmap("chartHeatmap", { x: heatX, y: heatY, z: heatZ });
+
+  // Safety net for any stale 0×0 layout that snuck in before the panel opened.
+  requestAnimationFrame(() => {
+    ["chartRadarOverview","chartFunnel","chartRatings","chartStatus","chartHeatmap"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && typeof Plotly !== 'undefined' && Plotly.Plots && Plotly.Plots.resize) {
+        try { Plotly.Plots.resize(el); } catch (_) {}
+      }
+    });
+  });
 }
+
+// Wire up the deep-dive toggle once. The <details> is in the DOM at parse time
+// since this script runs in the {% block scripts %} after the body.
+document.addEventListener("DOMContentLoaded", () => {
+  const detailsEl = document.querySelector('.dash-deep-dive');
+  if (!detailsEl) return;
+  detailsEl.addEventListener('toggle', () => {
+    if (detailsEl.open && !_deepDiveDrawn && _lastChartRows && _lastChartRows.length) {
+      renderDeepDiveCharts(_lastChartRows);
+      _deepDiveDrawn = true;
+    }
+  });
+});
 
 function renderTable(rows) {
   const tbody = document.getElementById("tbody");
