@@ -14,6 +14,10 @@
       <span class="kbd-hint">·  <kbd>Ctrl</kbd>+<kbd>Enter</kbd> <span data-i18n="de.shortcut_hint"></span></span>
     </p>
   </div>
+  <button class="btn btn-primary" onclick="openNewEvalModal()">
+    <span class="material-symbols-outlined" aria-hidden="true">add</span>
+    <span data-i18n="de.new_evaluation"></span>
+  </button>
 </div>
 
 <!-- Progress tiles -->
@@ -63,6 +67,7 @@
       <option value="pending" data-i18n="de.waiting_eval"></option>
       <option value="done" data-i18n="de.evaluated"></option>
       <option value="no-sales" data-i18n="de.missing_sales"></option>
+      <option value="mine" data-i18n="de.my_submissions"></option>
     </select>
   </div>
   <div class="field">
@@ -92,11 +97,39 @@
 <div id="chipsRow" class="pf-chips" style="margin-bottom:12px"></div>
 
 <div id="list"></div>
+
+<!-- New Evaluation modal — quick-pick a rep + month, then scrolls to that
+     rep's card and focuses the first input. (DE-05/06) -->
+<div class="modal-backdrop" id="newEvalModal" role="dialog" aria-modal="true" aria-labelledby="newEvalTitle">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <div class="modal-title" id="newEvalTitle" data-i18n="de.new_evaluation"></div>
+      <button class="modal-close" onclick="closeModal('newEvalModal')" data-i18n-aria-label="common.close">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="text-muted" style="font-size:13px;margin-top:0" data-i18n="de.new_evaluation_hint"></p>
+      <div class="field">
+        <label for="neRep" data-i18n="de.pick_rep"></label>
+        <select id="neRep">
+          <option value="" data-i18n="de.pick_rep_placeholder"></option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="neMonth" data-i18n="common.month"></label>
+        <input type="month" id="neMonth">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="startNewEvaluation()" data-i18n="de.start_evaluation"></button>
+      <button class="btn btn-ghost" onclick="closeModal('newEvalModal')" data-i18n="common.cancel"></button>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/charts.js') }}?v=flat17"></script>
-<script src="{{ url_for('static', filename='js/date_range.js') }}?v=flat17"></script>
+<script src="{{ url_for('static', filename='js/charts.js') }}?v=flat18"></script>
+<script src="{{ url_for('static', filename='js/date_range.js') }}?v=flat18"></script>
 <script>
 let users = [];
 let entries = {};
@@ -105,6 +138,10 @@ let kpiConfig = null;  // Loaded once from /api/kpi/config; powers live score pr
 let _drCtrl = null;
 // Auto-widen to YTD if the default (last_30) returns no entries on first paint.
 let _drFallbackArmed = true;
+
+// Snapshot the current user's id so the "mine" filter can match
+// entries.dataentry_by === me. Pulled via |tojson so a null surfaces as null.
+const CURRENT_USER_ID = {{ user.id|tojson }};
 const NUMERIC = ["fresh_leads", "calls", "meetings", "crm_pct", "deals",
                  "reports", "reservations", "followup_pct", "attendance_pct"];
 const PASSFAIL = ["attitude", "presentation", "behaviour", "appearance", "hr_roles"];
@@ -211,6 +248,67 @@ function onSearchInput() {
   applyFilters();
 }
 
+// ─── New Evaluation modal (DE-05/06) ─────────────────────────────────────
+// Quick-pick a sales rep + month, then scrolls to that rep's card and
+// focuses the first numeric input. Doesn't open a separate form — it just
+// surfaces the existing per-card inline form, which already handles save +
+// validation + score preview. This lets the spec's "prominent button" hook
+// into the existing data flow without forking the entry mechanism.
+function openNewEvalModal() {
+  const sel = document.getElementById("neRep");
+  // Build the rep options from the loaded sales-user list. Sorted alpha.
+  const opts = [`<option value="">${t("de.pick_rep_placeholder")}</option>`];
+  [...users].sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""))
+    .forEach(u => opts.push(`<option value="${u.id}">${escapeHTML(u.full_name)}</option>`));
+  sel.innerHTML = opts.join("");
+  // Default month: whichever single month the picker currently sits on,
+  // else the picker's range.to month, else current month.
+  const r = _drCtrl ? _drCtrl.getRange() : null;
+  const monthInput = document.getElementById("neMonth");
+  monthInput.value = (r && r.monthStr) || (r ? r.to.slice(0, 7) : currentMonth());
+  openModal("newEvalModal");
+  setTimeout(() => sel.focus(), 50);
+}
+
+function startNewEvaluation() {
+  const repId = document.getElementById("neRep").value;
+  const month = document.getElementById("neMonth").value;
+  if (!repId) {
+    toast(t("de.pick_rep_required"), "error");
+    return;
+  }
+  if (!month) {
+    toast(t("de.pick_month_required"), "error");
+    return;
+  }
+  closeModal("newEvalModal");
+  // If the picker's current range doesn't already cover this month,
+  // snap the picker so the rep's card actually appears in the list.
+  if (_drCtrl) {
+    const r = _drCtrl.getRange();
+    if (!r || r.monthStr !== month) {
+      const [y, m] = month.split("-").map(Number);
+      const last = new Date(y, m, 0).getDate();
+      _drCtrl.setRange({
+        from: `${month}-01`,
+        to:   `${month}-${String(last).padStart(2, "0")}`,
+        preset: "custom",
+      });
+      // setRange triggers loadAll → renderAll. After that finishes,
+      // _focusAfterReload (existing flow) handles scroll + focus.
+    }
+  }
+  _focusAfterReload = Number(repId);
+  // If the card is already in the DOM and visible, scroll directly.
+  const existing = document.querySelector(`.card[data-user-id="${repId}"]`);
+  if (existing && !existing.classList.contains("is-hidden")) {
+    existing.scrollIntoView({ behavior: "smooth", block: "start" });
+    const first = existing.querySelector("input[type='number']");
+    if (first) first.focus();
+    _focusAfterReload = null;
+  }
+}
+
 function clearSearchBox() {
   const sb = document.getElementById("searchBox");
   if (sb) { sb.value = ""; sb.focus(); }
@@ -292,11 +390,14 @@ function applyFilters() {
     const status = card.dataset.status;       // "done" | "pending" | "missing"
     const team   = card.dataset.team;          // team id or "none"
     const hay    = card.dataset.search || "";  // lowercase name + username
+    const owner  = card.dataset.owner || "";   // dataentry_by user id (string)
 
     let visible = true;
     if (filter === "pending"  && status !== "pending") visible = false;
     if (filter === "done"     && status !== "done")    visible = false;
     if (filter === "no-sales" && status !== "missing") visible = false;
+    // DE-08: "My Submissions" — only entries I personally evaluated.
+    if (filter === "mine"     && (owner === "" || Number(owner) !== CURRENT_USER_ID)) visible = false;
     if (teamVal === "none" && team !== "none") visible = false;
     else if (teamVal && team !== teamVal)      visible = false;
     if (search && !hay.includes(search))       visible = false;
@@ -387,8 +488,10 @@ function renderCard(user, entry) {
   const status = isDone ? "done" : (hasNumeric ? "pending" : "missing");
   const teamAttr = user.team_id == null ? "none" : String(user.team_id);
   const searchHay = ((user.full_name || "") + " " + (user.username || "")).toLowerCase();
+  // dataentry_by lets the "mine" filter (DE-08) match my own submissions.
+  const ownerAttr = (entry && entry.dataentry_by != null) ? String(entry.dataentry_by) : "";
 
-  return `<div class="card de-card" data-user-id="${user.id}" data-status="${status}" data-team="${escapeHTML(teamAttr)}" data-search="${escapeHTML(searchHay)}">
+  return `<div class="card de-card" data-user-id="${user.id}" data-status="${status}" data-team="${escapeHTML(teamAttr)}" data-search="${escapeHTML(searchHay)}" data-owner="${escapeHTML(ownerAttr)}">
     <div class="de-card-head">
       <div class="row-actor">
         <div class="avatar">${escapeHTML((user.full_name || "?")[0])}</div>
