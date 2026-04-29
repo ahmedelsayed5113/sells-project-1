@@ -160,29 +160,53 @@ function renderTopTiles(totals) {
   const totalDeals = totals.total_deals || 0;
   const totalRes   = totals.total_reservations || 0;
   document.getElementById("topTotals").innerHTML = `
-    <div class="kpi-tile tile-brand span-3">
+    <div class="kpi-tile tile-brand span-3 is-clickable" id="ftile_revenue" data-i18n-aria-label="dash.tile_action_revenue" tabindex="0" role="button">
       <div class="kpi-tile-head"><div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">payments</span></div><div class="kpi-tile-label" data-i18n="fin.total_revenue"></div></div>
       <div class="kpi-tile-value money-compact">${fmtCompactMoney(totals.total_revenue)}</div>
       <div class="kpi-tile-sub">${t("fin.egp")}</div>
     </div>
-    <div class="kpi-tile tile-accent span-3">
+    <div class="kpi-tile tile-accent span-3 is-clickable" id="ftile_commission" data-i18n-aria-label="dash.tile_action_commission" tabindex="0" role="button">
       <div class="kpi-tile-head"><div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">track_changes</span></div><div class="kpi-tile-label" data-i18n="fin.total_commission"></div></div>
       <div class="kpi-tile-value money-compact">${fmtCompactMoney(totals.total_commission)}</div>
       <div class="kpi-tile-sub">${t("fin.egp")}</div>
     </div>
-    <div class="kpi-tile tile-coral span-3">
+    <div class="kpi-tile tile-coral span-3 is-clickable" id="ftile_deals" data-i18n-aria-label="dash.tile_action_deals" tabindex="0" role="button">
       <div class="kpi-tile-head"><div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">business_center</span></div><div class="kpi-tile-label" data-i18n="fin.total_deals"></div></div>
       <div class="kpi-tile-value">${totalDeals}</div>
       <div class="kpi-tile-sub">${totalDeals ? fmtCompactMoney(totals.total_revenue / totalDeals) + " " + t("fin.deal_value") : ''}</div>
     </div>
-    <div class="kpi-tile tile-violet span-3">
+    <div class="kpi-tile tile-violet span-3 is-clickable" id="ftile_reservations" data-i18n-aria-label="dash.tile_action_reservations" tabindex="0" role="button">
       <div class="kpi-tile-head"><div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">handshake</span></div><div class="kpi-tile-label" data-i18n="fin.total_reservations"></div></div>
       <div class="kpi-tile-value">${totalRes}</div>
       <div class="kpi-tile-sub">&nbsp;</div>
     </div>
   `;
-  // Re-apply i18n bindings for newly inserted nodes
   if (typeof applyLang === 'function') applyLang(true);
+  _wireFinanceTileClicks();
+}
+
+// Action 2 — finance tile click actions. Sort the by-rep table on the chosen
+// dimension and scroll to it. Tile-revenue keeps the default sort (revenue desc).
+let _financeSort = 'total_revenue';
+function _wireFinanceTileClicks() {
+  const wire = (id, sortKey) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const handler = () => {
+      _financeSort = sortKey;
+      if (reportData) renderTable(reportData.breakdown);
+      const tbl = document.querySelector('.table-wrap');
+      if (tbl) tbl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+    el.onclick = handler;
+    el.onkeydown = e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handler(); }
+    };
+  };
+  wire('ftile_revenue',      'total_revenue');
+  wire('ftile_commission',   'total_commission');
+  wire('ftile_deals',        'deals_count');
+  wire('ftile_reservations', 'reservations_count');
 }
 
 function renderTotals(totals) {
@@ -293,7 +317,8 @@ function renderTable(rows) {
     tbody.innerHTML = '<tr><td colspan="8" class="table-empty">' + t("dash.no_data") + '</td></tr>';
     return;
   }
-  const sorted = [...rows].sort((a,b) => b.total_revenue - a.total_revenue);
+  const sortKey = _financeSort || 'total_revenue';
+  const sorted = [...rows].sort((a,b) => (b[sortKey] || 0) - (a[sortKey] || 0));
   tbody.innerHTML = sorted.map((r, i) => {
     const rankCls = i === 0 ? "r1" : i === 1 ? "r2" : i === 2 ? "r3" : "";
     return `<tr>

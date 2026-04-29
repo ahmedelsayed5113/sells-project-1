@@ -17,23 +17,47 @@
   </div>
 </div>
 
-<!-- Top KPI tiles -->
+<!-- Headline: avg KPI as the lead, gauge as visual companion. Mirrors TL page pattern. -->
+<div class="tl-headline">
+  <div class="tl-headline-score">
+    <div class="tl-headline-label" data-i18n="dash.avg_kpi"></div>
+    <div class="tl-headline-value" id="hero_avg">—</div>
+    <div class="tl-headline-rating" id="hero_rating"></div>
+    <div class="tl-headline-meta" id="hero_meta"></div>
+  </div>
+  <div class="tl-headline-gauge">
+    <div id="chartHealthGauge" class="plotly-container short"><div class="chart-skel"></div></div>
+  </div>
+</div>
+
+<!-- Three clickable summary tiles (Avg KPI moved into headline above) -->
 <div class="bento" id="kpiTiles">
-  <div class="kpi-tile tile-brand span-3"><div class="kpi-tile-head">
-    <div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">groups</span></div><div class="kpi-tile-label" data-i18n="dash.sales_count"></div>
-  </div><div class="kpi-tile-value" id="tile_n">—</div><div class="kpi-tile-sub" id="tile_n_sub">&nbsp;</div></div>
+  <div class="kpi-tile tile-brand span-4 is-clickable" id="tile_n_card" data-i18n-aria-label="dash.tile_action_total" tabindex="0" role="button">
+    <div class="kpi-tile-head">
+      <div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">groups</span></div>
+      <div class="kpi-tile-label" data-i18n="dash.sales_count"></div>
+    </div>
+    <div class="kpi-tile-value" id="tile_n">—</div>
+    <div class="kpi-tile-sub" id="tile_n_sub">&nbsp;</div>
+  </div>
 
-  <div class="kpi-tile tile-accent span-3"><div class="kpi-tile-head">
-    <div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">trending_up</span></div><div class="kpi-tile-label" data-i18n="dash.avg_kpi"></div>
-  </div><div class="kpi-tile-value" id="tile_avg">—</div><div class="kpi-tile-sub" id="tile_avg_sub">&nbsp;</div></div>
+  <div class="kpi-tile tile-coral span-4 is-clickable" id="tile_top_card" data-i18n-aria-label="dash.tile_action_top" tabindex="0" role="button">
+    <div class="kpi-tile-head">
+      <div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">emoji_events</span></div>
+      <div class="kpi-tile-label" data-i18n="dash.top"></div>
+    </div>
+    <div class="kpi-tile-value is-name" id="tile_top">—</div>
+    <div class="kpi-tile-sub" id="tile_top_sub">&nbsp;</div>
+  </div>
 
-  <div class="kpi-tile tile-coral span-3"><div class="kpi-tile-head">
-    <div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">emoji_events</span></div><div class="kpi-tile-label" data-i18n="dash.top"></div>
-  </div><div class="kpi-tile-value is-name" id="tile_top">—</div><div class="kpi-tile-sub" id="tile_top_sub">&nbsp;</div></div>
-
-  <div class="kpi-tile tile-warm span-3"><div class="kpi-tile-head">
-    <div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">warning</span></div><div class="kpi-tile-label" data-i18n="dash.needs_attention"></div>
-  </div><div class="kpi-tile-value" id="tile_low">—</div><div class="kpi-tile-sub" data-i18n="dash.below_55"></div></div>
+  <div class="kpi-tile tile-warm span-4 is-clickable" id="tile_low_card" data-i18n-aria-label="dash.tile_action_attention" tabindex="0" role="button">
+    <div class="kpi-tile-head">
+      <div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">warning</span></div>
+      <div class="kpi-tile-label" data-i18n="dash.needs_attention"></div>
+    </div>
+    <div class="kpi-tile-value" id="tile_low">—</div>
+    <div class="kpi-tile-sub" data-i18n="dash.below_55"></div>
+  </div>
 </div>
 
 <div class="controls">
@@ -66,57 +90,54 @@
 <!-- Secondary KPIs (operational): leads, calls, deals, conversion -->
 <div class="stats-grid stagger" id="opStats"></div>
 
-<!-- Bento row 1: gauge ring + radar + funnel -->
-<div class="bento">
-  <div class="chart-card span-4">
-    <h3 data-i18n="dash.health_score"></h3>
-    <div id="chartHealthGauge" class="plotly-container short"><div class="chart-skel"></div></div>
-  </div>
-  <div class="chart-card span-4">
-    <h3 data-i18n="dash.metric_pillars"></h3>
-    <div id="chartRadarOverview" class="plotly-container short"><div class="chart-skel"></div></div>
-  </div>
-  <div class="chart-card span-4">
-    <h3 data-i18n="dash.chart_funnel"></h3>
-    <div id="chartFunnel" class="plotly-container short"><div class="chart-skel"></div></div>
-  </div>
+<!-- PRIMARY analytical surfaces — always visible, full-width, ranked by actionability -->
+<div class="chart-card">
+  <h3 data-i18n="dash.chart_leaderboard"></h3>
+  <div id="chartTeamPerf" class="plotly-container tall"><div class="chart-skel"></div></div>
 </div>
 
-<!-- Bento row 2: distribution donut + leaderboard -->
-<div class="bento">
-  <div class="chart-card span-4">
-    <h3 data-i18n="dash.chart_distribution"></h3>
-    <div id="chartRatings" class="plotly-container"><div class="chart-skel"></div></div>
-  </div>
-  <div class="chart-card span-8">
-    <h3 data-i18n="dash.chart_leaderboard"></h3>
-    <div id="chartTeamPerf" class="plotly-container tall"><div class="chart-skel"></div></div>
-  </div>
-</div>
-
-<!-- KPI Achievement (full-width: bar + each KPI shown) -->
 <div class="chart-card">
   <h3 data-i18n="dash.chart_breakdown"></h3>
   <div id="chartBreakdown" class="plotly-container tall"><div class="chart-skel"></div></div>
 </div>
 
-<!-- Bento row 3: actual-vs-target combo + status split donut -->
-<div class="bento">
-  <div class="chart-card span-8">
-    <h3 data-i18n="dash.chart_kpi_actual_target"></h3>
-    <div id="chartActualTarget" class="plotly-container"><div class="chart-skel"></div></div>
-  </div>
-  <div class="chart-card span-4">
-    <h3 data-i18n="dash.chart_status_split"></h3>
-    <div id="chartStatus" class="plotly-container"><div class="chart-skel"></div></div>
-  </div>
+<div class="chart-card">
+  <h3 data-i18n="dash.chart_kpi_actual_target"></h3>
+  <div id="chartActualTarget" class="plotly-container"><div class="chart-skel"></div></div>
 </div>
 
-<!-- Heatmap: rep × KPI achievement -->
-<div class="chart-card">
-  <h3 data-i18n="dash.chart_heatmap"></h3>
-  <div id="chartHeatmap" class="plotly-container tall"><div class="chart-skel"></div></div>
-</div>
+<!-- Deep dive — collapsed by default, opens on demand. Five secondary charts. -->
+<details class="dash-deep-dive">
+  <summary class="dash-deep-dive-summary">
+    <span class="material-symbols-outlined" aria-hidden="true">analytics</span>
+    <span data-i18n="dash.deep_dive"></span>
+    <span class="material-symbols-outlined dash-deep-dive-chevron" aria-hidden="true">expand_more</span>
+  </summary>
+  <div class="bento">
+    <div class="chart-card span-4">
+      <h3 data-i18n="dash.metric_pillars"></h3>
+      <div id="chartRadarOverview" class="plotly-container short"><div class="chart-skel"></div></div>
+    </div>
+    <div class="chart-card span-4">
+      <h3 data-i18n="dash.chart_funnel"></h3>
+      <div id="chartFunnel" class="plotly-container short"><div class="chart-skel"></div></div>
+    </div>
+    <div class="chart-card span-4">
+      <h3 data-i18n="dash.chart_distribution"></h3>
+      <div id="chartRatings" class="plotly-container short"><div class="chart-skel"></div></div>
+    </div>
+  </div>
+  <div class="bento">
+    <div class="chart-card span-4">
+      <h3 data-i18n="dash.chart_status_split"></h3>
+      <div id="chartStatus" class="plotly-container short"><div class="chart-skel"></div></div>
+    </div>
+    <div class="chart-card span-8">
+      <h3 data-i18n="dash.chart_heatmap"></h3>
+      <div id="chartHeatmap" class="plotly-container tall"><div class="chart-skel"></div></div>
+    </div>
+  </div>
+</details>
 
 <!-- Detailed table -->
 <div class="card-title mb-2" style="margin-top:8px;">
@@ -215,15 +236,30 @@ function renderTiles(rows) {
   const salesDone = rows.filter(r => r.sales_submitted_at).length;
   const deDone = rows.filter(r => r.dataentry_submitted_at).length;
 
-  document.getElementById("tile_n").textContent = n;
-  document.getElementById("tile_n_sub").textContent = `${salesDone}/${n} ${t("dash.sales_submitted")} · ${deDone}/${n} ${t("dash.eval_done")}`;
+  // Headline (avg KPI as hero)
+  const heroAvgEl = document.getElementById("hero_avg");
+  const rating = getRating(avg);
+  const ratingCls = (typeof ratingClass === "function" ? ratingClass(rating) : "").replace("badge-", "");
+  heroAvgEl.textContent = avg.toFixed(1) + "%";
+  heroAvgEl.className = "tl-headline-value is-" + ratingCls;
+  document.getElementById("hero_rating").textContent = t("rating." + rating);
+  // Meta line: "12 sales reps · Top: Ahmed Hassan (87%) · 5 below threshold"
+  const topName = top ? (top.user_name || "—") : "—";
+  const topScore = top ? (parseFloat(top.total_score || 0).toFixed(1) + "%") : "—";
+  const meta = document.getElementById("hero_meta");
+  meta.innerHTML = top
+    ? `<strong>${n}</strong> ${t("dash.sales_count")} · ${t("dash.top")}: <strong>${escapeHTML(topName)}</strong> (${topScore}) · <strong>${below55}</strong> ${t("dash.below_55")}`
+    : `<strong>${n}</strong> ${t("dash.sales_count")}`;
 
-  document.getElementById("tile_avg").textContent = avg.toFixed(1) + "%";
-  document.getElementById("tile_avg_sub").textContent = t("rating." + getRating(avg));
+  // Mini-tiles row (3 clickable cards)
+  document.getElementById("tile_n").textContent = n;
+  document.getElementById("tile_n_sub").textContent =
+    `${salesDone}/${n} ${t("dash.sales_submitted")} · ${deDone}/${n} ${t("dash.eval_done")}`;
 
   if (top) {
     document.getElementById("tile_top").textContent = top.user_name || "—";
-    document.getElementById("tile_top_sub").textContent = parseFloat(top.total_score || 0).toFixed(1) + "% · " + t("rating." + (top.rating || "Pending"));
+    document.getElementById("tile_top_sub").textContent =
+      parseFloat(top.total_score || 0).toFixed(1) + "% · " + t("rating." + (top.rating || "Pending"));
   } else {
     document.getElementById("tile_top").textContent = "—";
     document.getElementById("tile_top_sub").innerHTML = "&nbsp;";
@@ -231,6 +267,58 @@ function renderTiles(rows) {
 
   document.getElementById("tile_low").textContent = below55;
 }
+
+function escapeHTML(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => (
+    {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]
+  ));
+}
+
+// ─── Tile click actions — Action 2 ─────────────────────────────────
+function _scrollToTable() {
+  const tbl = document.querySelector('.table-wrap');
+  if (tbl) tbl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function _wireTileClick(elId, handler) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.addEventListener('click', handler);
+  el.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handler(); }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  _wireTileClick('tile_n_card', _scrollToTable);
+
+  _wireTileClick('tile_top_card', () => {
+    // Top performer is row[0] after the score-sort.
+    const sort = document.getElementById('selSort');
+    if (sort) { sort.value = 'score'; }
+    render();
+    if (allData.length) {
+      const top = [...allData].sort((a,b) => (parseFloat(b.total_score)||0) - (parseFloat(a.total_score)||0))[0];
+      if (top) showDetail(top.user_id, top.month);
+    }
+  });
+
+  _wireTileClick('tile_low_card', () => {
+    // Filter to weak/bad and scroll. The "Below Threshold" / "Underperforming"
+    // labels render via i18n; the value 'Bad'/'Weak' stays as the enum value.
+    const ratingSel = document.getElementById('selRating');
+    if (ratingSel) {
+      // The rating filter accepts a single value; pick the one that matches more rows.
+      const weakCount = allData.filter(r => r.rating === 'Weak').length;
+      const badCount  = allData.filter(r => r.rating === 'Bad').length;
+      ratingSel.value = (badCount >= weakCount && badCount > 0) ? 'Bad'
+                       : (weakCount > 0) ? 'Weak'
+                       : 'Bad';
+      render();
+    }
+    _scrollToTable();
+  });
+});
 
 function renderOpStats(rows) {
   // Sum operational metrics

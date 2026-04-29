@@ -249,24 +249,25 @@ function renderTilesAndCharts() {
   const noTeam = users.filter(u => u.team_id == null && (u.role === 'sales' || u.role === 'team_leader')).length;
 
   document.getElementById("adminTiles").innerHTML = `
-    <div class="kpi-tile tile-brand span-3">
+    <div class="kpi-tile tile-brand span-3 is-clickable" id="atile_total" data-i18n-aria-label="dash.tile_action_users" tabindex="0" role="button">
       <div class="kpi-tile-head"><div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">manage_accounts</span></div><div class="kpi-tile-label">${t("admin.title")}</div></div>
       <div class="kpi-tile-value">${total}</div>
     </div>
-    <div class="kpi-tile tile-accent span-3">
+    <div class="kpi-tile tile-accent span-3 is-clickable" id="atile_active" data-i18n-aria-label="dash.tile_action_active" tabindex="0" role="button">
       <div class="kpi-tile-head"><div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">check_circle</span></div><div class="kpi-tile-label">${t("common.active")}</div></div>
       <div class="kpi-tile-value">${active}</div>
       <div class="kpi-tile-sub">${total ? Math.round(active/total*100) : 0}%</div>
     </div>
-    <div class="kpi-tile tile-coral span-3">
+    <div class="kpi-tile tile-coral span-3 is-clickable" id="atile_teams" data-i18n-aria-label="dash.tile_action_teams" tabindex="0" role="button">
       <div class="kpi-tile-head"><div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">groups</span></div><div class="kpi-tile-label">${t("nav.teams")}</div></div>
       <div class="kpi-tile-value">${teamCount}</div>
     </div>
-    <div class="kpi-tile tile-warm span-3">
+    <div class="kpi-tile tile-warm span-3 is-clickable" id="atile_no_team" data-i18n-aria-label="dash.tile_action_no_team" tabindex="0" role="button">
       <div class="kpi-tile-head"><div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">warning</span></div><div class="kpi-tile-label">${t("filters.no_team")}</div></div>
       <div class="kpi-tile-value">${noTeam}</div>
     </div>
   `;
+  _wireAdminTileClicks();
 
   if (typeof Plotly === 'undefined') return;
 
@@ -599,6 +600,35 @@ async function confirmUserDelete() {
 }
 
 function onLangChange() { renderTilesAndCharts(); render(); }
+
+// Action 2 — admin tile click actions.
+function _wireAdminTileClicks() {
+  const wire = (id, handler) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.onclick = handler;
+    el.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handler(); } };
+  };
+  wire('atile_total', () => {
+    // Clear all filters → show every user.
+    resetFilters();
+    document.querySelector('.table-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  wire('atile_active', () => {
+    document.getElementById('statusFilter').value = 'active';
+    document.getElementById('roleFilter').value = 'all';
+    render();
+    document.querySelector('.table-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  wire('atile_teams', () => {
+    window.location.href = '/teams';
+  });
+  wire('atile_no_team', () => {
+    document.getElementById('teamFilter').value = 'none';
+    render();
+    document.querySelector('.table-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
 
 loadUsers();
 </script>

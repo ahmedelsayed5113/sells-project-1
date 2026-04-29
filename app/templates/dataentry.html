@@ -26,9 +26,13 @@
     <div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">check_circle</span></div><div class="kpi-tile-label" data-i18n="de.evaluated"></div>
   </div><div class="kpi-tile-value" id="tile_done">—</div><div class="kpi-tile-sub" id="tile_done_sub">&nbsp;</div></div>
 
-  <div class="kpi-tile tile-warm span-3"><div class="kpi-tile-head">
-    <div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">hourglass_empty</span></div><div class="kpi-tile-label" data-i18n="de.waiting_eval"></div>
-  </div><div class="kpi-tile-value" id="tile_pending">—</div></div>
+  <div class="kpi-tile tile-warm span-3 is-clickable" id="detile_pending" data-i18n-aria-label="dash.tile_action_pending_eval" tabindex="0" role="button">
+    <div class="kpi-tile-head">
+      <div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">hourglass_empty</span></div>
+      <div class="kpi-tile-label" data-i18n="de.waiting_eval"></div>
+    </div>
+    <div class="kpi-tile-value" id="tile_pending">—</div>
+  </div>
 
   <div class="kpi-tile tile-coral span-3"><div class="kpi-tile-head">
     <div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">inbox</span></div><div class="kpi-tile-label" data-i18n="de.missing_sales"></div>
@@ -650,6 +654,22 @@ function onLangChange() {
     if (typeof refreshSoftWarn === 'function') refreshSoftWarn(inp);
   });
 }
+
+// Action 2 — Pending tile click: filter to pending and scroll to first pending card.
+document.addEventListener('DOMContentLoaded', () => {
+  const tile = document.getElementById('detile_pending');
+  if (!tile) return;
+  const handler = () => {
+    document.getElementById('filterStatus').value = 'pending';
+    applyFilters();
+    const first = document.querySelector('#list .card[data-status="pending"]:not(.is-hidden)');
+    if (first) first.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  tile.addEventListener('click', handler);
+  tile.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handler(); }
+  });
+});
 
 document.getElementById("month").value = currentMonth();
 loadAll();

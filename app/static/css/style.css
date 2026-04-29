@@ -1206,6 +1206,67 @@ fieldset.field legend {
 .user-delete-footer .btn { min-width: 100px; }
 
 /* ──────────────────────────────────────────────────────────────────
+   DASHBOARD — deep-dive disclosure + clickable tile affordance
+   ────────────────────────────────────────────────────────────────── */
+.dash-deep-dive {
+  margin-bottom: 22px;
+}
+.dash-deep-dive-summary {
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: var(--surface-solid);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  user-select: none;
+  margin-bottom: 18px;
+  transition: color 0.15s, border-color 0.15s, box-shadow 0.15s;
+  min-height: 40px;
+}
+.dash-deep-dive-summary::-webkit-details-marker { display: none; }
+.dash-deep-dive-summary:hover {
+  color: var(--brand);
+  border-color: var(--brand);
+  box-shadow: var(--shadow-xs);
+}
+.dash-deep-dive-summary .material-symbols-outlined {
+  font-size: 18px;
+  font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 20;
+}
+.dash-deep-dive-summary .dash-deep-dive-chevron {
+  margin-inline-start: auto;
+  transition: transform 0.2s var(--ease);
+}
+.dash-deep-dive[open] .dash-deep-dive-summary .dash-deep-dive-chevron {
+  transform: rotate(180deg);
+}
+
+/* Clickable KPI tile — used on dashboard, finance, admin, dataentry. */
+.kpi-tile.is-clickable {
+  cursor: pointer;
+  transition: box-shadow 0.2s var(--ease), border-color 0.2s var(--ease), transform 0.2s var(--ease);
+}
+.kpi-tile.is-clickable:hover {
+  box-shadow: var(--shadow-sm);
+  border-color: var(--border-strong);
+}
+.kpi-tile.is-clickable:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.kpi-tile.is-clickable:active {
+  transform: translateY(1px);
+}
+
+/* ──────────────────────────────────────────────────────────────────
    TEAM-LEADER — headline score, my-team card, rank line
    ────────────────────────────────────────────────────────────────── */
 .tl-headline {
