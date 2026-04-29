@@ -109,3 +109,18 @@ When adding a new page, prefer wrapping its title in `.hero-ribbon` (a glass car
 - **Charts** → call helpers in `Charts.*` rather than `Plotly.newPlot` directly so theming, RTL fonts, and the load-wait helper stay consistent.
 - **Sidebar nav** → edit `app/templates/base.html`. Each link checks `request.path` for the `active` class; icons use Material Symbols Outlined.
 - **Master V API access** is gated by `MASTER_V_TOKEN`. The token in `config.py` is a development fallback; production sets it via env.
+- **Date-range filtering** → range-aware endpoints (`/api/kpi/report`, `/api/kpi/summary`, `/api/kpi/team-leaders`, `/api/kpi/teams-summary`, `/api/finance/report`) accept `?from=YYYY-MM-DD&to=YYYY-MM-DD&preset=...` as well as the legacy `?month=YYYY-MM`. Parsing/validation lives in `app/util/date_range.py` (`parse_range(args, allow_sub_month=...)`). Front-end picker is `DateRange.mount(host, opts)` in `app/static/js/date_range.js` — one component, used everywhere. Soft cap: 10K rows → HTTP 413 `range_too_large`. Max range: `Config.MAX_RANGE_YEARS = 5` (overridable via env).
+
+## Known issues / future work
+
+These are tracked design debts, not bugs. Each lists how to enable / refactor when the time comes.
+
+- **Daily activity log (option c, deferred from the date-range initiative).** `kpi_entries` is monthly-grain by schema (`UNIQUE(user_id, month)`). Sub-month presets in the date-range picker filter rows by `dataentry_submitted_at` / `sales_submitted_at`, but the activity counts inside each row remain monthly totals — surfaced via the `dr.footnote_submission` line on every range-aware page. If enterprise needs true per-day metric values (not just per-day filtering), add a sibling `kpi_activity_log(user_id, date, metric_key, value)` table, write to it from every `submit/sales` and `submit/evaluation` path, and rewrite report aggregation to roll up from the log. Estimated cost: 1–2 weeks.
+
+- **TIMESTAMPTZ migration.** All `TIMESTAMP` columns are without time zone. Server reads `NOW()` in app-server local time (Africa/Cairo). Cutover plan when enterprise demands UTC discipline: (1) add TZ-aware columns alongside, (2) dual-write for one release cycle, (3) backfill existing values via `created_at AT TIME ZONE 'Africa/Cairo'`, (4) drop the old columns. Coordinate with any Railway TZ change. Frontend already converts via `Intl.DateTimeFormat` so display is locale-agnostic.
+
+- **Audit trail (built but off by default).** `query_audit` table + `@audit_query` decorator on the 5 range-aware endpoints. Enable with `AUDIT_QUERIES=true` env (no redeploy needed). Recommended retention: 90 days via `DELETE FROM query_audit WHERE created_at < NOW() - INTERVAL '90 days'` on cron. For multi-worker deploys, the in-memory rate limiter (`app/auth.py:_RateLimiter`) and the synchronous audit insert may need a Redis/queue refactor — flagged as a follow-up.
+
+- **Date-range pagination (deferred).** Range-aware endpoints currently return up to 10K rows then 413 with `range_too_large`. Marker comment `# TODO: paginate when consistently exceeding 5K rows` at each fetch site. Cursor-based pagination on `(month DESC, user_id ASC)` is the natural shape. Don't pre-build — measure first.
+
+- **Date-range UI rollback.** The reliable path is `git`: rollback tag `pre-date-range-v1` or `git revert` of UI commits 8–12 (each commit isolated to one page; the backend BC contract means reverting the picker won't break the API). The `Config.DATE_RANGE_ENABLED` env knob exists for a future graceful kill-switch but is **not currently wired into the templates** — wiring it would require each page to fall back to a legacy `<input type="month">` host. Worth doing only if a need arises that revert can't address.
