@@ -209,8 +209,11 @@ def role_required(*allowed_roles):
 
 
 def role_home(role: str) -> str:
+    # Admin lands on the dashboard after login — closer to the day-to-day
+    # workflow than the user-management page. /admin remains accessible via
+    # the sidebar nav.
     return {
-        "admin": "/admin",
+        "admin": "/dashboard",
         "manager": "/dashboard",
         "team_leader": "/team-leader",
         "dataentry": "/data-entry",

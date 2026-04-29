@@ -54,7 +54,7 @@ Default first-run admin: `admin / admin123` (override via `DEFAULT_ADMIN_*` env 
 
 ### Roles and home routing
 Roles live in `app.auth.ROLES` and gate every page. `role_home(role)` in `app/auth.py` is the source of truth for post-login redirect:
-- `admin → /admin`, `manager → /dashboard`, `team_leader → /team-leader`, `dataentry → /data-entry`, `marketing → /marketing`, `sales → /propfinder`.
+- `admin → /dashboard`, `manager → /dashboard`, `team_leader → /team-leader`, `dataentry → /data-entry`, `marketing → /marketing`, `sales → /propfinder`. Admin retains access to `/admin` via sidebar nav; the post-login landing is the dashboard.
 
 `@role_required(*roles)` always lets `admin` through. Sales reps are intentionally scoped to PropFinder only — they have no KPI self-entry page anymore (`/sales` redirects to `/propfinder`).
 
