@@ -543,7 +543,7 @@ function renderDeepDiveCharts(rows) {
 }
 
 // Wire up the deep-dive toggle once. The <details> is in the DOM at parse time
-// since this script runs in the {% block scripts %} after the body.
+// since this script runs in the scripts block after the body.
 document.addEventListener("DOMContentLoaded", () => {
   const detailsEl = document.querySelector('.dash-deep-dive');
   if (!detailsEl) return;

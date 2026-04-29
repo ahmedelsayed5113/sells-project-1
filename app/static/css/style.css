@@ -786,12 +786,16 @@ input[type=checkbox] { accent-color: var(--brand); }
 .btn-danger:hover:not(:disabled) { background: var(--danger-soft); color: var(--danger); border-color: var(--danger); }
 
 .btn-ghost {
-  background: transparent;
-  border-color: transparent;
-  color: var(--text-muted);
+  background: rgba(124, 131, 253, 0.06);
+  border-color: rgba(71, 77, 197, 0.28);
+  color: var(--brand);
   box-shadow: none;
 }
-.btn-ghost:hover:not(:disabled) { background: rgba(124, 131, 253, 0.08); color: var(--brand); border-color: transparent; }
+.btn-ghost:hover:not(:disabled) {
+  background: rgba(124, 131, 253, 0.14);
+  color: var(--brand);
+  border-color: var(--brand);
+}
 
 .btn-sm { padding: 7px 13px; font-size: 12px; }
 .btn-full { width: 100%; }
