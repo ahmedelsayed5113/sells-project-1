@@ -16,7 +16,7 @@
 <div class="controls">
   <div class="field">
     <label data-i18n="common.month"></label>
-    <input type="month" id="month" onchange="loadAll()">
+    <div id="dateRangeHost"></div>
   </div>
   <div class="field">
     <label data-i18n="filters.team"></label>
@@ -92,6 +92,7 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script src="{{ url_for('static', filename='js/date_range.js') }}"></script>
 <script>
 let leaders = [];
 let teams = [];
@@ -99,15 +100,16 @@ let teamsPerf = [];
 let unassignedSummary = { member_count: 0, members_submitted: 0, members_evaluated: 0, members: [] };
 let currentTL = null;
 let tlKpiData = null;
+let _drCtrl = null;
 
 async function loadAll() {
-  const month = document.getElementById("month").value;
-  if (!month) return;
+  if (!_drCtrl) return;
+  const qs = _drCtrl.toQueryString();
   try {
     const [ls, ts, tp] = await Promise.all([
-      api(`/api/kpi/team-leaders?month=${month}`),
+      api(`/api/kpi/team-leaders?${qs}`),
       teams.length ? Promise.resolve(teams) : api("/api/teams").catch(() => []),
-      api(`/api/kpi/teams-summary?month=${month}`).catch(() => ({ teams: [], unassigned: null })),
+      api(`/api/kpi/teams-summary?${qs}`).catch(() => ({ teams: [], unassigned: null })),
     ]);
     leaders = ls;
     teams = ts || [];
@@ -281,8 +283,17 @@ function escapeHTML(s) {
   ));
 }
 
+// Editing a TL evaluation is single-month (kpi_entries.month is YYYY-MM).
+// When the picker covers multiple months, the modal opens for the latest
+// month in range — newest evaluation wins.
+function _editingMonth() {
+  const r = _drCtrl ? _drCtrl.getRange() : null;
+  if (r && r.monthStr) return r.monthStr;
+  return r ? r.to.slice(0, 7) : currentMonth();
+}
+
 function render() {
-  const month = document.getElementById("month").value;
+  const month = _editingMonth();
   const teamVal = document.getElementById("teamFilter").value;
   const statusVal = document.getElementById("statusFilter").value;
   const search = (document.getElementById("searchBox").value || "").trim().toLowerCase();
@@ -563,11 +574,17 @@ async function saveEval() {
   } catch (e) { toastError(e); }
 }
 
-function onLangChange() { render(); }
+function onLangChange() {
+  if (_drCtrl) _drCtrl.refreshLabels();
+  render();
+}
 
-const now = new Date();
-document.getElementById("month").value =
-  now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,"0");
-loadAll();
+// TL evaluation is monthly-grain — DISTINCT-ON server side picks latest entry
+// within range, so the picker is locked to month-only mode.
+_drCtrl = DateRange.mount(document.getElementById("dateRangeHost"), {
+  defaultPreset: "this_month",
+  mode: "month-only",
+  onChange: () => loadAll(),
+});
 </script>
 {% endblock %}
