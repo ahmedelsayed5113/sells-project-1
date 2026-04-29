@@ -54,7 +54,7 @@
 <div class="controls">
   <div class="field">
     <label data-i18n="common.month"></label>
-    <input type="month" id="month" onchange="loadAll()">
+    <div id="dateRangeHost"></div>
   </div>
   <div class="field">
     <label data-i18n="common.filter"></label>
@@ -96,11 +96,13 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script src="{{ url_for('static', filename='js/date_range.js') }}"></script>
 <script>
 let users = [];
 let entries = {};
 let teams = [];
 let kpiConfig = null;  // Loaded once from /api/kpi/config; powers live score preview + soft validation.
+let _drCtrl = null;
 const NUMERIC = ["fresh_leads", "calls", "meetings", "crm_pct", "deals",
                  "reports", "reservations", "followup_pct", "attendance_pct"];
 const PASSFAIL = ["attitude", "presentation", "behaviour", "appearance", "hr_roles"];
@@ -120,12 +122,12 @@ function escapeHTML(s) {
 }
 
 async function loadAll() {
-  const month = document.getElementById("month").value;
-  if (!month) return;
+  if (!_drCtrl) return;
   try {
+    const qs = _drCtrl.toQueryString();
     const [u, report, ts, cfg] = await Promise.all([
       api("/api/users?role=sales&active_only=true"),
-      api(`/api/kpi/report?month=${month}`),
+      api(`/api/kpi/report?${qs}`),
       teams.length ? Promise.resolve(teams) : api("/api/teams").catch(() => []),
       kpiConfig ? Promise.resolve(kpiConfig) : api("/api/kpi/config").catch(() => null),
     ]);
@@ -439,8 +441,19 @@ function dePill(kind, done) {
 // proceeds without re-prompting.
 const _warnedCards = new Set();
 
+// When the picker covers a multi-month or sub-month range, an entry's actual
+// month comes from its existing row; for new entries (no row in `entries`)
+// fall back to the picker's monthStr (single month) or the range's to-month.
+function _editingMonth(userId) {
+  const existing = entries[userId];
+  if (existing && existing.month) return existing.month;
+  const r = _drCtrl ? _drCtrl.getRange() : null;
+  if (r && r.monthStr) return r.monthStr;
+  return r ? r.to.slice(0, 7) : currentMonth();
+}
+
 async function saveEval(userId) {
-  const month = document.getElementById("month").value;
+  const month = _editingMonth(userId);
   const body = {
     user_id: userId,
     month,
@@ -479,7 +492,7 @@ async function saveEval(userId) {
 }
 
 function showDetail(userId) {
-  const month = document.getElementById("month").value;
+  const month = _editingMonth(userId);
   window.location.href = `/dashboard?user=${userId}&month=${encodeURIComponent(month)}`;
 }
 
@@ -605,6 +618,7 @@ renderAll = function patchedRenderAll() {
 };
 
 function onLangChange() {
+  if (_drCtrl) _drCtrl.refreshLabels();
   // Card labels are baked into renderCard's template literals via t() — they don't
   // re-translate via applyLang() alone. We rebuild, but snapshot every in-progress
   // input value first and restore it after so unsaved work survives the language flip.
@@ -673,7 +687,10 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-document.getElementById("month").value = currentMonth();
-loadAll();
+_drCtrl = DateRange.mount(document.getElementById("dateRangeHost"), {
+  defaultPreset: "this_month",
+  mode: "full",                       // dataentry can filter by submission date
+  onChange: () => loadAll(),
+});
 </script>
 {% endblock %}
