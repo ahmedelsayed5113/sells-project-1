@@ -1515,6 +1515,181 @@ fieldset.field legend {
   margin-top: 2px;
 }
 
+/* DATE RANGE PICKER — cross-cutting filter component */
+.dr {
+  display: inline-block;
+  position: relative;
+  font-family: inherit;
+}
+.dr-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-solid);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
+  box-shadow: var(--shadow-xs);
+  min-height: 36px;
+}
+.dr-summary:hover { border-color: var(--brand); color: var(--brand); }
+.dr-summary[aria-expanded="true"] {
+  border-color: var(--brand);
+  color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(71, 77, 197, 0.12);
+}
+.dr-summary-icon { font-size: 18px; }
+.dr-summary-text { white-space: nowrap; }
+.dr-summary-chev {
+  font-size: 18px;
+  transition: transform 0.2s var(--ease);
+}
+.dr-summary[aria-expanded="true"] .dr-summary-chev { transform: rotate(180deg); }
+
+.dr-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  inset-inline-start: 0;
+  z-index: 200;
+  min-width: 320px;
+  max-width: 420px;
+  background: var(--surface-solid);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 14px;
+  animation: fadeIn 0.15s var(--ease);
+}
+
+.dr-panel-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.dr-preset {
+  border: 1px solid var(--outline-variant);
+  background: rgba(241, 243, 255, 0.4);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s var(--ease);
+}
+.dr-preset:hover {
+  background: rgba(124, 131, 253, 0.10);
+  border-color: var(--brand);
+  color: var(--brand);
+}
+.dr-preset.is-active {
+  background: rgba(71, 77, 197, 0.14);
+  border-color: var(--brand);
+  color: var(--brand);
+}
+.dr-preset.is-custom {
+  /* Sits at the end; visually distinct from presets via the dashed border. */
+  border-style: dashed;
+}
+
+.dr-panel-custom {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--outline-variant);
+}
+.dr-custom-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.dr-custom-field { display: flex; flex-direction: column; gap: 4px; }
+.dr-custom-field label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.dr-custom-field input {
+  font-family: inherit;
+  font-size: 13px;
+  padding: 7px 10px;
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-sm);
+  background: var(--surface-solid);
+  color: var(--text);
+}
+.dr-custom-field input:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(71, 77, 197, 0.12);
+}
+.dr-custom-error {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--danger);
+  background: var(--danger-soft);
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+}
+.dr-custom-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.dr-panel-footnote {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--outline-variant);
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* Info banner — used by team_leader page when a multi-month range collapses
+   to "showing latest month". Reusable for similar advisories elsewhere. */
+.dr-info-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin: 10px 0 16px;
+  background: rgba(0, 103, 98, 0.08);   /* accent teal soft */
+  border: 1px solid rgba(0, 103, 98, 0.22);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 13px;
+}
+.dr-info-banner .material-symbols-outlined {
+  color: var(--accent);
+  font-size: 18px;
+}
+
+@media (max-width: 720px) {
+  .dr-panel {
+    position: fixed;
+    inset: auto 0 0 0;
+    top: auto;
+    width: 100%;
+    max-width: none;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    padding: 18px 16px 22px;
+    animation: slideUp 0.2s var(--ease);
+  }
+  .dr-custom-row { grid-template-columns: 1fr; }
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
 /* Per-KPI drill-down modal — Batch 6 */
 .kpi-drill-grid {
   display: grid;
