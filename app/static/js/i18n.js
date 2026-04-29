@@ -478,7 +478,6 @@ const I18N = {
     "dr.cancel": "إلغاء",
     "dr.footnote_submission": "يعرض القيود المُقدَّمة في هذا النطاق. أرقام النشاط تعكس إجمالي الشهر.",
     "dr.footnote_month_grain": "هذه الصفحة تعمل بنطاق شهري. اختر شهرًا واحدًا أو عدة أشهر.",
-    "dr.banner_latest_month": "عرض شهر {month}. اختر شهرًا واحدًا لعرض التفاصيل.",
     "errors.range_inverted": "تاريخ الانتهاء لازم يكون بعد تاريخ البدء أو مساوي له.",
     "errors.range_too_wide": "النطاق الزمني ما يقدرش يزيد عن ٥ سنين.",
     "errors.range_too_large": "النتائج كتيرة جدًا — ضيّق النطاق.",
@@ -486,6 +485,8 @@ const I18N = {
     "errors.invalid_preset": "النطاق المختار غير صالح.",
     "finance.range_warning_submonth": "<strong>تنبيه:</strong> الأرقام المالية إجمالات شهرية. النطاق ده بيفلتر القيود اللي اتقدمت في الفترة دي بس — الإيراد المعروض لكل صف بيغطي الشهر بالكامل.",
     "tl_eval.range_warning_submonth": "<strong>تنبيه:</strong> تقييم الـ TL شهري. النطاق ده بيعرض الـ TLs اللي اتقيِّموا في الفترة دي بس — كل تقييم بيغطي شهر كامل.",
+    "tl.range_warning_submonth": "<strong>تنبيه:</strong> نتيجتك محسوبة شهريًا. اختار شهر كامل عشان تشوف التفاصيل بشكل صحيح.",
+    "tl.range_warning_multimonth": "<strong>بيعرض شهر {month}</strong> (آخر شهر في النطاق المختار). اختار شهر واحد لعرض التفاصيل.",
 
     /* ─── propfinder ─── */
     "pf.title": "PropFinder",
@@ -1169,7 +1170,6 @@ const I18N = {
     "dr.cancel": "Cancel",
     "dr.footnote_submission": "Showing entries submitted in this range. Activity counts are monthly totals.",
     "dr.footnote_month_grain": "This page works in monthly grain. Choose a single month or a multi-month range.",
-    "dr.banner_latest_month": "Showing {month}. Pick a single month for detail view.",
     "errors.range_inverted": "End date must be on or after start date.",
     "errors.range_too_wide": "Date range cannot exceed 5 years.",
     "errors.range_too_large": "Too many results — narrow the range.",
@@ -1177,6 +1177,8 @@ const I18N = {
     "errors.invalid_preset": "Invalid date range.",
     "finance.range_warning_submonth": "<strong>Heads up:</strong> financial figures are monthly totals. This range filters which entries are shown by submission date — the revenue shown per row covers the full month.",
     "tl_eval.range_warning_submonth": "<strong>Heads up:</strong> TL evaluations are monthly. This range filters by submission date — each evaluation still covers a full month.",
+    "tl.range_warning_submonth": "<strong>Heads up:</strong> your score is computed monthly. Pick a full month to see details correctly.",
+    "tl.range_warning_multimonth": "<strong>Showing {month}</strong> (the latest month in the selected range). Pick a single month for the detail view.",
 
     /* ─── propfinder ─── */
     "pf.title": "PropFinder",

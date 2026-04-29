@@ -20,11 +20,17 @@
   </div>
 </div>
 
-<!-- "Showing latest month in range" banner — appears only when picker covers
-     multiple months. Auto-selects the latest month for the detail view. -->
-<div id="latestMonthBanner" class="dr-info-banner" hidden>
-  <span class="material-symbols-outlined" aria-hidden="true">info</span>
-  <span id="latestMonthBannerText"></span>
+<!-- Consolidated contextual range banner. ONE banner; copy switches based
+     on what the user picked:
+       - sub-month preset       → tl.range_warning_submonth
+       - multi-month range      → tl.range_warning_multimonth ({month} = latest)
+       - single calendar month  → hidden
+     min-height host reserves the slot to prevent layout shift. -->
+<div class="dr-context-warning-host" id="rangeWarningHost" aria-live="polite">
+  <div class="dr-context-warning" id="rangeWarning" hidden>
+    <span class="material-symbols-outlined" aria-hidden="true">warning</span>
+    <div class="dr-context-warning-text" id="rangeWarningText"></div>
+  </div>
 </div>
 
 <div id="noTeam" class="hidden">
@@ -131,25 +137,32 @@ function _selectedMonth() {
   return r.monthStr || r.to.slice(0, 7);
 }
 
-function _updateLatestMonthBanner() {
-  const banner = document.getElementById("latestMonthBanner");
-  const txt = document.getElementById("latestMonthBannerText");
+function _updateRangeWarning() {
+  const banner = document.getElementById("rangeWarning");
+  const txt = document.getElementById("rangeWarningText");
   if (!banner || !txt) return;
   const r = _drCtrl ? _drCtrl.getRange() : null;
-  if (r && !r.monthStr) {
-    const monthLabel = fmtMonth(_selectedMonth());
-    txt.textContent = t("dr.banner_latest_month").replace("{month}", monthLabel);
-    banner.hidden = false;
-  } else {
+  if (!r || r.monthStr) {
+    // Single calendar month — no banner needed.
     banner.hidden = true;
+    return;
   }
+  if (r.isSubMonth) {
+    // Sub-month range: surface that scoring is monthly and detail isn't useful.
+    txt.innerHTML = t("tl.range_warning_submonth");
+  } else {
+    // Multi-month aligned: latest month auto-selected; tell the user which.
+    const monthLabel = fmtMonth(_selectedMonth());
+    txt.innerHTML = t("tl.range_warning_multimonth").replace("{month}", monthLabel);
+  }
+  banner.hidden = false;
 }
 
 async function loadKPI() {
   const month = _selectedMonth();
   if (!month) return;
 
-  _updateLatestMonthBanner();
+  _updateRangeWarning();
   document.getElementById("kpiContent").classList.add("hidden");
   document.getElementById("noTeam").classList.add("hidden");
 
@@ -416,12 +429,15 @@ function onLangChange() {
   loadKPI();   // re-renders banner + cards in the new locale
 }
 
-// TL's own KPI is single-month-by-formula. Picker is month-only; for
-// multi-month ranges the latest month wins and a banner explains.
+// TL's own KPI is single-month-by-formula. Picker now allows all presets;
+// the consolidated warning banner explains when the picker's range can't
+// drive the detail view directly:
+//   sub-month  → tl.range_warning_submonth
+//   multi-month → tl.range_warning_multimonth (latest month auto-selected)
 init().then(() => {
   _drCtrl = DateRange.mount(document.getElementById("dateRangeHost"), {
     defaultPreset: "this_month",
-    mode: "month-only",
+    mode: "full",
     onChange: () => loadKPI(),
   });
 });
