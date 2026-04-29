@@ -63,8 +63,10 @@ def finance_page():
 
 
 @pages_bp.route("/admin")
-@role_required("admin")
+@role_required("admin", "manager", "dataentry")
 def admin_page():
+    # manager/dataentry get the same UI but the backend enforces role
+    # hierarchy on every CRUD action (see app/auth.py:can_create_role).
     return render_template("admin.html", user=current_user())
 
 

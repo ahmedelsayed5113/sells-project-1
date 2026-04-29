@@ -10,6 +10,7 @@ from flask import Blueprint, request, jsonify, session
 
 from app.auth import (
     ROLES,
+    can_create_role,
     error_response,
     hash_password,
     role_required,
@@ -116,7 +117,7 @@ def get_user(user_id):
 
 
 @users_bp.route("", methods=["POST"])
-@role_required("admin")
+@role_required("admin", "manager", "dataentry")
 def create_user():
     data = request.get_json(silent=True) or {}
     username = (data.get("username") or "").strip().lower()
@@ -130,6 +131,10 @@ def create_user():
         return error_response("required_fields_missing", 400)
     if role not in ROLES:
         return error_response("invalid_role", 400)
+    # Hierarchy guard (DE-04): the creator may only assign roles permitted
+    # by their own role. dataentry can create sales/marketing only.
+    if not can_create_role(session.get("role"), role):
+        return error_response("role_not_allowed", 403)
     if (err := validate_username(username)):
         return error_response(err, 400)
     if (err := validate_email(email, required=True)):
@@ -168,9 +173,10 @@ def create_user():
 
 
 @users_bp.route("/<int:user_id>", methods=["PUT"])
-@role_required("admin")
+@role_required("admin", "manager", "dataentry")
 def update_user(user_id):
     data = request.get_json(silent=True) or {}
+    actor_role = session.get("role")
     conn = None
     try:
         conn = get_conn()
@@ -180,6 +186,11 @@ def update_user(user_id):
             existing = cur.fetchone()
             if not existing:
                 return error_response("not_found", 404)
+
+            # Hierarchy guard: the actor must be allowed to manage the
+            # existing role. Prevents dataentry from editing admins/managers etc.
+            if not can_create_role(actor_role, existing["role"]):
+                return error_response("role_not_allowed", 403)
 
             fields = []
             params = []
@@ -195,6 +206,10 @@ def update_user(user_id):
                 r = (data["role"] or "").strip()
                 if r not in ROLES:
                     return error_response("invalid_role", 400)
+                # Hierarchy guard for the NEW role too — dataentry can't
+                # promote a sales rep to manager.
+                if not can_create_role(actor_role, r):
+                    return error_response("role_not_allowed", 403)
                 # Guard against demoting the last admin
                 if existing["role"] == "admin" and r != "admin":
                     cur.execute(
@@ -257,7 +272,7 @@ def update_user(user_id):
 
 
 @users_bp.route("/<int:user_id>", methods=["DELETE"])
-@role_required("admin")
+@role_required("admin", "manager", "dataentry")
 def delete_user(user_id):
     """Hard delete — removes user and all their KPI entries (CASCADE)."""
     if user_id == session.get("user_id"):
@@ -270,6 +285,9 @@ def delete_user(user_id):
             row = cur.fetchone()
             if not row:
                 return error_response("not_found", 404)
+            # Hierarchy guard — actor must be allowed to manage this role.
+            if not can_create_role(session.get("role"), row[0]):
+                return error_response("role_not_allowed", 403)
             if row[0] == "admin":
                 cur.execute(
                     "SELECT COUNT(*) FROM users WHERE role = 'admin' AND active = true"
@@ -289,7 +307,7 @@ def delete_user(user_id):
 
 
 @users_bp.route("/<int:user_id>/deactivate", methods=["POST"])
-@role_required("admin")
+@role_required("admin", "manager", "dataentry")
 def deactivate_user(user_id):
     if user_id == session.get("user_id"):
         return error_response("forbidden", 403)
@@ -301,6 +319,8 @@ def deactivate_user(user_id):
             row = cur.fetchone()
             if not row:
                 return error_response("not_found", 404)
+            if not can_create_role(session.get("role"), row[0]):
+                return error_response("role_not_allowed", 403)
             if row[0] == "admin":
                 cur.execute(
                     "SELECT COUNT(*) FROM users WHERE role = 'admin' AND active = true"
@@ -322,12 +342,19 @@ def deactivate_user(user_id):
 
 
 @users_bp.route("/<int:user_id>/activate", methods=["POST"])
-@role_required("admin")
+@role_required("admin", "manager", "dataentry")
 def activate_user(user_id):
     conn = None
     try:
         conn = get_conn()
         with conn.cursor() as cur:
+            # Hierarchy guard before activating
+            cur.execute("SELECT role FROM users WHERE id = %s", (user_id,))
+            row = cur.fetchone()
+            if not row:
+                return error_response("not_found", 404)
+            if not can_create_role(session.get("role"), row[0]):
+                return error_response("role_not_allowed", 403)
             cur.execute(
                 "UPDATE users SET active = true, updated_at = NOW(), "
                 "failed_logins = 0, locked_until = NULL WHERE id = %s",

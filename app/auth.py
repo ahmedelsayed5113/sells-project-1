@@ -26,6 +26,25 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 ROLES = ["admin", "manager", "team_leader", "dataentry", "sales", "marketing"]
 
+# Role hierarchy for user CRUD permissions (Section 01 — DE-04). Each entry
+# lists the roles a creator can assign on user creation/edit. dataentry sits
+# below manager and can only create roles "below Data Entry level" per spec.
+_CAN_CREATE_ROLES = {
+    "admin":      ["admin", "manager", "team_leader", "dataentry", "sales", "marketing"],
+    "manager":    ["team_leader", "dataentry", "sales", "marketing"],
+    "dataentry":  ["sales", "marketing"],
+}
+
+
+def can_create_role(creator_role: str, target_role: str) -> bool:
+    """True iff a user with `creator_role` may create/edit a user with `target_role`."""
+    return target_role in _CAN_CREATE_ROLES.get(creator_role, [])
+
+
+def allowed_target_roles(creator_role: str) -> list[str]:
+    """The set of roles a creator may assign — used by the UI to filter the role picker."""
+    return list(_CAN_CREATE_ROLES.get(creator_role, []))
+
 # Legacy salt retained ONLY to verify old accounts; new hashes never use it.
 _LEGACY_SALT = "ain_kpi_2026_salt"
 
