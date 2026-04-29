@@ -23,7 +23,7 @@
 <div class="controls">
   <div class="field">
     <label data-i18n="common.month"></label>
-    <select id="selMonth" onchange="loadAll()"></select>
+    <div id="dateRangeHost"></div>
   </div>
   <div class="field">
     <label data-i18n="fin.avg_deal"></label>
@@ -96,26 +96,11 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script src="{{ url_for('static', filename='js/date_range.js') }}"></script>
 <script>
 let reportData = null;
 let trendData = null;
-
-async function initMonths() {
-  try {
-    const months = await api("/api/kpi/months");
-    const sel = document.getElementById("selMonth");
-    const cur = currentMonth();
-    sel.innerHTML = "";
-    const monthSet = new Set(months);
-    monthSet.add(cur);
-    [...monthSet].sort().reverse().forEach(m => {
-      const o = document.createElement("option");
-      o.value = m; o.textContent = fmtMonth(m);
-      if (m === cur) o.selected = true;
-      sel.appendChild(o);
-    });
-  } catch (e) { console.error(e); }
-}
+let _drCtrl = null;
 
 // Persist user-tuned defaults across visits — these are org-wide constants
 // the manager rarely changes, but should not have to retype every load.
@@ -129,16 +114,19 @@ function _seedFinanceDefaults() {
   if (rate && !rate.value) rate.value = localStorage.getItem(FIN_COMMRATE_KEY) || "2.5";
 }
 
-async function loadAll(monthArg) {
+async function loadAll() {
   _seedFinanceDefaults();
-  const month = monthArg || document.getElementById("selMonth").value || currentMonth();
+  if (!_drCtrl) return;
   const avgDeal = parseFloat(document.getElementById("avgDeal").value) || 2500000;
   const commRate = (parseFloat(document.getElementById("commissionRate").value) || 2.5) / 100;
   if (avgDeal <= 0 || commRate < 0) return toast(t("errors.invalid_input"), "error");
   try { localStorage.setItem(FIN_AVGDEAL_KEY,  String(avgDeal)); } catch {}
   try { localStorage.setItem(FIN_COMMRATE_KEY, String(commRate * 100)); } catch {}
   try {
-    const qs = `month=${month}&avg_deal_value_egp=${avgDeal}&commission_rate=${commRate}`;
+    const qs = _drCtrl.toQueryString({
+      avg_deal_value_egp: avgDeal,
+      commission_rate: commRate,
+    });
     // Report + trend are independent — fetch in parallel.
     const [report, trend] = await Promise.all([
       api(`/api/finance/report?${qs}`),
@@ -366,9 +354,17 @@ function exportCSV() {
   a.click();
 }
 
-function onLangChange() { render(); }
+function onLangChange() {
+  if (_drCtrl) _drCtrl.refreshLabels();
+  render();
+}
 
-// Run months listing and the initial finance fetch in parallel.
-Promise.all([initMonths(), loadAll(currentMonth())]);
+// Finance is locked to month-only mode: financial projections are computed
+// from monthly deal/reservation counts; sub-month proration would mislead.
+_drCtrl = DateRange.mount(document.getElementById("dateRangeHost"), {
+  defaultPreset: "this_month",
+  mode: "month-only",
+  onChange: () => loadAll(),
+});
 </script>
 {% endblock %}
