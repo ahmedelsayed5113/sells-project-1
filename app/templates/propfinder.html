@@ -565,6 +565,7 @@ function renderGrid(rows) {
         : `<span class="badge badge-excellent">${t("pf.available")}</span>`)
       : "";
     const discount = Number(u.cash_discount_percent || 0);
+    const planCount = Array.isArray(u.payment_plans) ? u.payment_plans.length : 0;
     const pills = [
       u.unit_type ? `<span class="pf-pill brand"><span class="material-symbols-outlined pf-pill-icon" aria-hidden="true">chair_alt</span>${escapeHTML(u.unit_type)}</span>` : "",
       u.bedrooms  ? `<span class="pf-pill"><span class="material-symbols-outlined pf-pill-icon" aria-hidden="true">bed</span>${u.bedrooms} ${t("pf.beds_short")}</span>` : "",
@@ -572,6 +573,7 @@ function renderGrid(rows) {
       (u.outdoor_area && String(u.outdoor_area).trim() && String(u.outdoor_area).trim() !== "0") ? `<span class="pf-pill accent"><span class="material-symbols-outlined pf-pill-icon" aria-hidden="true">deck</span>${escapeHTML(u.outdoor_area)}</span>` : "",
       u.delivery_from_months ? `<span class="pf-pill warn"><span class="material-symbols-outlined pf-pill-icon" aria-hidden="true">schedule</span>${u.delivery_from_months} ${t("pf.months_short")}</span>` : "",
       discount > 0 ? `<span class="pf-pill discount"><span class="material-symbols-outlined pf-pill-icon" aria-hidden="true">sell</span>-${discount}%</span>` : "",
+      planCount > 1 ? `<span class="pf-pill plans"><span class="material-symbols-outlined pf-pill-icon" aria-hidden="true">payments</span>${planCount} ${t("pf.plans_short")}</span>` : "",
     ].filter(Boolean).join("");
     const uid = u.id || u.detail_id || ("idx-" + idx);
     return `<div class="pf-card clickable" data-unit-id="${escapeHTML(String(uid))}">
@@ -688,9 +690,15 @@ function showUnit(idx) {
     ).join("");
     paymentPlanCell = `
       <div class="pf-detail-item pf-detail-item-wide">
-        <div class="k">${t("pf.payment_plan")} <span class="text-muted" style="font-size:11px">(${plans.length})</span></div>
+        <div class="k">${t("pf.payment_plan")} <span class="pf-pill plans" style="margin-inline-start:6px;padding:2px 8px;font-size:10px">${plans.length} ${t("pf.plans_short")}</span></div>
         <div class="v">
-          <select class="pf-plan-select">${opts}</select>
+          <div class="pf-plan-select-wrap">
+            <select class="pf-plan-select">${opts}</select>
+          </div>
+          <div class="pf-plan-select-hint">
+            <span class="material-symbols-outlined" aria-hidden="true">touch_app</span>
+            ${t("pf.plans_hint")}
+          </div>
         </div>
       </div>`;
   } else if (u.payment_plan) {

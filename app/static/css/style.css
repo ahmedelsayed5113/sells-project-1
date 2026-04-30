@@ -3172,6 +3172,9 @@ kbd {
 .pf-pill.accent  { background: var(--accent-soft);    color: var(--accent-2);  border-color: rgba(0, 131, 124, 0.22); }
 .pf-pill.warn    { background: rgba(255, 184, 77, 0.16); color: #b97000;       border-color: rgba(255, 184, 77, 0.30); }
 .pf-pill.discount { background: var(--warning-soft); color: var(--warning); border-color: rgba(196, 114, 0, 0.30); font-weight: 700; }
+/* Multi-plan indicator: signals to the user (before opening the detail
+   modal) that the unit has more than one payment plan to choose from. */
+.pf-pill.plans { background: rgba(71, 77, 197, 0.10); color: var(--brand); border-color: rgba(71, 77, 197, 0.30); font-weight: 700; }
 
 .pf-card-price {
   display: flex;
@@ -3409,25 +3412,59 @@ kbd {
    the payment-plans dropdown so the <select> doesn't get a cramped width. */
 .pf-detail-item-wide { grid-column: 1 / -1; }
 
-/* Payment-plans dropdown inside the unit detail modal. Matches the
-   neutral-recessed look of the surrounding cells but exposes the
-   chevron and a comfortable click target. */
+/* Payment-plans dropdown inside the unit detail modal. We hide the
+   native chevron (which renders inconsistently across mobile browsers)
+   and paint our own brand-tinted chevron via a CSS background-image so
+   the user immediately sees this is a picker, not a static cell. */
+.pf-plan-select-wrap {
+  position: relative;
+  display: block;
+  margin-top: 2px;
+}
+.pf-plan-select-wrap::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  inset-inline-end: 14px;
+  width: 10px; height: 10px;
+  border-right: 2px solid var(--brand);
+  border-bottom: 2px solid var(--brand);
+  transform: translateY(-65%) rotate(45deg);
+  pointer-events: none;
+}
 .pf-plan-select {
   width: 100%;
-  margin-top: 2px;
-  padding: 8px 12px;
+  padding: 10px 38px 10px 14px;
   font-size: 13px;
   font-weight: 600;
   color: var(--text);
   background: var(--surface-solid);
-  border: 1px solid var(--outline-variant);
+  border: 1px solid var(--brand);
   border-radius: var(--radius-sm);
   cursor: pointer;
   font-family: inherit;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  box-shadow: 0 0 0 3px rgba(71, 77, 197, 0.08);
 }
+html[dir="rtl"] .pf-plan-select { padding: 10px 14px 10px 38px; }
 .pf-plan-select:focus {
   outline: 2px solid var(--brand);
   outline-offset: 2px;
+}
+.pf-plan-select-hint {
+  font-size: 11px;
+  color: var(--brand);
+  font-weight: 700;
+  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.pf-plan-select-hint .material-symbols-outlined {
+  font-size: 14px;
+  font-variation-settings: 'FILL' 1, 'wght' 500;
 }
 
 .pf-table-wrap { overflow-x: auto; }
