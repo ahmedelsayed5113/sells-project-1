@@ -1731,6 +1731,281 @@ fieldset.field legend {
   to   { transform: translateY(0); }
 }
 
+/* ──────────────────────────────────────────────────────────────────
+   Marketing Section 05 — 12-section dashboard primitives (.mkt-*)
+   ────────────────────────────────────────────────────────────────── */
+.mkt-section {
+  background: var(--surface-solid);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 22px 24px;
+  margin-bottom: 22px;
+  box-shadow: var(--shadow-xs);
+}
+.mkt-section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 16px;
+  letter-spacing: -0.01em;
+}
+.mkt-section-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--grad-brand);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font-display);
+  flex-shrink: 0;
+}
+.mkt-section-cta { margin-inline-start: auto; }
+
+/* 1. Overview tiles — compact label/value pairs in a grid */
+.mkt-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+}
+.mkt-overview-tile {
+  background: rgba(241, 243, 255, 0.4);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+}
+.mkt-overview-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.mkt-overview-value {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  word-break: break-word;
+}
+
+/* 2. Scenario row — 3 cards side-by-side, recommended one highlighted */
+.mkt-scenarios-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.mkt-scenario-card {
+  background: var(--surface-solid);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+  transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
+}
+.mkt-scenario-card.is-recommended {
+  border-color: var(--brand);
+  background: rgba(124, 131, 253, 0.06);
+  box-shadow: 0 0 0 3px rgba(71, 77, 197, 0.10);
+}
+.mkt-scenario-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.mkt-scenario-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text);
+}
+.mkt-scenario-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+  margin: 0;
+}
+.mkt-scenario-stats > div {
+  min-width: 0;
+}
+.mkt-scenario-stats dt {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.mkt-scenario-stats dd {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+  word-break: break-word;
+}
+.mkt-recommended {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--accent-soft, rgba(0, 103, 98, 0.10));
+  border: 1px solid rgba(0, 103, 98, 0.22);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text);
+}
+.mkt-recommended .material-symbols-outlined {
+  color: var(--accent);
+  font-size: 18px;
+}
+
+/* 4 + 5 + 8 — Headline cards row (small stat tiles inline above tables) */
+.mkt-headline-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.mkt-headline-card {
+  background: rgba(241, 243, 255, 0.45);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+}
+.mkt-headline-card .mkt-headline-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.mkt-headline-card .mkt-headline-value {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+.mkt-empty-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(241, 243, 255, 0.5);
+  border: 1px dashed var(--outline-variant);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.mkt-empty-hint .material-symbols-outlined {
+  font-size: 18px;
+  color: var(--text-muted);
+}
+
+/* 9. Insights — bulleted, compact */
+.mkt-insights {
+  margin: 0;
+  padding-inline-start: 22px;
+  list-style: disc;
+}
+.mkt-insights li {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+/* 10. Action plan — 5 cards on a grid */
+.mkt-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+.mkt-action-card {
+  background: rgba(241, 243, 255, 0.4);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+}
+.mkt-action-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--brand);
+}
+.mkt-action-head .material-symbols-outlined {
+  font-size: 18px;
+  font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+}
+.mkt-action-card ol {
+  margin: 0;
+  padding-inline-start: 22px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text);
+}
+.mkt-action-card ol li { margin-bottom: 4px; }
+
+/* 11+12. Collapsible sections (Templates, Formulas) */
+.mkt-collapsible[open] .mkt-chev { transform: rotate(180deg); }
+.mkt-collapsible > summary {
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+}
+.mkt-collapsible > summary::-webkit-details-marker { display: none; }
+.mkt-chev {
+  margin-inline-start: auto;
+  font-size: 22px;
+  transition: transform 0.2s var(--ease);
+  color: var(--text-muted);
+}
+.mkt-formulas {
+  margin: 0;
+  padding-inline-start: 22px;
+  list-style: disc;
+}
+.mkt-formulas li {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+/* RTL polish — keep ordered-list numerals + section number circle aligned */
+[dir="rtl"] .mkt-action-card ol,
+[dir="rtl"] .mkt-insights,
+[dir="rtl"] .mkt-formulas {
+  padding-inline-start: 22px;
+}
+
+@media (max-width: 720px) {
+  .mkt-section { padding: 18px 16px; }
+  .mkt-overview-grid,
+  .mkt-headline-row,
+  .mkt-scenarios-row,
+  .mkt-actions-grid {
+    grid-template-columns: 1fr;
+  }
+  .mkt-section-cta { margin-inline-start: 0; margin-top: 8px; }
+}
+
 /* Per-KPI drill-down modal — Batch 6 */
 .kpi-drill-grid {
   display: grid;
