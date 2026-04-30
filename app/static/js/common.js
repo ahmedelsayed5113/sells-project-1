@@ -244,6 +244,47 @@ function initLangToggle() {
   });
 }
 
+// ─── Theme (light/dark) ──────────────────────────────────────────────
+// Theme is applied inline in <head> before render to avoid a flash. This
+// only handles the runtime toggle. The chosen theme is persisted in
+// localStorage; clearing it falls back to the OS preference.
+function getTheme() {
+  return document.documentElement.getAttribute("data-theme") || "light";
+}
+
+function setTheme(theme) {
+  const t = theme === "dark" ? "dark" : "light";
+  document.documentElement.setAttribute("data-theme", t);
+  try { localStorage.setItem("ain_theme", t); } catch (_) {}
+  // Broadcast so chart-rendering modules can swap their palette + redraw.
+  window.dispatchEvent(new CustomEvent("themechange", { detail: { theme: t } }));
+}
+
+function initThemeToggle() {
+  const btns = document.querySelectorAll("#themeToggleBtn, .theme-toggle");
+  btns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      btn.classList.remove("spin-once"); void btn.offsetWidth;
+      btn.classList.add("spin-once");
+      setTheme(getTheme() === "dark" ? "light" : "dark");
+    });
+  });
+
+  // If the user hasn't explicitly chosen a theme, follow the OS as it
+  // changes (e.g. system flips to dark at sunset). Once they click the
+  // toggle, ain_theme is set and this listener becomes a no-op.
+  if (window.matchMedia) {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const handler = (e) => {
+      if (localStorage.getItem("ain_theme")) return;
+      document.documentElement.setAttribute("data-theme", e.matches ? "dark" : "light");
+      window.dispatchEvent(new CustomEvent("themechange", { detail: { theme: e.matches ? "dark" : "light" } }));
+    };
+    if (mq.addEventListener) mq.addEventListener("change", handler);
+    else if (mq.addListener) mq.addListener(handler);
+  }
+}
+
 // ─── Formatting ────────────────────────────────────────────────────
 function ratingClass(rating) {
   return {
@@ -426,6 +467,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initUserDropdown();
   initBurger();
   initLangToggle();
+  initThemeToggle();
   initReveal();
   initPasswordToggles();
   initPassfailToggles();

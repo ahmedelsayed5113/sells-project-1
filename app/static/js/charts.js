@@ -4,29 +4,82 @@
    Solid backgrounds, neutral grids, straight lines by default.
    ════════════════════════════════════════════════════════════════════ */
 
-const CHART_COLORS = {
-  brand:       '#474dc5',  // periwinkle primary
-  brand2:      '#6067df',  // periwinkle lighter
-  brand3:      '#bfc2ff',  // periwinkle dim
-  accent:      '#006762',  // teal tertiary
-  accent2:     '#00837c',
-  accent3:     '#40dcd1',  // mint highlight
-  secondary:   '#884f41',  // coral / brown
-  secondary2:  '#ffb4a2',  // soft coral
-  info:        '#5a7cff',
-  warning:     '#c47200',
-  warning2:    '#ffb84d',
-  danger:      '#ba1a1a',
-  danger2:     '#ff6b8a',
-  muted:       '#767685',
-  text:        '#181b24',
-  textMuted:   '#464653',
-  bg:          '#ffffff',
-  surface2:    '#f5f6fc',
-  border:      '#e5e7ef',
-  grid:        '#eef0f6',
-  gridStrong:  '#d8dbe8',
+// Light/dark palettes. `CHART_COLORS` is mutated in place on theme change
+// (rather than reassigned) so existing references in this module still
+// point at the live object — and so callers can keep using property
+// access (CHART_COLORS.brand) without needing to re-read every render.
+const _CHART_PALETTES = {
+  light: {
+    brand:       '#474dc5',  // periwinkle primary
+    brand2:      '#6067df',  // periwinkle lighter
+    brand3:      '#bfc2ff',  // periwinkle dim
+    accent:      '#006762',  // teal tertiary
+    accent2:     '#00837c',
+    accent3:     '#40dcd1',  // mint highlight
+    secondary:   '#884f41',  // coral / brown
+    secondary2:  '#ffb4a2',  // soft coral
+    info:        '#5a7cff',
+    warning:     '#c47200',
+    warning2:    '#ffb84d',
+    danger:      '#ba1a1a',
+    danger2:     '#ff6b8a',
+    muted:       '#767685',
+    text:        '#181b24',
+    textMuted:   '#464653',
+    bg:          '#ffffff',
+    surface2:    '#f5f6fc',
+    border:      '#e5e7ef',
+    grid:        '#eef0f6',
+    gridStrong:  '#d8dbe8',
+  },
+  dark: {
+    // Brightened brand hues so they remain legible against dark surfaces.
+    brand:       '#7c83fd',
+    brand2:      '#969cff',
+    brand3:      '#5559c8',
+    accent:      '#4ed6ce',
+    accent2:     '#6ee0d8',
+    accent3:     '#00837c',
+    secondary:   '#d49887',
+    secondary2:  '#f5b8a8',
+    info:        '#8ba4ff',
+    warning:     '#ffb84d',
+    warning2:    '#ffc97a',
+    danger:      '#ff6b8a',
+    danger2:     '#ff8b9e',
+    muted:       '#8388a0',
+    text:        '#e8eaf2',
+    textMuted:   '#b3b6c4',
+    bg:          '#1c1f2b',          // matches --surface-solid
+    surface2:    '#20232f',
+    border:      '#2a2d3a',
+    grid:        '#262934',
+    gridStrong:  '#353948',
+  },
 };
+
+const CHART_COLORS = Object.assign({}, _CHART_PALETTES.light);
+
+function _currentTheme() {
+  return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+}
+
+function _applyChartPalette(theme) {
+  const src = _CHART_PALETTES[theme] || _CHART_PALETTES.light;
+  Object.keys(src).forEach(k => { CHART_COLORS[k] = src[k]; });
+}
+_applyChartPalette(_currentTheme());
+
+// Listen for theme changes and re-render every chart on the page. Pages
+// already implement onLangChange to re-render their charts on language
+// switch — re-using that hook means we don't have to wire up a separate
+// onThemeChange in every template.
+window.addEventListener('themechange', () => {
+  _applyChartPalette(_currentTheme());
+  if (typeof window.onLangChange === 'function') {
+    try { window.onLangChange(typeof getLang === 'function' ? getLang() : 'ar'); } catch (_) {}
+  }
+});
 
 // Honored across all chart fns. Read once at module load.
 const _PREFERS_REDUCED_MOTION = !!(window.matchMedia &&

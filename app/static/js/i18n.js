@@ -25,6 +25,7 @@ const I18N = {
     "nav.section_admin": "الإدارة",
     "nav.section_tools": "أدوات",
     "nav.language_toggle": "تغيير اللغة",
+    "nav.theme_toggle": "تغيير المظهر (فاتح / داكن)",
 
     /* ─── common ─── */
     "common.save": "حفظ",
@@ -852,6 +853,7 @@ const I18N = {
     "nav.section_admin": "Administration",
     "nav.section_tools": "Tools",
     "nav.language_toggle": "Switch language",
+    "nav.theme_toggle": "Toggle theme (light / dark)",
 
     /* ─── common ─── */
     "common.save": "Save",

@@ -6,8 +6,11 @@
   <title>{% block title %}Ain KPI{% endblock %}</title>
   <!-- Apply language before render to prevent Arabic flash in EN mode -->
   <script>(function(){var l=localStorage.getItem('ain_lang')||'ar';document.documentElement.lang=l;document.documentElement.dir=l==='ar'?'rtl':'ltr';document.documentElement.className=l==='en'?'lang-en':'';})()</script>
+  <!-- Apply theme before render to prevent flash. Manual choice in localStorage
+       wins; otherwise we follow the OS preference (prefers-color-scheme). -->
+  <script>(function(){var t=localStorage.getItem('ain_theme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})()</script>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=flat27">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=flat28">
   {% block head %}{% endblock %}
 </head>
 <body>
@@ -111,6 +114,10 @@
       <div class="topnav-links" id="navLinks"></div>
 
       <div class="topnav-actions">
+        <button id="themeToggleBtn" class="theme-toggle" data-i18n-title="nav.theme_toggle" data-i18n-aria-label="nav.theme_toggle" title="Theme" aria-label="Theme">
+          <span class="material-symbols-outlined theme-toggle-icon-light" aria-hidden="true">light_mode</span>
+          <span class="material-symbols-outlined theme-toggle-icon-dark" aria-hidden="true">dark_mode</span>
+        </button>
         <button id="langToggleBtn" class="lang-toggle" data-i18n-title="nav.language_toggle" title="Language">EN</button>
         <div class="topnav-user" id="userMenuTrigger">
           <div class="avatar">{{ user.full_name[0] if user.full_name else 'U' }}</div>
@@ -133,8 +140,8 @@
     </main>
   </div>
 
-  <script src="{{ url_for('static', filename='js/i18n.js') }}?v=flat27"></script>
-  <script src="{{ url_for('static', filename='js/common.js') }}?v=flat27"></script>
+  <script src="{{ url_for('static', filename='js/i18n.js') }}?v=flat28"></script>
+  <script src="{{ url_for('static', filename='js/common.js') }}?v=flat28"></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>
