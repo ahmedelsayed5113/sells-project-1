@@ -76,12 +76,40 @@ function _applyChartPalette(theme) {
 }
 _applyChartPalette(_currentTheme());
 
-// Listen for theme changes and re-render every chart on the page. Pages
-// already implement onLangChange to re-render their charts on language
-// switch — re-using that hook means we don't have to wire up a separate
-// onThemeChange in every template.
+// Per-container redraw closures. Every public draw function (drawBarChart
+// / drawDonut / etc.) registers its argument list keyed by container id;
+// on theme change we re-invoke each closure so the chart re-renders with
+// the active palette. Means pages don't have to wire a per-page handler
+// — the chart helpers handle their own theming end-to-end.
+const _redrawCallbacks = new Map();
+function _registerRedraw(id, fn) {
+  if (id) _redrawCallbacks.set(id, fn);
+}
+
 window.addEventListener('themechange', () => {
   _applyChartPalette(_currentTheme());
+  _rebuildPalette();
+
+  // Two-layer redraw strategy:
+  //
+  // 1) Pages whose chart args are computed at draw-time (most charts —
+  //    they read CHART_COLORS / PALETTE inside the drawer body, so the
+  //    closure replay below catches the new palette).
+  //
+  // 2) Pages that pre-resolve PALETTE on the page side and pass an
+  //    array of HEX strings via data.colors. Those strings are frozen
+  //    in the captured closure args. For those, calling the page's
+  //    onLangChange() re-runs its render(), which re-evaluates
+  //    Charts.PALETTE[i] with the new live values.
+  _redrawCallbacks.forEach((fn, id) => {
+    const el = document.getElementById(id);
+    if (!el || !el.isConnected) {
+      _redrawCallbacks.delete(id);
+      return;
+    }
+    try { fn(); } catch (e) { console.warn('chart redraw failed:', id, e); }
+  });
+
   if (typeof window.onLangChange === 'function') {
     try { window.onLangChange(typeof getLang === 'function' ? getLang() : 'ar'); } catch (_) {}
   }
@@ -187,17 +215,27 @@ function cancelPending(elOrId) {
   try { if (typeof Plotly !== 'undefined' && Plotly.purge) Plotly.purge(el); } catch (_) {}
 }
 
-// Sequential palette: periwinkle → teal → coral → yellow → blue → mint
-const PALETTE = [
-  CHART_COLORS.brand,
-  CHART_COLORS.accent2,
-  CHART_COLORS.secondary2,
-  CHART_COLORS.warning2,
-  CHART_COLORS.info,
-  CHART_COLORS.accent3,
-  CHART_COLORS.brand3,
-  CHART_COLORS.danger2,
-];
+// Sequential palette: periwinkle → teal → coral → yellow → blue → mint.
+// Defined as a `let`-like mutable array so theme changes can rewrite the
+// values in place — callers that captured a reference (Charts.PALETTE,
+// PALETTE[2], etc.) keep pointing at the same array. _rebuildPalette()
+// runs on every theme change to keep the entries in sync with CHART_COLORS.
+const PALETTE = [];
+function _rebuildPalette() {
+  const next = [
+    CHART_COLORS.brand,
+    CHART_COLORS.accent2,
+    CHART_COLORS.secondary2,
+    CHART_COLORS.warning2,
+    CHART_COLORS.info,
+    CHART_COLORS.accent3,
+    CHART_COLORS.brand3,
+    CHART_COLORS.danger2,
+  ];
+  PALETTE.length = 0;
+  next.forEach(c => PALETTE.push(c));
+}
+_rebuildPalette();
 
 function chartLayout(opts = {}) {
   const fontFamily = _chartFontFamily();
@@ -770,21 +808,32 @@ function hexToRgba(hex, alpha = 1) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+// Wrap every public draw function so its call args are remembered against
+// the container id. The themechange handler walks the registry and calls
+// each closure to repaint with the active palette — pages don't need a
+// per-template hook.
+function _trackedDraw(fn) {
+  return function trackedDraw(containerId, ...rest) {
+    _registerRedraw(containerId, () => fn(containerId, ...rest));
+    return fn(containerId, ...rest);
+  };
+}
+
 window.Charts = {
-  drawBarChart,
-  drawHorizontalBar,
-  drawDonut,
-  drawLineChart,
-  drawAreaChart,
-  drawGauge,
-  drawRadarChart,
-  drawStackedBar,
-  drawGroupedBar,
-  drawHeatmap,
-  drawTreemap,
-  drawFunnel,
-  drawScatter,
-  drawComboBarLine,
+  drawBarChart:     _trackedDraw(drawBarChart),
+  drawHorizontalBar: _trackedDraw(drawHorizontalBar),
+  drawDonut:        _trackedDraw(drawDonut),
+  drawLineChart:    _trackedDraw(drawLineChart),
+  drawAreaChart:    _trackedDraw(drawAreaChart),
+  drawGauge:        _trackedDraw(drawGauge),
+  drawRadarChart:   _trackedDraw(drawRadarChart),
+  drawStackedBar:   _trackedDraw(drawStackedBar),
+  drawGroupedBar:   _trackedDraw(drawGroupedBar),
+  drawHeatmap:      _trackedDraw(drawHeatmap),
+  drawTreemap:      _trackedDraw(drawTreemap),
+  drawFunnel:       _trackedDraw(drawFunnel),
+  drawScatter:      _trackedDraw(drawScatter),
+  drawComboBarLine: _trackedDraw(drawComboBarLine),
   scoreColorHex,
   hexToRgba,
   cancelPending,
