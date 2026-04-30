@@ -441,11 +441,21 @@ html[dir="rtl"] .sidebar-link:hover { transform: translateX(-2px); }
 
 .topnav-brand-icon {
   width: 36px; height: 36px;
-  background: var(--brand);
+  background: var(--grad-brand);
   border-radius: 12px;
   display: flex; align-items: center; justify-content: center;
   font-weight: 700; color: #ffffff;
-  box-shadow: var(--shadow-xs);
+  box-shadow: 0 4px 14px rgba(71, 77, 197, 0.28), inset 0 1px 0 rgba(255,255,255,0.18);
+  flex-shrink: 0;
+}
+/* Inline AIN logo mark sits inside the brand icon — sized to fill the
+   container, color inherits from the parent so it renders white on the
+   gradient background. */
+.topnav-brand-icon svg,
+.brand-mark svg {
+  width: 70%; height: 70%;
+  color: #ffffff;
+  display: block;
 }
 
 .topnav-links { display: flex; gap: 4px; flex: 1; justify-content: center; }
@@ -2637,57 +2647,306 @@ kbd {
   .profile-info { grid-template-columns: 1fr; gap: 14px; }
 }
 
-/* ──────────────────────────────────────────────────────────────────
-   AUTH PAGES
-   ────────────────────────────────────────────────────────────────── */
-.auth-page {
+/* ════════════════════════════════════════════════════════════════════
+   AUTH PAGES — split-shell, brand-led
+   Two-column layout on desktop: brand storytelling on the left, form on
+   the right. Brand panel collapses on mobile and is replaced by a thin
+   mini-brand strip in the form header.
+   ════════════════════════════════════════════════════════════════════ */
+body:has(.auth-shell) { overflow: hidden; }
+.auth-main {
+  padding: 0 !important;
+  max-width: none !important;
+  margin: 0 !important;
+}
+
+.auth-shell {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
   min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
   background: var(--bg);
 }
-
-.auth-card {
-  width: 100%;
-  max-width: 440px;
-  background: var(--surface-solid);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  padding: 40px;
-  box-shadow: var(--shadow-md);
+@media (max-width: 960px) {
+  .auth-shell { grid-template-columns: 1fr; }
+  .auth-brand { display: none; }
 }
 
-.auth-logo {
+/* ── Brand panel (left) ─────────────────────────────────────────── */
+.auth-brand {
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
-  margin-bottom: 8px;
-  flex-direction: column;
+  background: linear-gradient(135deg, #2c1f6e 0%, #474dc5 55%, #6067df 100%);
+  color: #fff;
+  isolation: isolate;
+}
+[data-theme="dark"] .auth-brand {
+  background: linear-gradient(135deg, #14163a 0%, #2c2f7a 55%, #474dc5 100%);
 }
 
-.auth-logo-icon {
-  width: 60px; height: 60px;
-  background: linear-gradient(135deg, #bfc2ff 0%, #e0e0ff 100%);
-  border-radius: 18px;
-  display: flex; align-items: center; justify-content: center;
-  color: var(--brand);
-  font-weight: 800;
-  font-size: 28px;
-  font-family: var(--font-display);
-  box-shadow: 0 10px 28px rgba(71, 77, 197, 0.20),
-              inset 0 1px 0 rgba(255,255,255,0.6);
+.auth-brand-bg { position: absolute; inset: 0; pointer-events: none; z-index: -1; }
+.auth-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.55;
+  animation: authBlobFloat 18s var(--ease) infinite;
+}
+.auth-blob-1 {
+  width: 480px; height: 480px;
+  background: radial-gradient(circle, #7c83fd 0%, transparent 70%);
+  top: -120px; left: -120px;
+}
+.auth-blob-2 {
+  width: 540px; height: 540px;
+  background: radial-gradient(circle, #00837c 0%, transparent 70%);
+  bottom: -180px; right: -160px;
+  animation-delay: -9s;
+  animation-duration: 22s;
+}
+@keyframes authBlobFloat {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(40px, -30px, 0) scale(1.08); }
+}
+.auth-grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);
 }
 
-.auth-logo-text { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; color: var(--brand); }
-.auth-subtitle { text-align: center; color: var(--text-muted); font-size: 13px; margin-bottom: 32px; }
+.auth-brand-content {
+  position: relative;
+  z-index: 1;
+  max-width: 460px;
+  padding: 60px 56px;
+  width: 100%;
+}
 
-.auth-lang-row {
+.auth-brand-logo {
   display: flex;
-  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 56px;
+}
+.auth-brand-mark {
+  width: 56px; height: 56px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.25);
+}
+.auth-brand-mark svg { width: 70%; height: 70%; color: #ffffff; }
+.auth-brand-wordmark { display: flex; flex-direction: column; line-height: 1; gap: 6px; }
+.auth-brand-name {
+  font-family: var(--font-en);
+  font-weight: 800;
+  font-size: 30px;
+  letter-spacing: 0.02em;
+  color: #ffffff;
+}
+.auth-brand-tagline {
+  font-family: var(--font-en);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.30em;
+  color: rgba(255, 255, 255, 0.78);
+  text-transform: uppercase;
+}
+
+.auth-brand-headline {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 36px;
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  margin-bottom: 16px;
+  text-wrap: balance;
+}
+.auth-brand-sub {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 15px;
+  line-height: 1.6;
+  margin-bottom: 36px;
+  max-width: 380px;
+}
+
+.auth-brand-features {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 48px;
+}
+.auth-brand-features li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 500;
+}
+.auth-brand-features li .material-symbols-outlined {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.auth-brand-trust {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+  letter-spacing: 0.02em;
+}
+.auth-brand-trust .material-symbols-outlined {
+  font-size: 16px;
+  color: #4ed6ce;
+}
+
+/* ── Form panel (right) ─────────────────────────────────────────── */
+.auth-form-panel {
+  display: flex;
+  flex-direction: column;
+  padding: 32px 40px;
+  background: var(--bg);
+  position: relative;
+  overflow-y: auto;
+}
+
+.auth-form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   margin-bottom: 20px;
+}
+.auth-form-mini-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--text);
+}
+@media (min-width: 961px) {
+  /* On desktop the brand panel carries the wordmark — hide the mini one. */
+  .auth-form-mini-brand { visibility: hidden; }
+}
+.auth-form-mini-mark {
+  width: 32px; height: 32px;
+  border-radius: 9px;
+  background: var(--grad-brand);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 14px rgba(71, 77, 197, 0.28);
+}
+.auth-form-mini-mark svg { width: 70%; height: 70%; color: #ffffff; }
+.auth-form-mini-name {
+  font-family: var(--font-en);
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+.auth-form-mini-name span {
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.18em;
+  margin-inline-start: 6px;
+}
+
+.auth-form-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.auth-form-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 24px 0;
+}
+@media (max-width: 960px) {
+  .auth-form-card { padding-top: 8px; padding-bottom: 24px; }
+}
+
+.auth-form-title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 32px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.auth-form-sub {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-bottom: 28px;
+}
+
+/* Input pill with leading icon. Built to feel premium without losing
+   the design system's input baseline (focus ring, validation states). */
+.auth-input-wrap {
+  position: relative;
+}
+.auth-input-icon {
+  position: absolute;
+  top: 50%;
+  inset-inline-start: 14px;
+  transform: translateY(-50%);
+  font-size: 20px;
+  color: var(--text-dim);
+  pointer-events: none;
+  transition: color 0.15s;
+}
+.auth-input-wrap input {
+  padding-inline-start: 44px;
+  padding-inline-end: 14px;
+  height: 48px;
+  font-size: 14px;
+}
+.auth-input-wrap:focus-within .auth-input-icon {
+  color: var(--brand);
+}
+.pw-toggle.pw-toggle-flush {
+  position: absolute;
+  top: 50%;
+  inset-inline-end: 4px;
+  transform: translateY(-50%);
+}
+
+.auth-submit {
+  height: 50px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  margin-top: 8px;
 }
 
 .auth-switch {
@@ -2696,7 +2955,6 @@ kbd {
   color: var(--text-muted);
   margin-top: 20px;
 }
-
 .auth-switch a {
   color: var(--brand);
   text-decoration: none;
@@ -2704,6 +2962,23 @@ kbd {
   transition: color 0.15s;
 }
 .auth-switch a:hover { color: var(--brand-2); text-decoration: underline; }
+
+.auth-form-footer {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--outline-variant);
+}
+
+/* Mobile spacing — the form panel absorbs the brand panel's padding. */
+@media (max-width: 480px) {
+  .auth-form-panel { padding: 20px 18px; }
+  .auth-form-title { font-size: 24px; }
+  .auth-form-sub { font-size: 13px; margin-bottom: 22px; }
+}
 
 .error-msg {
   background: var(--danger-soft);

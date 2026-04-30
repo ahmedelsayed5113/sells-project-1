@@ -10,7 +10,7 @@
        wins; otherwise we follow the OS preference (prefers-color-scheme). -->
   <script>(function(){var t=localStorage.getItem('ain_theme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})()</script>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=flat28">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=flat29">
   {% block head %}{% endblock %}
 </head>
 <body>
@@ -18,7 +18,7 @@
     {% if user %}
     <aside class="sidebar" id="sidebar" role="dialog" aria-modal="true" aria-labelledby="sidebarBrandName" data-mobile-drawer="true" tabindex="-1">
       <a href="/" class="sidebar-brand">
-        <div class="topnav-brand-icon">A</div>
+        <div class="topnav-brand-icon">{% include "_logo_mark.html" %}</div>
         <div class="sidebar-brand-text">
           <span class="sidebar-brand-name" id="sidebarBrandName" data-i18n="app.name">Ain Real Estate</span>
           <span class="sidebar-brand-tag" data-i18n="app.tagline">KPI Management</span>
@@ -106,7 +106,7 @@
       </button>
 
       <a href="/" class="topnav-brand">
-        <div class="topnav-brand-icon">A</div>
+        <div class="topnav-brand-icon">{% include "_logo_mark.html" %}</div>
         <span data-i18n="app.name">Ain Real Estate</span>
       </a>
 
@@ -140,8 +140,8 @@
     </main>
   </div>
 
-  <script src="{{ url_for('static', filename='js/i18n.js') }}?v=flat28"></script>
-  <script src="{{ url_for('static', filename='js/common.js') }}?v=flat28"></script>
+  <script src="{{ url_for('static', filename='js/i18n.js') }}?v=flat29"></script>
+  <script src="{{ url_for('static', filename='js/common.js') }}?v=flat29"></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>
