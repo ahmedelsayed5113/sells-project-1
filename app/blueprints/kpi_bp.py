@@ -850,7 +850,7 @@ def teams_summary():
                 # so users with no entry in range still appear with NULLs.
                 q_sales = (
                     """
-                    SELECT u.id AS user_id, u.full_name, u.team_id,
+                    SELECT u.id AS user_id, u.full_name, u.team_id, u.avatar_url,
                            e.fresh_leads, e.calls, e.meetings, e.deals,
                            e.reservations, e.crm_pct, e.followup_pct,
                            e.total_score, e.rating, e.month,
@@ -881,32 +881,50 @@ def teams_summary():
                 continue
             by_team.setdefault(int(tid), []).append(r)
 
+        # Each (user, month) lands as its own row from the LEFT JOIN; over a
+        # multi-month range that means the same user appears multiple times.
+        # Per-rep displays (member list, member_count, submitted/evaluated
+        # counters, top performer) need per-user dedupe — pick the latest
+        # month so the status reflects what the user did most recently.
+        # Range sums (deals/calls/meetings totals) intentionally stay on the
+        # raw rows so the totals add up across the whole period.
+        def _dedupe_latest(rows):
+            by_uid = {}
+            for r in rows:
+                uid = r["user_id"]
+                m_new = r.get("month") or ""
+                prev = by_uid.get(uid)
+                if not prev or (prev.get("month") or "") < m_new:
+                    by_uid[uid] = r
+            return list(by_uid.values())
+
         out = []
         for t in teams:
             tid = int(t["team_id"])
-            members = by_team.get(tid, [])
-            mcount = len(members)
+            members_all = by_team.get(tid, [])         # raw rows for sums
+            members_uniq = _dedupe_latest(members_all)  # one row per user, latest
 
-            submitted = sum(1 for m in members if m.get("sales_submitted_at"))
-            evaluated = sum(1 for m in members if m.get("dataentry_submitted_at"))
+            mcount = len(members_uniq)
+            submitted = sum(1 for m in members_uniq if m.get("sales_submitted_at"))
+            evaluated = sum(1 for m in members_uniq if m.get("dataentry_submitted_at"))
 
             scored = [
                 (m["full_name"], float(m["total_score"]))
-                for m in members
+                for m in members_uniq
                 if m.get("total_score") is not None
             ]
             avg_member = (sum(s for _, s in scored) / len(scored)) if scored else 0.0
             top = max(scored, key=lambda x: x[1]) if scored else None
 
-            def _sum(field):
-                return sum(float(m.get(field) or 0) for m in members)
+            def _sum(field, _rows=members_all):
+                return sum(float(m.get(field) or 0) for m in _rows)
 
             ld = leader_kpi.get(int(t["leader_id"])) if t["leader_id"] else None
 
             # Per-rep list — same shape as tl-kpi's members so the manager
             # cards and the TL's own page can share rendering.
             member_list = []
-            for m in members:
+            for m in members_uniq:
                 if m.get("dataentry_submitted_at"):
                     mstatus = "evaluated"
                 elif m.get("sales_submitted_at"):
@@ -916,6 +934,7 @@ def teams_summary():
                 member_list.append({
                     "id":          m["user_id"],
                     "full_name":   m["full_name"],
+                    "avatar_url":  m.get("avatar_url"),
                     "total_score": float(m["total_score"]) if m.get("total_score") is not None else None,
                     "rating":      m.get("rating"),
                     "status":      mstatus,
@@ -952,11 +971,12 @@ def teams_summary():
         for i, row in enumerate(out, 1):
             row["rank"] = i
 
-        # Unassigned bucket — sales reps with no team. Same per-rep fields
-        # as the tl-kpi members array so the UI can render them with the
-        # same row template.
+        # Unassigned bucket — sales reps with no team. Same dedupe rule as
+        # the team buckets above so a rep doesn't appear once per month
+        # they have an entry in the range.
+        unassigned_uniq = _dedupe_latest(unassigned_rows)
         unassigned_members = []
-        for r in unassigned_rows:
+        for r in unassigned_uniq:
             if r.get("dataentry_submitted_at"):
                 status = "evaluated"
             elif r.get("sales_submitted_at"):
@@ -966,12 +986,13 @@ def teams_summary():
             unassigned_members.append({
                 "id":          r["user_id"],
                 "full_name":   r["full_name"],
+                "avatar_url":  r.get("avatar_url"),
                 "total_score": float(r["total_score"]) if r.get("total_score") is not None else None,
                 "rating":      r.get("rating"),
                 "status":      status,
             })
-        u_submitted = sum(1 for m in unassigned_rows if m.get("sales_submitted_at"))
-        u_evaluated = sum(1 for m in unassigned_rows if m.get("dataentry_submitted_at"))
+        u_submitted = sum(1 for m in unassigned_uniq if m.get("sales_submitted_at"))
+        u_evaluated = sum(1 for m in unassigned_uniq if m.get("dataentry_submitted_at"))
 
         return _json({
             "teams": out,

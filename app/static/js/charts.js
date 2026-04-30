@@ -16,24 +16,28 @@ const _CHART_PALETTES = {
   // so the chart-only versions are nudged to medium saturation / medium
   // lightness for comfortable long viewing.
   light: {
-    brand:       '#5e64db',  // periwinkle, slightly softer than the CSS --brand
-    brand2:      '#7d83e8',
+    // Mid-saturation palette — deep enough to read as "serious enterprise"
+    // on white, soft enough to not strain the eye on large filled areas.
+    // Sits between the CSS design tokens (full saturation, used on small
+    // chrome) and a fully washed-out pastel palette.
+    brand:       '#525bd6',  // periwinkle
+    brand2:      '#7079e3',
     brand3:      '#bfc2ff',
-    accent:      '#2eb5a8',  // medium teal — lighter than the deep #006762
-    accent2:     '#4ec5b9',
+    accent:      '#138a7e',  // teal — readable on white without being harsh
+    accent2:     '#2ba89c',
     accent3:     '#7fdcd0',
-    secondary:   '#c98c7d',  // warm coral, easier than the dark brown
-    secondary2:  '#f1b4a4',
-    info:        '#6b8fed',
-    warning:     '#d68c2a',  // amber, less burnt than #c47200
-    warning2:    '#f0b463',
-    danger:      '#d65962',  // muted red, still clearly a warning
-    danger2:     '#ec828a',
-    muted:       '#8a8e9c',
-    text:        '#2d3142',  // softened from pure black for axis labels
-    textMuted:   '#5b6072',
+    secondary:   '#b07a6c',  // coral
+    secondary2:  '#e5a596',
+    info:        '#5b7de8',
+    warning:     '#c47a25',  // amber
+    warning2:    '#e8a957',
+    danger:      '#c64954',  // red
+    danger2:     '#e07682',
+    muted:       '#787c8b',
+    text:        '#1f2438',  // softened black for axis labels
+    textMuted:   '#4a5063',
     bg:          '#ffffff',
-    surface2:    '#f7f8fc',
+    surface2:    '#f5f6fc',
     border:      '#e5e7ef',
     grid:        '#eef0f6',
     gridStrong:  '#d8dbe8',
