@@ -20,7 +20,7 @@ from functools import wraps
 from threading import Lock
 from typing import Optional, Tuple
 
-from flask import jsonify, redirect, request, session
+from flask import g, jsonify, redirect, request, session
 from werkzeug.security import check_password_hash, generate_password_hash
 
 
@@ -187,17 +187,52 @@ def rate_limit_reset(prefix: str):
 # ─── Session helpers ───────────────────────────────────────────────────────────
 
 def current_user():
+    """Returns the current user as a dict for templates and APIs.
+
+    avatar_url is fetched from the DB (not the session cookie) because a
+    base64 data-URL avatar is ~30-80KB — far above the ~4KB browser cap
+    on cookies. Storing it in the cookie session would cause Set-Cookie
+    to be silently dropped by the browser, which is exactly the symptom
+    we hit (avatar reverts after reload). The DB hit is cached on
+    flask.g for the request so multiple template renders don't pile up.
+    """
     if "user_id" not in session:
         return None
-    return {
-        "id": session.get("user_id"),
+    uid = session.get("user_id")
+
+    # Per-request cache
+    cached = getattr(g, "_current_user_cache", None)
+    if cached and cached.get("id") == uid:
+        return cached
+
+    avatar_url = None
+    try:
+        from app.database import get_conn
+        conn = get_conn()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT avatar_url FROM users WHERE id = %s", (uid,))
+                row = cur.fetchone()
+                if row:
+                    avatar_url = row[0]
+        finally:
+            conn.close()
+    except Exception:
+        # Avatar fetch is non-critical — fall back to no avatar rather than
+        # breaking page renders if the DB momentarily flakes.
+        pass
+
+    user = {
+        "id": uid,
         "username": session.get("username"),
         "full_name": session.get("full_name"),
         "role": session.get("role"),
         "email": session.get("email"),
         "phone": session.get("phone"),
-        "avatar_url": session.get("avatar_url"),
+        "avatar_url": avatar_url,
     }
+    g._current_user_cache = user
+    return user
 
 
 def login_required(f):

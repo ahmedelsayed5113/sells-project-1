@@ -151,6 +151,37 @@
   </form>
 </div>
 
+<!-- Avatar crop modal — pan + zoom + circular preview, finally extracts a
+     square JPEG via canvas before posting. -->
+<div class="modal-backdrop" id="avatarCropModal" role="dialog" aria-modal="true" aria-labelledby="avatarCropTitle">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <div class="modal-title" id="avatarCropTitle" data-i18n="profile.crop_title"></div>
+      <button class="modal-close" onclick="closeModal('avatarCropModal')" data-i18n-aria-label="common.close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="avatar-crop-stage" id="avatarCropStage" aria-label="Crop stage">
+        <img id="avatarCropImg" alt="" draggable="false">
+        <span class="avatar-crop-frame" aria-hidden="true"></span>
+      </div>
+      <div class="avatar-crop-controls">
+        <button type="button" class="avatar-crop-icon-btn" id="avatarZoomOutBtn" data-i18n-aria-label="profile.crop_zoom_out">
+          <span class="material-symbols-outlined" aria-hidden="true">remove</span>
+        </button>
+        <input type="range" id="avatarZoom" min="1" max="3" step="0.01" value="1" aria-label="Zoom">
+        <button type="button" class="avatar-crop-icon-btn" id="avatarZoomInBtn" data-i18n-aria-label="profile.crop_zoom_in">
+          <span class="material-symbols-outlined" aria-hidden="true">add</span>
+        </button>
+      </div>
+      <p class="avatar-crop-hint" data-i18n="profile.crop_hint"></p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-primary" id="avatarCropSaveBtn" data-i18n="common.save"></button>
+      <button type="button" class="btn btn-ghost" onclick="closeModal('avatarCropModal')" data-i18n="common.cancel"></button>
+    </div>
+  </div>
+</div>
+
 <!-- Avatar remove confirm modal -->
 <div class="modal-backdrop" id="avatarRemoveModal" role="dialog" aria-modal="true" aria-labelledby="avatarRemoveTitle">
   <div class="modal" style="max-width:420px">
@@ -195,61 +226,185 @@ function fmtDate(iso) {
   } catch (_) { return iso; }
 }
 
-// ─── Avatar upload ───────────────────────────────────────────────────
-// Resize client-side so the payload stays small (~30-80KB) before posting.
-// Skips Pillow on the server, keeps DB rows lean.
-const AVATAR_TARGET = 256;     // pixels (square)
+// ─── Avatar pipeline: pick → crop → upload ──────────────────────────
+// Final avatar stored at AVATAR_TARGET × AVATAR_TARGET, JPEG @ ~0.85
+// quality, gives us 30–80 KB payloads — well under the 200 KB server cap.
+const AVATAR_TARGET = 256;
 const AVATAR_QUALITY = 0.85;
+// Stage (preview area) size in CSS pixels. Has to match the .avatar-crop-stage
+// rule below — we use it both for layout maths and the final canvas crop.
+const CROP_STAGE = 280;
 
-function _readFileAsImage(file) {
+let cropState = {
+  naturalW: 0,
+  naturalH: 0,
+  baseScale: 1,    // scale needed to "cover" the stage at zoom=1
+  scale: 1,        // user zoom (1..3)
+  tx: 0,           // user pan
+  ty: 0,
+};
+
+function _readFileAsDataURL(file) {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error("read_failed"));
-    reader.onload = () => {
-      const img = new Image();
-      img.onerror = () => reject(new Error("image_decode_failed"));
-      img.onload = () => resolve(img);
-      img.src = reader.result;
-    };
-    reader.readAsDataURL(file);
+    const r = new FileReader();
+    r.onerror = () => reject(new Error("read_failed"));
+    r.onload = () => resolve(r.result);
+    r.readAsDataURL(file);
   });
 }
 
-function _resizeToDataURL(img) {
-  // Center-crop to square, scale to AVATAR_TARGET, encode as JPEG. The
-  // exception is PNG with transparency — we still encode JPEG because
-  // round-cropped square avatars don't need alpha and JPEG is ~2× smaller.
-  const side = Math.min(img.width, img.height);
-  const sx = (img.width - side) / 2;
-  const sy = (img.height - side) / 2;
-  const canvas = document.createElement("canvas");
-  canvas.width = AVATAR_TARGET;
-  canvas.height = AVATAR_TARGET;
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(img, sx, sy, side, side, 0, 0, AVATAR_TARGET, AVATAR_TARGET);
-  return canvas.toDataURL("image/jpeg", AVATAR_QUALITY);
+function _loadImageFromDataURL(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onerror = () => reject(new Error("image_decode_failed"));
+    img.onload = () => resolve(img);
+    img.src = dataUrl;
+  });
 }
 
-async function uploadAvatar(file) {
-  if (!file) return;
+async function openCropper(file) {
   if (!/^image\/(png|jpe?g|webp)$/i.test(file.type)) {
     return toast(t("errors.avatar_unsupported_type"), "error");
   }
-  if (file.size > 8 * 1024 * 1024) {
-    // Source bound: even before client-side resize we won't try to decode huge
-    // files in memory. The post-resize cap is enforced server-side too.
+  if (file.size > 12 * 1024 * 1024) {
+    // Source bound: refuse very large files before we try to decode them.
     return toast(t("errors.avatar_too_large"), "error");
   }
 
-  let dataUrl;
+  let dataUrl, img;
   try {
-    const img = await _readFileAsImage(file);
-    dataUrl = _resizeToDataURL(img);
+    dataUrl = await _readFileAsDataURL(file);
+    img = await _loadImageFromDataURL(dataUrl);
   } catch (_) {
     return toast(t("errors.avatar_invalid"), "error");
   }
 
-  // Optimistic UI: show the new avatar immediately, roll back on failure.
+  cropState.naturalW = img.naturalWidth;
+  cropState.naturalH = img.naturalHeight;
+  cropState.baseScale = Math.max(CROP_STAGE / img.naturalWidth, CROP_STAGE / img.naturalHeight);
+  cropState.scale = 1;
+  cropState.tx = 0;
+  cropState.ty = 0;
+
+  const cropImg = document.getElementById("avatarCropImg");
+  cropImg.src = dataUrl;
+  cropImg.width = img.naturalWidth;
+  cropImg.height = img.naturalHeight;
+  applyCropTransform();
+  document.getElementById("avatarZoom").value = "1";
+
+  openModal("avatarCropModal");
+}
+
+function applyCropTransform() {
+  const totalScale = cropState.baseScale * cropState.scale;
+  const dispW = cropState.naturalW * totalScale;
+  const dispH = cropState.naturalH * totalScale;
+  // Center the (scaled) image inside the stage, then offset by the user pan.
+  const offsetX = (CROP_STAGE - dispW) / 2 + cropState.tx;
+  const offsetY = (CROP_STAGE - dispH) / 2 + cropState.ty;
+  const img = document.getElementById("avatarCropImg");
+  img.style.transformOrigin = "0 0";
+  img.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${totalScale})`;
+}
+
+// Clamp the pan so the image always covers the stage (no empty corners).
+function clampPan() {
+  const totalScale = cropState.baseScale * cropState.scale;
+  const dispW = cropState.naturalW * totalScale;
+  const dispH = cropState.naturalH * totalScale;
+  const overflowX = Math.max(0, (dispW - CROP_STAGE) / 2);
+  const overflowY = Math.max(0, (dispH - CROP_STAGE) / 2);
+  cropState.tx = Math.max(-overflowX, Math.min(overflowX, cropState.tx));
+  cropState.ty = Math.max(-overflowY, Math.min(overflowY, cropState.ty));
+}
+
+// Pan via pointer events (mouse + touch; pointer capture keeps the stage
+// "sticky" if the cursor leaves it mid-drag).
+let _dragState = null;
+const cropStage = document.getElementById("avatarCropStage");
+cropStage.addEventListener("pointerdown", (e) => {
+  cropStage.setPointerCapture(e.pointerId);
+  cropStage.classList.add("is-dragging");
+  _dragState = {
+    pid: e.pointerId,
+    startX: e.clientX, startY: e.clientY,
+    baseTx: cropState.tx, baseTy: cropState.ty,
+  };
+});
+cropStage.addEventListener("pointermove", (e) => {
+  if (!_dragState || _dragState.pid !== e.pointerId) return;
+  cropState.tx = _dragState.baseTx + (e.clientX - _dragState.startX);
+  cropState.ty = _dragState.baseTy + (e.clientY - _dragState.startY);
+  clampPan();
+  applyCropTransform();
+});
+const _endDrag = (e) => {
+  if (!_dragState || _dragState.pid !== e.pointerId) return;
+  cropStage.classList.remove("is-dragging");
+  _dragState = null;
+};
+cropStage.addEventListener("pointerup", _endDrag);
+cropStage.addEventListener("pointercancel", _endDrag);
+
+// Zoom slider + plus/minus buttons
+function _setZoom(z) {
+  cropState.scale = Math.max(1, Math.min(3, z));
+  document.getElementById("avatarZoom").value = String(cropState.scale);
+  clampPan();
+  applyCropTransform();
+}
+document.getElementById("avatarZoom").addEventListener("input", (e) => {
+  _setZoom(Number(e.target.value));
+});
+document.getElementById("avatarZoomInBtn").addEventListener("click", () => _setZoom(cropState.scale + 0.2));
+document.getElementById("avatarZoomOutBtn").addEventListener("click", () => _setZoom(cropState.scale - 0.2));
+
+// Wheel zoom on the stage, like Figma / Zoom-to-cursor lite.
+cropStage.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  _setZoom(cropState.scale + (e.deltaY < 0 ? 0.08 : -0.08));
+}, { passive: false });
+
+// On Save: extract the visible source region into a 256×256 canvas.
+document.getElementById("avatarCropSaveBtn").addEventListener("click", async () => {
+  const img = document.getElementById("avatarCropImg");
+  if (!cropState.naturalW || !cropState.naturalH) return;
+
+  const totalScale = cropState.baseScale * cropState.scale;
+  const dispW = cropState.naturalW * totalScale;
+  const dispH = cropState.naturalH * totalScale;
+  const offsetX = (CROP_STAGE - dispW) / 2 + cropState.tx;
+  const offsetY = (CROP_STAGE - dispH) / 2 + cropState.ty;
+
+  // Stage coords (0..CROP_STAGE) → source-image coords:
+  //   srcPx = (stagePx - offset) / totalScale
+  const sx = -offsetX / totalScale;
+  const sy = -offsetY / totalScale;
+  const sWidth = CROP_STAGE / totalScale;
+  const sHeight = CROP_STAGE / totalScale;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = AVATAR_TARGET;
+  canvas.height = AVATAR_TARGET;
+  const ctx = canvas.getContext("2d");
+  // White underlay so JPEG encoding of transparent PNGs doesn't render
+  // weird dark fringes on the avatar's circular display.
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, AVATAR_TARGET, AVATAR_TARGET);
+  ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, AVATAR_TARGET, AVATAR_TARGET);
+
+  const dataUrl = canvas.toDataURL("image/jpeg", AVATAR_QUALITY);
+  closeModal("avatarCropModal");
+  await uploadAvatarDataURL(dataUrl);
+});
+
+async function uploadAvatarDataURL(dataUrl) {
+  // Defensive size check before posting (server caps at 200KB after b64
+  // decode; ~272KB raw data URL ≈ 200KB binary).
+  if (dataUrl.length > 280 * 1024) {
+    return toast(t("errors.avatar_too_large"), "error");
+  }
   const prev = _setAvatarPreview(dataUrl);
   try {
     await api("/api/auth/avatar", { method: "POST", body: { avatar_url: dataUrl } });
@@ -299,7 +454,7 @@ document.getElementById("profileAvatarBtn").addEventListener("click", () => {
 });
 document.getElementById("profileAvatarInput").addEventListener("change", (e) => {
   const file = e.target.files && e.target.files[0];
-  uploadAvatar(file);
+  if (file) openCropper(file);
   e.target.value = "";  // allow reselecting the same file
 });
 

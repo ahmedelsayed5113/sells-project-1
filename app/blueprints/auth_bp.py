@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 
 import psycopg2
 import psycopg2.extras
-from flask import Blueprint, current_app, jsonify, request, session
+from flask import Blueprint, current_app, g, jsonify, request, session
 
 from app.auth import (
     current_user,
@@ -120,7 +120,11 @@ def login():
         session["role"] = user["role"]
         session["email"] = user.get("email")
         session["phone"] = user.get("phone")
-        session["avatar_url"] = user.get("avatar_url")
+        # avatar_url is intentionally NOT stored in the cookie session — a
+        # data-URL avatar (~30-80KB) blows past the browser's ~4KB cookie cap
+        # and the new Set-Cookie gets silently dropped, which is exactly the
+        # symptom that broke avatar persistence on reload. current_user()
+        # fetches it fresh from the DB and caches per-request via flask.g.
         session.permanent = True
         ensure_csrf_token()
         rate_limit_reset("login")
@@ -294,7 +298,11 @@ def upload_avatar():
                 (data_url, session["user_id"]),
             )
         conn.commit()
-        session["avatar_url"] = data_url
+        # Bust any per-request cache so the next current_user() in this
+        # request (e.g. response middleware) sees the new avatar. The DB is
+        # the source of truth — no session write here on purpose.
+        if hasattr(g, "_current_user_cache"):
+            g._current_user_cache = None
         log.info("avatar updated for user_id=%s mime=%s size=%d", session["user_id"], mime, size)
         return jsonify({"ok": True, "avatar_url": data_url})
     except Exception as e:
@@ -317,7 +325,8 @@ def delete_avatar():
                 (session["user_id"],),
             )
         conn.commit()
-        session["avatar_url"] = None
+        if hasattr(g, "_current_user_cache"):
+            g._current_user_cache = None
         return jsonify({"ok": True})
     except Exception as e:
         log.error("delete_avatar error: %s", e)

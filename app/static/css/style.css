@@ -2840,6 +2840,80 @@ kbd {
   margin-top: 6px;
 }
 
+/* ── Avatar crop modal ──────────────────────────────────────────── */
+.avatar-crop-stage {
+  position: relative;
+  width: 280px; height: 280px;
+  margin: 0 auto 16px;
+  background: var(--surface-recessed);
+  border-radius: var(--radius);
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.avatar-crop-stage.is-dragging { cursor: grabbing; }
+.avatar-crop-stage img {
+  position: absolute;
+  top: 0;
+  inset-inline-start: 0;
+  max-width: none;
+  max-height: none;
+  pointer-events: none;
+  user-select: none;
+}
+/* Circular preview overlay — darkens everything outside the circle and
+   draws a thin contrast border to mark the crop boundary. */
+.avatar-crop-frame {
+  position: absolute;
+  top: 8px; inset-inline-start: 8px;
+  width: calc(100% - 16px);
+  height: calc(100% - 16px);
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
+  border: 2px solid rgba(255, 255, 255, 0.65);
+}
+[data-theme="dark"] .avatar-crop-frame {
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.65);
+}
+
+.avatar-crop-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 auto 8px;
+  max-width: 280px;
+}
+.avatar-crop-controls input[type="range"] {
+  flex: 1;
+  accent-color: var(--brand);
+  height: 4px;
+}
+.avatar-crop-icon-btn {
+  width: 34px; height: 34px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-solid);
+  color: var(--brand);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.avatar-crop-icon-btn:hover {
+  background: var(--brand);
+  color: #ffffff;
+  border-color: transparent;
+}
+.avatar-crop-icon-btn .material-symbols-outlined { font-size: 18px; }
+
+.avatar-crop-hint {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
 .profile-contact-hint {
   display: block;
   margin-top: 12px;
