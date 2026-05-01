@@ -925,12 +925,16 @@ function drawTreemap(containerId, data, options = {}) {
     : labels.map((_, i) => PALETTE[i % PALETTE.length]);
 
   // Build sortable items. Sort descending by value — required by the
-  // squarify algorithm to produce roughly-square tiles.
+  // squarify algorithm to produce roughly-square tiles. `meta` is an
+  // optional per-tile payload propagated to onTileClick so callers can
+  // recover the original record (e.g. a rep's monthly breakdown).
+  const metaArr = data.meta || [];
   const items = labels
     .map((lbl, i) => ({
       label: lbl,
       value: values[i] || 0,
       color: colors[i % colors.length],
+      meta: metaArr[i],
       formatted: useCompact
         ? valueFormatter(values[i] || 0)
         : (typeof values[i] === 'number' ? values[i].toLocaleString() : String(values[i] || '')),
@@ -958,15 +962,20 @@ function drawTreemap(containerId, data, options = {}) {
 
   // Build the DOM in one shot — innerHTML is faster than per-tile
   // appendChild and avoids visible flicker on redraw.
+  const clickable = typeof options.onTileClick === 'function';
   const sep = 1; // separator gutter in px (renders as inset, not gap)
-  const html = tiles.map(tile => {
+  const html = tiles.map((tile, idx) => {
     const textCol = _contrastTextColor(tile.color);
     const isTiny = tile.w < 70 || tile.h < 44;
     const isSmall = tile.w < 110 || tile.h < 70;
     const labelSize = isTiny ? 10 : (isSmall ? 12 : 14);
     const valueSize = isTiny ? 9 : (isSmall ? 11 : 12);
+    const tileCls = `ct-tile${clickable ? ' is-clickable' : ''}`;
+    const tileAttrs = clickable
+      ? ` data-tile-idx="${idx}" tabindex="0" role="button"`
+      : '';
     return `
-      <div class="ct-tile"
+      <div class="${tileCls}"${tileAttrs}
            style="left:${tile.x}px;top:${tile.y}px;
                   width:${Math.max(0, tile.w - sep)}px;
                   height:${Math.max(0, tile.h - sep)}px;
@@ -987,6 +996,25 @@ function drawTreemap(containerId, data, options = {}) {
   }
   _bumpToken(el.id);
   el.innerHTML = html;
+
+  // Wire click + keyboard activation when a handler was supplied. tiles[]
+  // and the rendered DOM children are in matching order — squarify
+  // preserves item order via {...r.item, ...} spreads.
+  if (clickable) {
+    el.querySelectorAll('.ct-tile.is-clickable').forEach((node) => {
+      const idx = Number(node.dataset.tileIdx);
+      const tile = tiles[idx];
+      if (!tile) return;
+      const fire = (ev) => {
+        ev.preventDefault();
+        try { options.onTileClick(tile); } catch (e) { console.error(e); }
+      };
+      node.addEventListener('click', fire);
+      node.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter' || ev.key === ' ') fire(ev);
+      });
+    });
+  }
 
   _attachResizeObserver(el);
 }

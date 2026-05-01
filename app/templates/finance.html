@@ -58,15 +58,33 @@
 </div>
 
 <!-- Charts row 2a: revenue treemap — gets full width because it carries
-     the most categorical detail (every rep is a tile) and was unreadably
-     cramped at span-4. Subtitle hint clarifies what tiles represent. -->
+     the most categorical detail (one tile per rep) and was unreadably
+     cramped at span-4. Subtitle hint clarifies what tiles represent.
+     Top-N selector trims the long tail into an "Others" bucket; clicking
+     any tile opens a per-rep monthly breakdown panel below the chart. -->
 <div class="chart-card">
-  <h3>
-    <span data-i18n="fin.chart_revenue_treemap"></span>
-    <span class="chart-card-hint" data-i18n="fin.treemap_hint"></span>
-  </h3>
+  <div class="chart-card-head">
+    <h3>
+      <span data-i18n="fin.chart_revenue_treemap"></span>
+      <span class="chart-card-hint" data-i18n="fin.treemap_hint"></span>
+    </h3>
+    <div class="chart-card-controls">
+      <label class="chart-card-control">
+        <span data-i18n="fin.treemap_show"></span>
+        <select id="treemapTopN" onchange="onTreemapTopNChange()">
+          <option value="5">Top 5</option>
+          <option value="10" selected>Top 10</option>
+          <option value="20">Top 20</option>
+          <option value="50">Top 50</option>
+          <option value="all" data-i18n="common.all"></option>
+        </select>
+      </label>
+    </div>
+  </div>
   <div id="chartTreemap" class="plotly-container tall"></div>
+  <div class="chart-card-hint" data-i18n="fin.treemap_click_hint" style="padding:8px 4px 0;display:block"></div>
 </div>
+<div id="treemapBreakdown" class="fin-tile-breakdown" hidden></div>
 
 <!-- Charts row 2b: deal vs reservation breakdowns side-by-side. -->
 <div class="bento">
@@ -114,8 +132,8 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/charts.js') }}?v=flat49"></script>
-<script src="{{ url_for('static', filename='js/date_range.js') }}?v=flat49"></script>
+<script src="{{ url_for('static', filename='js/charts.js') }}?v=flat50"></script>
+<script src="{{ url_for('static', filename='js/date_range.js') }}?v=flat50"></script>
 <script>
 let reportData = null;
 let trendData = null;
@@ -168,6 +186,10 @@ async function loadAll() {
 
 function render() {
   if (!reportData) return;
+  // Drop any open drill-downs from the previous range so users don't see
+  // a panel for a rep who no longer matches the filter.
+  closeTileBreakdown();
+  closeTreemapBreakdown();
   const totals = reportData.totals;
   const breakdown = reportData.breakdown;
   renderTopTiles(totals);
@@ -390,42 +412,9 @@ function renderCharts(rows) {
     colors: [Charts.COLORS.brand2, Charts.COLORS.secondary2],
   }, { centerText: fmtMoney(dealComm + resComm) });
 
-  // Treemap — every contributing rep gets a tile. The previous "top 12 +
-  // Others" bucket produced a single huge "Others" tile that dwarfed the
-  // named reps and was visually unreadable. Showing all reps with revenue
-  // ≥ 0.5% of the total keeps tiles meaningful (sub-half-percent slivers
-  // would render as blank chips with no readable text anyway). Anything
-  // we drop gets folded into a clearly-labelled aggregate so the totals
-  // still reconcile.
-  const totalRev = sortedByRev.reduce((a, r) => a + (r.total_revenue || 0), 0) || 1;
-  const minTileShare = 0.005; // 0.5% threshold
-  const named = [];
-  let micro = 0;
-  let microCount = 0;
-  for (const r of sortedByRev) {
-    const v = r.total_revenue || 0;
-    if (v <= 0) continue;
-    if (v / totalRev >= minTileShare || named.length < 8) {
-      named.push(r);
-    } else {
-      micro += v;
-      microCount += 1;
-    }
-  }
-  const treeLabels = named.map(r => r.user_name);
-  const treeVals   = named.map(r => r.total_revenue || 0);
-  const treeColors = named.map((_, i) => Charts.PALETTE[i % Charts.PALETTE.length]);
-  if (micro > 0) {
-    treeLabels.push(`${t("fin.others")} (${microCount})`);
-    treeVals.push(micro);
-    treeColors.push(Charts.COLORS.muted);
-  }
-  Charts.drawTreemap("chartTreemap", {
-    labels: treeLabels,
-    values: treeVals,
-    parents: treeLabels.map(() => ""),
-    colors: treeColors,
-  });
+  // Treemap rendering is delegated so the Top-N selector can re-render
+  // without refetching report data.
+  renderTreemap(rows);
 
   // Stacked deals + reservations (top 8)
   const topRows = sortedByRev.slice(0, 8);
@@ -437,6 +426,189 @@ function renderCharts(rows) {
     topRows.map(r => r.user_name),
     { showlegend: true, xaxis: { tickangle: -25 } }
   );
+}
+
+// Treemap — one tile per REP (not per user-month row). Each tile carries
+// the rep's total revenue across the active range plus a meta payload
+// holding their per-month breakdown, so a click can drill straight into
+// the dates that produced that total.
+//
+// Top-N control trims the long tail into a single "Others" tile. Clicking
+// "Others" opens a list of folded reps with their individual totals, so
+// nobody gets hidden — they're just collapsed for legibility.
+const TREEMAP_TOPN_KEY = "ain_fin_treemapTopN";
+
+function _readTreemapTopN() {
+  const sel = document.getElementById("treemapTopN");
+  if (!sel) return 10;
+  const stored = localStorage.getItem(TREEMAP_TOPN_KEY);
+  if (stored && [...sel.options].some(o => o.value === stored)) {
+    sel.value = stored;
+  }
+  return sel.value === "all" ? Infinity : (parseInt(sel.value, 10) || 10);
+}
+
+function onTreemapTopNChange() {
+  const sel = document.getElementById("treemapTopN");
+  if (sel) {
+    try { localStorage.setItem(TREEMAP_TOPN_KEY, sel.value); } catch {}
+  }
+  // Closing the panel avoids a stale drill-down referring to a tile that
+  // may no longer exist after the limit changes.
+  closeTreemapBreakdown();
+  if (reportData) renderTreemap(reportData.breakdown);
+}
+
+// Aggregate per-(user, month) rows into one entry per user. Keeps the
+// monthly rows so the click handler can show per-date detail.
+function _aggregateByUser(rows) {
+  const byUser = new Map();
+  for (const r of rows) {
+    const uid = r.user_id;
+    if (!byUser.has(uid)) {
+      byUser.set(uid, {
+        user_id: uid,
+        user_name: r.user_name,
+        total_revenue: 0,
+        total_commission: 0,
+        deals_count: 0,
+        reservations_count: 0,
+        months: [],
+      });
+    }
+    const a = byUser.get(uid);
+    a.total_revenue    += r.total_revenue || 0;
+    a.total_commission += r.total_commission || 0;
+    a.deals_count      += r.deals_count || 0;
+    a.reservations_count += r.reservations_count || 0;
+    if ((r.total_revenue || 0) > 0) a.months.push(r);
+  }
+  return [...byUser.values()]
+    .filter(u => (u.total_revenue || 0) > 0)
+    .sort((a, b) => b.total_revenue - a.total_revenue);
+}
+
+function renderTreemap(rows) {
+  const el = document.getElementById("chartTreemap");
+  if (!el) return;
+  if (!rows || !rows.length) {
+    if (Charts.cancelPending) Charts.cancelPending("chartTreemap");
+    el.innerHTML = `<div class="empty-state" style="padding:30px">${t("dash.no_data")}</div>`;
+    return;
+  }
+
+  const reps = _aggregateByUser(rows);
+  if (!reps.length) {
+    el.innerHTML = `<div class="empty-state" style="padding:30px">${t("dash.no_data")}</div>`;
+    return;
+  }
+
+  const topN = _readTreemapTopN();
+  const named = reps.slice(0, topN);
+  const tail = reps.slice(topN);
+
+  const labels = named.map(u => u.user_name);
+  const values = named.map(u => u.total_revenue);
+  const colors = named.map((_, i) => Charts.PALETTE[i % Charts.PALETTE.length]);
+  const meta   = named.map(u => ({ type: "rep", rep: u }));
+
+  if (tail.length) {
+    const tailTotal = tail.reduce((s, u) => s + (u.total_revenue || 0), 0);
+    labels.push(`${t("fin.others")} (${tail.length})`);
+    values.push(tailTotal);
+    colors.push(Charts.COLORS.muted);
+    meta.push({ type: "others", members: tail, total: tailTotal });
+  }
+
+  Charts.drawTreemap("chartTreemap", {
+    labels,
+    values,
+    colors,
+    meta,
+    parents: labels.map(() => ""),
+  }, {
+    onTileClick: (tile) => showTreemapBreakdown(tile.meta),
+  });
+}
+
+// Renders the per-rep (or "Others") breakdown panel below the treemap.
+// Visually mirrors #finTileBreakdown so the page reads consistently.
+function showTreemapBreakdown(meta) {
+  const panel = document.getElementById("treemapBreakdown");
+  if (!panel || !meta) return;
+
+  if (meta.type === "rep") {
+    const rep = meta.rep;
+    const months = [...rep.months].sort(
+      (a, b) => (a.month || "").localeCompare(b.month || "")
+    );
+    if (!months.length) {
+      panel.hidden = true;
+      panel.innerHTML = "";
+      return;
+    }
+    const values = months.map(m => m.total_revenue || 0);
+    const maxVal = Math.max(...values);
+    const minVal = Math.min(...values);
+    const cells = months.map(m => {
+      const v = m.total_revenue || 0;
+      const isPeak = months.length > 1 && v === maxVal && maxVal > 0;
+      const isLow  = months.length > 1 && v === minVal && minVal < maxVal;
+      const cls = isPeak ? "is-peak" : (isLow ? "is-low" : "");
+      const dealsRes = `${m.deals_count || 0} ${t("fin.deals_count")} · ${m.reservations_count || 0} ${t("fin.reservations_count")}`;
+      return `
+        <div class="fin-tile-breakdown-cell ${cls}">
+          <div class="fin-tile-breakdown-month">${escapeHTML(fmtMonth(m.month))}</div>
+          <div class="fin-tile-breakdown-value">${fmtCompactMoney(v)}</div>
+          <div class="fin-tile-breakdown-sub-line">${escapeHTML(dealsRes)}</div>
+        </div>`;
+    }).join("");
+    panel.innerHTML = `
+      <div class="fin-tile-breakdown-head">
+        <div>
+          <div class="fin-tile-breakdown-title">${escapeHTML(rep.user_name)}</div>
+          <div class="fin-tile-breakdown-sub">
+            ${escapeHTML(t("fin.total_revenue"))}: ${fmtCompactMoney(rep.total_revenue)}
+            · ${months.length} ${escapeHTML(t("fin.months_label"))}
+          </div>
+        </div>
+        <button class="fin-tile-breakdown-close" type="button" onclick="closeTreemapBreakdown()" aria-label="${escapeHTML(t("common.close"))}">
+          <span class="material-symbols-outlined" aria-hidden="true">close</span>
+        </button>
+      </div>
+      <div class="fin-tile-breakdown-grid">${cells}</div>
+    `;
+  } else if (meta.type === "others") {
+    const members = [...meta.members].sort(
+      (a, b) => b.total_revenue - a.total_revenue
+    );
+    const cells = members.map(u => `
+      <div class="fin-tile-breakdown-cell is-rep-row">
+        <div class="fin-tile-breakdown-month">${escapeHTML(u.user_name)}</div>
+        <div class="fin-tile-breakdown-value">${fmtCompactMoney(u.total_revenue)}</div>
+      </div>`).join("");
+    panel.innerHTML = `
+      <div class="fin-tile-breakdown-head">
+        <div>
+          <div class="fin-tile-breakdown-title">${escapeHTML(t("fin.others"))} (${members.length})</div>
+          <div class="fin-tile-breakdown-sub">
+            ${escapeHTML(t("fin.total_revenue"))}: ${fmtCompactMoney(meta.total)}
+          </div>
+        </div>
+        <button class="fin-tile-breakdown-close" type="button" onclick="closeTreemapBreakdown()" aria-label="${escapeHTML(t("common.close"))}">
+          <span class="material-symbols-outlined" aria-hidden="true">close</span>
+        </button>
+      </div>
+      <div class="fin-tile-breakdown-grid">${cells}</div>
+    `;
+  }
+  panel.hidden = false;
+  panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function closeTreemapBreakdown() {
+  const panel = document.getElementById("treemapBreakdown");
+  if (panel) { panel.hidden = true; panel.innerHTML = ""; }
 }
 
 function renderTrend() {
