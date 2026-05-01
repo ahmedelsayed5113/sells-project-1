@@ -50,29 +50,15 @@ def list_campaigns():
         conn = get_conn()
         try:
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-                role = session.get("role")
-                uid  = session.get("user_id")
-                if role in ("admin", "manager"):
-                    cur.execute("""
-                        SELECT c.*, u.full_name AS owner_name,
-                               a.actual_spend, a.actual_leads, a.actual_deals,
-                               a.updated_at AS actuals_updated
-                        FROM marketing_campaigns c
-                        JOIN users u ON u.id = c.user_id
-                        LEFT JOIN marketing_actuals a ON a.campaign_id = c.id
-                        ORDER BY c.created_at DESC
-                    """)
-                else:
-                    cur.execute("""
-                        SELECT c.*, u.full_name AS owner_name,
-                               a.actual_spend, a.actual_leads, a.actual_deals,
-                               a.updated_at AS actuals_updated
-                        FROM marketing_campaigns c
-                        JOIN users u ON u.id = c.user_id
-                        LEFT JOIN marketing_actuals a ON a.campaign_id = c.id
-                        WHERE c.user_id = %s
-                        ORDER BY c.created_at DESC
-                    """, (uid,))
+                cur.execute("""
+                    SELECT c.*, u.full_name AS owner_name,
+                           a.actual_spend, a.actual_leads, a.actual_deals,
+                           a.updated_at AS actuals_updated
+                    FROM marketing_campaigns c
+                    JOIN users u ON u.id = c.user_id
+                    LEFT JOIN marketing_actuals a ON a.campaign_id = c.id
+                    ORDER BY c.created_at DESC
+                """)
                 rows = [dict(r) for r in cur.fetchall()]
         finally:
             conn.close()
@@ -265,10 +251,6 @@ def _check_campaign_access(cur, cid):
     row = cur.fetchone()
     if not row:
         return None, _json({"error_code": "not_found", "error": "not_found"}, 404)
-    role = session.get("role")
-    owner_id = row["user_id"] if hasattr(row, "keys") else row[1]
-    if role == "marketing" and owner_id != session.get("user_id"):
-        return None, _json({"error_code": "forbidden", "error": "forbidden"}, 403)
     return row, None
 
 
