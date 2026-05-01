@@ -111,8 +111,8 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/charts.js') }}?v=flat46"></script>
-<script src="{{ url_for('static', filename='js/date_range.js') }}?v=flat46"></script>
+<script src="{{ url_for('static', filename='js/charts.js') }}?v=flat47"></script>
+<script src="{{ url_for('static', filename='js/date_range.js') }}?v=flat47"></script>
 <script>
 let reportData = null;
 let trendData = null;
@@ -362,32 +362,144 @@ function renderTrend() {
   ], { showlegend: true });
 }
 
+// Group breakdown rows by user_id, sum across the months they appear in,
+// and render as expandable cards. Summary row shows the user's TOTAL for
+// the active range; clicking expands a per-month detail list with the
+// month label, deal/reservation counts, and the revenue + commission
+// each month contributed. This replaces the previous flat per-(user,month)
+// table where the same rep appeared once per month and totals had to be
+// summed by eye.
 function renderTable(rows) {
   const tbody = document.getElementById("tbody");
   if (!rows.length) {
     tbody.innerHTML = '<tr><td colspan="8" class="table-empty">' + t("dash.no_data") + '</td></tr>';
     return;
   }
+
+  // Aggregate by user_id.
+  const byUser = new Map();
+  for (const r of rows) {
+    const uid = r.user_id;
+    if (!byUser.has(uid)) {
+      byUser.set(uid, {
+        user_id: uid,
+        user_name: r.user_name,
+        months: [],
+        deals_count: 0,
+        reservations_count: 0,
+        deal_revenue: 0,
+        reservation_revenue: 0,
+        total_revenue: 0,
+        total_commission: 0,
+      });
+    }
+    const agg = byUser.get(uid);
+    agg.months.push(r);
+    agg.deals_count        += r.deals_count || 0;
+    agg.reservations_count += r.reservations_count || 0;
+    agg.deal_revenue       += r.deal_revenue || 0;
+    agg.reservation_revenue+= r.reservation_revenue || 0;
+    agg.total_revenue      += r.total_revenue || 0;
+    agg.total_commission   += r.total_commission || 0;
+  }
+
   const sortKey = _financeSort || 'total_revenue';
-  const sorted = [...rows].sort((a,b) => (b[sortKey] || 0) - (a[sortKey] || 0));
-  tbody.innerHTML = sorted.map((r, i) => {
+  const aggregates = [...byUser.values()]
+    .sort((a, b) => (b[sortKey] || 0) - (a[sortKey] || 0));
+
+  // Each rep gets two rows: a clickable summary row (always visible)
+  // and a hidden detail row that expands inline. The summary row uses
+  // a chevron + .is-expanded class to drive the rotation; the detail
+  // row's <table> mirrors the parent column widths so numbers line up.
+  tbody.innerHTML = aggregates.map((u, i) => {
     const rankCls = i === 0 ? "r1" : i === 1 ? "r2" : i === 2 ? "r3" : "";
-    return `<tr>
+    // Sort months chronologically (newest last) so the timeline reads
+    // top → bottom = older → newer when the panel expands.
+    const monthsSorted = [...u.months].sort((a, b) =>
+      (a.month || "").localeCompare(b.month || "")
+    );
+    const detailRows = monthsSorted.map(m => `
+      <tr class="fin-detail-month">
+        <td>${escapeHTML(fmtMonth(m.month))}</td>
+        <td>${m.deals_count || 0}</td>
+        <td>${m.reservations_count || 0}</td>
+        <td class="money">${fmtMoney(m.deal_revenue)}</td>
+        <td class="money">${fmtMoney(m.reservation_revenue)}</td>
+        <td class="money">${fmtMoney(m.total_revenue)}</td>
+        <td class="money">${fmtMoney(m.total_commission)}</td>
+      </tr>`).join("");
+
+    const monthCount = monthsSorted.length;
+    const subText = monthCount === 1
+      ? fmtMonth(monthsSorted[0].month)
+      : `${monthCount} ${t("fin.months_label")} · ${fmtMonth(monthsSorted[0].month)} → ${fmtMonth(monthsSorted[monthCount-1].month)}`;
+
+    return `<tr class="fin-summary" data-user="${u.user_id}">
       <td><span class="rank ${rankCls}">${i + 1}</span></td>
       <td style="font-weight:600">
         <div style="display:flex;align-items:center;gap:10px">
-          <div class="avatar" style="width:30px;height:30px;font-size:12px">${(r.user_name||'?')[0]}</div>
-          <span>${r.user_name}</span>
+          <button class="fin-expand-btn" type="button" aria-expanded="false" aria-label="${escapeHTML(t('common.details'))}">
+            <span class="material-symbols-outlined fin-expand-chev" aria-hidden="true">expand_more</span>
+          </button>
+          <div class="avatar" style="width:30px;height:30px;font-size:12px">${escapeHTML((u.user_name||'?')[0])}</div>
+          <div style="display:flex;flex-direction:column;line-height:1.25">
+            <span>${escapeHTML(u.user_name)}</span>
+            <span class="text-muted" style="font-size:11px;font-weight:500">${escapeHTML(subText)}</span>
+          </div>
         </div>
       </td>
-      <td>${r.deals_count}</td>
-      <td>${r.reservations_count}</td>
-      <td class="money">${fmtMoney(r.deal_revenue)}</td>
-      <td class="money">${fmtMoney(r.reservation_revenue)}</td>
-      <td class="money fin-key-num">${fmtMoney(r.total_revenue)}</td>
-      <td class="money fin-key-num">${fmtMoney(r.total_commission)}</td>
+      <td>${u.deals_count}</td>
+      <td>${u.reservations_count}</td>
+      <td class="money">${fmtMoney(u.deal_revenue)}</td>
+      <td class="money">${fmtMoney(u.reservation_revenue)}</td>
+      <td class="money fin-key-num">${fmtMoney(u.total_revenue)}</td>
+      <td class="money fin-key-num">${fmtMoney(u.total_commission)}</td>
+    </tr>
+    <tr class="fin-detail-row" hidden>
+      <td colspan="8">
+        <div class="fin-detail-wrap">
+          <div class="fin-detail-title">${escapeHTML(t('fin.activity_breakdown'))}</div>
+          <table class="fin-detail-table">
+            <thead><tr>
+              <th>${escapeHTML(t('common.month'))}</th>
+              <th>${escapeHTML(t('fin.deals_count'))}</th>
+              <th>${escapeHTML(t('fin.reservations_count'))}</th>
+              <th>${escapeHTML(t('fin.deal_revenue'))}</th>
+              <th>${escapeHTML(t('fin.reservation_revenue'))}</th>
+              <th>${escapeHTML(t('fin.total_revenue'))}</th>
+              <th>${escapeHTML(t('fin.total_commission'))}</th>
+            </tr></thead>
+            <tbody>${detailRows}</tbody>
+          </table>
+        </div>
+      </td>
     </tr>`;
   }).join("");
+
+  // Wire expand toggles. Delegated on the tbody so we don't have to
+  // re-bind every render; one listener handles all rows.
+  tbody.querySelectorAll('.fin-summary').forEach(row => {
+    const detail = row.nextElementSibling;
+    if (!detail) return;
+    const btn = row.querySelector('.fin-expand-btn');
+    const toggle = (e) => {
+      // Don't toggle when the click hits a child button or link inside
+      // the summary cells (none today, but future-proof).
+      if (e.target.closest('a')) return;
+      const open = detail.hasAttribute('hidden');
+      if (open) detail.removeAttribute('hidden');
+      else      detail.setAttribute('hidden', '');
+      row.classList.toggle('is-expanded', open);
+      if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    };
+    row.addEventListener('click', toggle);
+  });
+}
+
+function escapeHTML(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => (
+    {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]
+  ));
 }
 
 function exportCSV() {

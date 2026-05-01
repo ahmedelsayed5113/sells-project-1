@@ -1078,6 +1078,91 @@ html[dir="rtl"] tbody tr.clickable:hover { transform: translateX(-2px); }
   color: var(--text);
 }
 
+/* Finance report — expandable per-rep activity breakdown.
+   Each rep occupies two <tr>s: a clickable summary row and a detail
+   row that's hidden until the user expands it. The detail row uses a
+   nested table so the column alignment matches the parent grid. */
+.fin-summary {
+  cursor: pointer;
+  transition: background 0.15s var(--ease);
+}
+.fin-summary:hover { background: var(--tint-soft); }
+.fin-summary.is-expanded { background: var(--tint-soft-strong); }
+.fin-expand-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: background 0.15s var(--ease), border-color 0.15s var(--ease), transform 0.15s var(--ease);
+}
+.fin-expand-btn:hover {
+  background: var(--tint-soft);
+  border-color: var(--brand);
+  color: var(--brand);
+}
+.fin-expand-chev {
+  font-size: 18px;
+  transition: transform 0.18s var(--ease);
+}
+.fin-summary.is-expanded .fin-expand-chev { transform: rotate(180deg); }
+
+.fin-detail-row > td {
+  padding: 0 !important;
+  background: var(--surface);
+}
+.fin-detail-wrap {
+  padding: 14px 18px 18px;
+  border-top: 1px solid var(--border);
+  background: linear-gradient(180deg,
+              color-mix(in srgb, var(--brand) 4%, transparent) 0%,
+              transparent 100%);
+}
+.fin-detail-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+}
+.fin-detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: transparent;
+}
+.fin-detail-table thead th {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 6px 10px;
+  text-align: start;
+  background: transparent;
+  border-bottom: 1px solid var(--outline-variant);
+}
+.fin-detail-table tbody td {
+  font-size: 12px;
+  padding: 8px 10px;
+  border-bottom: 1px dashed var(--outline-variant);
+  color: var(--text);
+}
+.fin-detail-table tbody tr:last-child td { border-bottom: none; }
+.fin-detail-table tbody tr:hover { background: var(--tint-soft); }
+
+@media (max-width: 720px) {
+  .fin-detail-wrap { padding: 10px 12px 14px; }
+  .fin-detail-table thead th,
+  .fin-detail-table tbody td { padding: 6px 8px; font-size: 11px; }
+}
+
 /* Status pill — used in dashboard table to show submitted/evaluated state.
    Carries icon + text so the signal isn't color-only. */
 .status-pill {
