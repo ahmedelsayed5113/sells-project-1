@@ -276,18 +276,12 @@
         presets.appendChild(b);
       });
 
-      const customBtn = document.createElement("button");
-      customBtn.type = "button";
-      customBtn.className = "dr-preset is-custom";
-      customBtn.dataset.preset = "custom";
-      customBtn.innerHTML = `<span class="dr-preset-label">${_t("dr.custom", opts)}</span>`;
-      customBtn.addEventListener("click", () => toggleCustom(true));
-      presets.appendChild(customBtn);
-
-      // Custom inputs section
+      // Custom inputs section — ALWAYS visible (no separate "Custom"
+      // button to click first). The user picks a preset from the row
+      // above, or types/picks a date in the inputs below and hits Apply.
+      // Two interaction paths, one panel, no hidden state.
       const custom = document.createElement("div");
       custom.className = "dr-panel-custom";
-      custom.hidden = true;
       const inputType = currentMode === "month-only" ? "month" : "date";
       custom.innerHTML = `
         <div class="dr-custom-row">
@@ -303,10 +297,12 @@
         <div class="dr-custom-error" role="alert" aria-live="polite" hidden></div>
         <div class="dr-custom-actions">
           <button type="button" class="btn btn-primary dr-apply">${_t("dr.apply", opts)}</button>
-          <button type="button" class="btn btn-ghost dr-cancel">${_t("dr.cancel", opts)}</button>
         </div>
       `;
       panel.appendChild(custom);
+      // Pre-fill the inputs with the active range so the user always
+      // sees what's currently selected — they can edit in place.
+      _syncCustomInputs();
 
       const footnote = document.createElement("div");
       footnote.className = "dr-panel-footnote";
@@ -322,9 +318,10 @@
         summary.setAttribute("aria-expanded", String(open));
       });
 
-      // Wire custom apply / cancel
+      // Apply button — wired to the always-visible custom inputs. Cancel
+      // button removed because the inputs are no longer in a hide/show
+      // state to "cancel out of"; closing the panel implicitly cancels.
       custom.querySelector(".dr-apply").addEventListener("click", applyCustom);
-      custom.querySelector(".dr-cancel").addEventListener("click", () => toggleCustom(false));
 
       // Click-outside closes
       document.addEventListener("click", _outsideClick);
@@ -352,22 +349,36 @@
       }
     }
 
-    function toggleCustom(open) {
+    // Sync the always-visible custom inputs to the currently-selected
+    // range. Replaces the old toggleCustom() which used to hide the
+    // custom area; we now keep it open at all times and just rewrite
+    // input values whenever the active range changes via a preset click.
+    function _syncCustomInputs() {
       const custom = host.querySelector(".dr-panel-custom");
       if (!custom) return;
-      custom.hidden = !open;
+      const errEl = custom.querySelector(".dr-custom-error");
+      if (errEl) errEl.hidden = true;
+      const f = custom.querySelector(".dr-custom-from");
+      const t = custom.querySelector(".dr-custom-to");
+      if (!f || !t) return;
+      if (currentMode === "month-only") {
+        f.value = range.from.slice(0, 7);
+        t.value = range.to.slice(0, 7);
+      } else {
+        f.value = range.from;
+        t.value = range.to;
+      }
+    }
+
+    function toggleCustom(open) {
+      // Kept for backward compat with any external caller, but the panel
+      // is always open now — `open=true` just refocuses the from input.
+      const custom = host.querySelector(".dr-panel-custom");
+      if (!custom) return;
+      _syncCustomInputs();
       if (open) {
-        custom.querySelector(".dr-custom-error").hidden = true;
         const f = custom.querySelector(".dr-custom-from");
-        const t = custom.querySelector(".dr-custom-to");
-        if (currentMode === "month-only") {
-          f.value = range.from.slice(0, 7);
-          t.value = range.to.slice(0, 7);
-        } else {
-          f.value = range.from;
-          t.value = range.to;
-        }
-        f.focus();
+        if (f) f.focus();
       }
     }
 
@@ -426,6 +437,9 @@
       writeURL();
       writeStorage();
       refreshLabels();
+      // Mirror the new range into the always-visible custom inputs so
+      // clicking "Last 30 Days" updates the date pickers below it too.
+      _syncCustomInputs();
       try { onChange(range); } catch (e) { console.error(e); }
     }
 

@@ -1,16 +1,23 @@
 """
 Demo-data seeder for Ain KPI.
 
-Creates:
+Creates a richer demo dataset suitable for showing the platform off:
   - 1 Sales Manager
-  - 2 Team Leaders (each leading a team of 5 Sales)
+  - 3 Team Leaders (one per team)
   - 1 Data Entry user
   - 1 Marketing Manager
-  - 10 Sales (5 per team)
-  - 3 months of KPI entries (last 3 months) with varied performance
-  - 2 marketing campaigns (one with full actuals, one with partial)
+  - 20 Sales reps split across 3 teams with VARIED tenure — some reps
+    have a full 12 months of history, others joined recently and only
+    have a few months of data
+  - 12 months of KPI entries (last full year) so charts have real shape
+  - 3 marketing campaigns (mix of completed actuals + template state)
 
-Idempotent: running it again will upsert users and KPI rows, not duplicate.
+Replacement seeding: any existing sales user NOT in the new SALES_REPS
+list is deleted first (with their KPI entries via ON DELETE CASCADE) so
+re-running the seed produces a clean, balanced dataset instead of
+piling on top of whatever was there before.
+
+Idempotent for the kept rows: re-running upserts users / KPI rows.
 
 Usage:
   # From project root — must have DATABASE_URL in env (or local DB config):
@@ -22,7 +29,7 @@ Usage:
 import os
 import random
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # Make "app" importable when invoked as a one-off script.
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -36,35 +43,71 @@ from app.kpi_logic import KPI_CONFIG, compute_score
 
 DEMO_PASSWORD = "Demo1234!"
 
+# Non-sales staff. Three team leaders match the three teams below.
 USERS = [
-    # username, full_name, role, email
-    ("omar.manager", "Omar Hassan", "manager",     "omar.manager@demo.ain"),
-    ("ali.tl",       "Ali Ahmed",   "team_leader", "ali.tl@demo.ain"),
-    ("sara.tl",      "Sara Ibrahim","team_leader", "sara.tl@demo.ain"),
-    ("menna",        "Menna Farouk","dataentry",   "menna@demo.ain"),
-    ("nour.mkt",     "Nour Mahmoud","marketing",   "nour.mkt@demo.ain"),
+    # username,         full_name,        role,          email
+    ("omar.manager",    "Omar Hassan",    "manager",     "omar.manager@demo.ain"),
+    ("ali.tl",          "Ali Ahmed",      "team_leader", "ali.tl@demo.ain"),
+    ("sara.tl",         "Sara Ibrahim",   "team_leader", "sara.tl@demo.ain"),
+    ("kareem.tl",       "Kareem Mansour", "team_leader", "kareem.tl@demo.ain"),
+    ("menna",           "Menna Farouk",   "dataentry",   "menna@demo.ain"),
+    ("nour.mkt",        "Nour Mahmoud",   "marketing",   "nour.mkt@demo.ain"),
 ]
 
 TEAMS = [
-    # team_name, leader_username, sales_members [(username, full_name), ...]
-    ("Team Alpha", "ali.tl", [
-        ("sales.ahmed",   "Ahmed Salah"),
-        ("sales.mostafa", "Mostafa Tarek"),
-        ("sales.laila",   "Laila Kamal"),
-        ("sales.khaled",  "Khaled Naguib"),
-        ("sales.hana",    "Hana Adel"),
-    ]),
-    ("Team Beta", "sara.tl", [
-        ("sales.youssef", "Youssef Amr"),
-        ("sales.mariam",  "Mariam Hany"),
-        ("sales.tamer",   "Tamer Wael"),
-        ("sales.reem",    "Reem Gamal"),
-        ("sales.bassel",  "Bassel Ezz"),
-    ]),
+    # team_name,    leader_username
+    ("Team Alpha",  "ali.tl"),
+    ("Team Beta",   "sara.tl"),
+    ("Team Gamma",  "kareem.tl"),
 ]
 
-# Three most recent months (YYYY-MM)
-def _recent_months(n=3):
+# 20 sales reps, distributed across the 3 teams with mixed tenure and
+# performance profiles so dashboards / leaderboards have natural shape.
+#
+# Tuple format:
+#   (username, full_name, team_idx, join_months_ago, profile)
+#
+# `join_months_ago = 12` means the rep has KPI rows for the last 12
+# months. `join_months_ago = 0` means they only have the current month.
+# Profiles drive how close their actuals get to target — see PROFILES.
+SALES_REPS = [
+    # Veterans — full year of history. Distributed so each team has
+    # one strong anchor.
+    ("sales.ahmed",   "Ahmed Salah",   0, 12, "excellent"),
+    ("sales.youssef", "Youssef Amr",   1, 12, "excellent"),
+    ("sales.tamer",   "Tamer Wael",    2, 12, "vgood"),
+
+    # 9–11 months — solid mid-tier contributors.
+    ("sales.laila",   "Laila Kamal",   0, 11, "vgood"),
+    ("sales.mariam",  "Mariam Hany",   1, 11, "good"),
+    ("sales.bassel",  "Bassel Ezz",    2, 10, "good"),
+    ("sales.mostafa", "Mostafa Tarek", 0, 9,  "good"),
+    ("sales.khaled",  "Khaled Naguib", 1, 9,  "vgood"),
+
+    # 6–8 months — last summer's hires.
+    ("sales.reem",    "Reem Gamal",    2, 8,  "good"),
+    ("sales.hana",    "Hana Adel",     0, 7,  "medium"),
+    ("sales.omar",    "Omar Saeed",    1, 6,  "good"),
+    ("sales.salma",   "Salma Hassan",  2, 6,  "vgood"),
+
+    # 3–5 months — newer reps still ramping up.
+    ("sales.karim",   "Karim Yasser",  0, 5,  "good"),
+    ("sales.dina",    "Dina Magdy",    1, 4,  "good"),
+    ("sales.tarek",   "Tarek Maged",   2, 4,  "good"),
+    ("sales.heba",    "Heba Aly",      0, 3,  "vgood"),
+
+    # 1–2 months — just joined, partial history.
+    ("sales.farah",   "Farah Sherif",  1, 2,  "good"),
+    ("sales.ziad",    "Ziad Nabil",    2, 2,  "medium"),
+    ("sales.nada",    "Nada Wael",     0, 1,  "good"),
+
+    # Joined this month — only one row of data so far.
+    ("sales.amr",     "Amr Hisham",    1, 0,  "medium"),
+]
+
+
+def _months_back(n):
+    """Return the last `n` calendar months in chronological order, latest last."""
     today = datetime.utcnow()
     out = []
     y, m = today.year, today.month
@@ -116,9 +159,36 @@ def upsert_team(conn, name, description, leader_id):
 
 def attach_members(conn, team_id, user_ids):
     with conn.cursor() as cur:
-        # Clear any previous team assignment for these users, then set to this team.
         cur.execute("UPDATE users SET team_id=%s, updated_at=NOW() WHERE id = ANY(%s)",
                     (team_id, user_ids))
+
+
+def cleanup_stale_sales(conn, keep_usernames):
+    """Delete any sales-role users not in `keep_usernames`.
+
+    We're seeding a fresh demo dataset; old sales reps from previous runs
+    would otherwise pollute the leaderboard with reps the user explicitly
+    asked us to remove. ON DELETE CASCADE on kpi_entries.user_id and the
+    other user-keyed tables means deleting the user removes their history
+    too — exactly what we want here.
+    """
+    keep_lower = [u.lower() for u in keep_usernames]
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT id, username FROM users
+            WHERE role = 'sales' AND LOWER(username) <> ALL(%s)
+            """,
+            (keep_lower,),
+        )
+        stale = cur.fetchall()
+        if not stale:
+            return 0
+        ids = [r[0] for r in stale]
+        cur.execute("DELETE FROM users WHERE id = ANY(%s)", (ids,))
+        for _, uname in stale:
+            print(f"   ✗ removed stale sales user: {uname}")
+        return len(stale)
 
 
 # ─── KPI seeding ─────────────────────────────────────────────────────────
@@ -132,19 +202,8 @@ PROFILES = {
     "weak":      {"lo": 0.25, "hi": 0.50, "passfail_fail_chance": 0.35},
 }
 
-# One stable profile per sales rep so trends make sense.
-SALES_PROFILES = {
-    "sales.ahmed":   "excellent",
-    "sales.mostafa": "vgood",
-    "sales.laila":   "good",
-    "sales.khaled":  "medium",
-    "sales.hana":    "weak",
-    "sales.youssef": "excellent",
-    "sales.mariam":  "good",
-    "sales.tamer":   "vgood",
-    "sales.reem":    "medium",
-    "sales.bassel":  "good",
-}
+# Look up profile from the SALES_REPS table.
+SALES_PROFILES = {row[0]: row[4] for row in SALES_REPS}
 
 
 def seed_kpi_for_rep(conn, user_id, username, month, rng: random.Random):
@@ -157,7 +216,6 @@ def seed_kpi_for_rep(conn, user_id, username, month, rng: random.Random):
     numbers = {}
     for key, cfg in KPI_CONFIG.items():
         if cfg.get("input_type") == "passfail":
-            # 0 or 100
             numbers[key] = 0 if rng.random() < profile["passfail_fail_chance"] else 100
             continue
 
@@ -171,14 +229,12 @@ def seed_kpi_for_rep(conn, user_id, username, month, rng: random.Random):
             target = 100
 
         actual = target * factor
-        # Percent fields: keep as percent (0..100+), cap sanely
         if cfg.get("input_type") == "percent":
             actual = round(min(actual, 100.0), 1)
         else:
             actual = round(actual)
         numbers[key] = actual
 
-    # Write the row
     params = {
         "user_id": user_id,
         "month": month,
@@ -231,7 +287,6 @@ def seed_kpi_for_rep(conn, user_id, username, month, rng: random.Random):
             RETURNING id
         """, params)
 
-    # Compute total score
     total, rating, _ = compute_score(params)
     with conn.cursor() as cur:
         cur.execute("""
@@ -333,59 +388,74 @@ def upsert_campaign(conn, user_id, name, avg_price, comm_input, ctype, cr, budge
 
 def main():
     rng = random.Random(42)  # stable seeds for reproducible demo
-    months = _recent_months(3)
-    print(f"→ Seeding months: {months}")
+    months = _months_back(12)
+    print(f"→ Seeding {len(months)} months: {months[0]} → {months[-1]}")
 
     conn = get_conn()
     conn.autocommit = False
 
     try:
-        # 1. Users
+        # 0. Cleanup — drop any sales user not in the new roster so the
+        #    leaderboard isn't polluted by leftovers from older seeds.
+        new_sales_usernames = [r[0] for r in SALES_REPS]
+        removed = cleanup_stale_sales(conn, new_sales_usernames)
+        if removed:
+            print(f"   ✓ removed {removed} stale sales user(s) (with their KPI history)")
+
+        # 1. Non-sales users (manager, team leaders, dataentry, marketing).
         user_ids = {}
         for username, full_name, role, email in USERS:
             uid = upsert_user(conn, username, full_name, role, email)
             user_ids[username] = uid
             print(f"   ✓ user {username:<16} → id {uid}")
 
-        # 2. Sales reps (one per team entry)
-        for team_name, _, members in TEAMS:
-            for username, full_name in members:
-                uid = upsert_user(conn, username, full_name, "sales",
-                                  f"{username}@demo.ain")
-                user_ids[username] = uid
-                print(f"   ✓ sales  {username:<16} → id {uid}")
+        # 2. Sales reps (all 20).
+        for username, full_name, _, _, _ in SALES_REPS:
+            uid = upsert_user(conn, username, full_name, "sales",
+                              f"{username}@demo.ain")
+            user_ids[username] = uid
+        print(f"   ✓ {len(SALES_REPS)} sales reps upserted")
 
-        # 3. Teams
-        for team_name, leader_username, members in TEAMS:
+        # 3. Teams + membership.
+        team_ids = {}
+        for team_name, leader_username in TEAMS:
             leader_id = user_ids[leader_username]
             tid = upsert_team(conn, team_name, f"{team_name} demo team", leader_id)
-            member_ids = [user_ids[u] for u, _ in members]
+            team_ids[team_name] = tid
+            # Sales reps belonging to this team
+            members = [r[0] for r in SALES_REPS
+                       if TEAMS[r[2]][0] == team_name]
+            member_ids = [user_ids[u] for u in members]
             attach_members(conn, tid, member_ids)
-            print(f"   ✓ team  {team_name} (leader={leader_username}, members={len(member_ids)})")
+            print(f"   ✓ team {team_name} (leader={leader_username}, members={len(member_ids)})")
 
         conn.commit()
 
-        # 4. KPI entries for sales reps × 3 months
-        for team_name, _, members in TEAMS:
-            for username, _ in members:
-                uid = user_ids[username]
-                for m in months:
-                    seed_kpi_for_rep(conn, uid, username, m, rng)
-        print(f"   ✓ KPI entries for {sum(len(m) for _,_,m in TEAMS)} reps × {len(months)} months")
+        # 4. KPI entries — each rep gets the months they were active for.
+        total_kpi_rows = 0
+        for username, _, _, join_months_ago, _ in SALES_REPS:
+            uid = user_ids[username]
+            # join_months_ago = 12 → last 12 months; = 0 → last 1 month only
+            n = max(1, int(join_months_ago) + 1)
+            rep_months = months[-n:]
+            for m in rep_months:
+                seed_kpi_for_rep(conn, uid, username, m, rng)
+                total_kpi_rows += 1
+        print(f"   ✓ KPI entries: {total_kpi_rows} rows across {len(SALES_REPS)} reps × varied tenure")
 
-        # 5. TL manual evaluations × 3 months
-        for _, leader_username, _ in TEAMS:
+        # 5. TL manual evaluations × 12 months.
+        for _, leader_username in TEAMS:
             tl_id = user_ids[leader_username]
             for m in months:
                 seed_tl_manual_eval(conn, tl_id, m, rng)
-        print(f"   ✓ TL manual evaluations × {len(months)} months")
+        print(f"   ✓ TL manual evaluations × {len(months)} months × {len(TEAMS)} TLs")
 
         conn.commit()
 
         # 6. Marketing campaigns
         mk_uid = user_ids["nour.mkt"]
         current_month = months[-1]
-        prev_month = months[0]
+        prev_month = months[-3] if len(months) >= 3 else months[0]
 
         upsert_campaign(
             conn, mk_uid,
@@ -408,7 +478,7 @@ def main():
             name="Sahel Premium",
             avg_price=12_000_000, comm_input=5.0, ctype="percentage",
             cr=0.015, budget=600_000, month=prev_month,
-            actuals=None,  # No actuals yet — template state
+            actuals=None,
         )
         print("   ✓ 3 marketing campaigns (2 with actuals, 1 template)")
 
@@ -426,17 +496,16 @@ def main():
 
 
 def _print_credentials_table():
-    print("=" * 72)
+    print("=" * 78)
     print("DEMO CREDENTIALS")
-    print("=" * 72)
+    print("=" * 78)
     print(f"{'Username':<22} {'Password':<14} {'Role':<14} {'Full Name'}")
-    print("-" * 72)
+    print("-" * 78)
     for username, full_name, role, _ in USERS:
         print(f"{username:<22} {DEMO_PASSWORD:<14} {role:<14} {full_name}")
-    for _, _, members in TEAMS:
-        for username, full_name in members:
-            print(f"{username:<22} {DEMO_PASSWORD:<14} {'sales':<14} {full_name}")
-    print("=" * 72)
+    for username, full_name, _, _, _ in SALES_REPS:
+        print(f"{username:<22} {DEMO_PASSWORD:<14} {'sales':<14} {full_name}")
+    print("=" * 78)
     print()
     print("Login at: /login")
     print("Admin account was created on first deploy — keep using that for admin access.")

@@ -67,14 +67,14 @@
   </div>
   <div class="field">
     <label data-i18n="common.filter"></label>
-    <select id="selSort" onchange="render()">
+    <select id="selSort" onchange="onManualFilter()">
       <option value="score" data-i18n="dash.sort_by_score"></option>
       <option value="name" data-i18n="dash.sort_by_name"></option>
     </select>
   </div>
   <div class="field">
     <label data-i18n="dash.rating"></label>
-    <select id="selRating" onchange="render()">
+    <select id="selRating" onchange="onManualFilter()">
       <option value="all" data-i18n="common.all"></option>
       <option value="Excellent" data-i18n="rating.Excellent">Excellent</option>
       <option value="V.Good" data-i18n="rating.V.Good">V.Good</option>
@@ -167,8 +167,8 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/charts.js') }}?v=flat44"></script>
-<script src="{{ url_for('static', filename='js/date_range.js') }}?v=flat44"></script>
+<script src="{{ url_for('static', filename='js/charts.js') }}?v=flat45"></script>
+<script src="{{ url_for('static', filename='js/date_range.js') }}?v=flat45"></script>
 <script>
 let allData = [];
 let _drCtrl = null;
@@ -187,7 +187,10 @@ async function loadAll() {
   try {
     // detail=1 returns the per-KPI breakdown the charts (radar, heatmap,
     // funnel, per-KPI bar, actual-vs-target) and the table both consume.
-    const qs = _drCtrl.toQueryString({ detail: 1 });
+    // dedupe=user collapses (user, month) pairs to the latest row per
+    // user — without it the leaderboard duplicates a rep once per month
+    // covered by the range.
+    const qs = _drCtrl.toQueryString({ detail: 1, dedupe: 'user' });
     allData = await api(`/api/kpi/report?${qs}`);
     if (_drFallbackArmed && allData.length === 0
         && _drCtrl.getRange().preset !== "ytd") {
@@ -207,8 +210,14 @@ function render() {
   const ratingFilter = document.getElementById("selRating").value;
   let rows = [...allData];
   if (ratingFilter !== "all") rows = rows.filter(r => r.rating === ratingFilter);
+  // Score sort honours the "needs attention" flag set by the warm tile —
+  // worst-first when the user clicked the alert tile, best-first otherwise.
   rows.sort(sort === "score"
-    ? (a, b) => (parseFloat(b.total_score) || 0) - (parseFloat(a.total_score) || 0)
+    ? (a, b) => {
+        const av = parseFloat(a.total_score) || 0;
+        const bv = parseFloat(b.total_score) || 0;
+        return _attentionFirst ? (av - bv) : (bv - av);
+      }
     : (a, b) => (a.user_name || "").localeCompare(b.user_name || ""));
 
   renderTiles(rows);
@@ -306,21 +315,27 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   _wireTileClick('tile_low_card', () => {
-    // Filter to weak/bad and scroll. The "Below Threshold" / "Underperforming"
-    // labels render via i18n; the value 'Bad'/'Weak' stays as the enum value.
+    // "Needs Attention" — surface the lowest scorers FIRST, but never hide
+    // the rest of the team. Previously this filtered to Bad/Weak only,
+    // which emptied the table whenever the team had no ratings that low
+    // (the actual symptom: blank screen on healthy teams). Now we just
+    // re-sort score ASC and clear the rating filter so every rep stays
+    // visible — worst at top, healthiest at bottom.
     const ratingSel = document.getElementById('selRating');
-    if (ratingSel) {
-      // The rating filter accepts a single value; pick the one that matches more rows.
-      const weakCount = allData.filter(r => r.rating === 'Weak').length;
-      const badCount  = allData.filter(r => r.rating === 'Bad').length;
-      ratingSel.value = (badCount >= weakCount && badCount > 0) ? 'Bad'
-                       : (weakCount > 0) ? 'Weak'
-                       : 'Bad';
-      render();
-    }
+    const sortSel = document.getElementById('selSort');
+    if (ratingSel) ratingSel.value = 'all';
+    if (sortSel) sortSel.value = 'score';
+    _attentionFirst = true;
+    render();
     _scrollToTable();
   });
 });
+
+// Tile-click flag — when set, render() flips the score-sort comparator so
+// the worst scorers come first. Cleared when the user changes either the
+// sort or the rating filter manually so they regain control.
+let _attentionFirst = false;
+function onManualFilter() { _attentionFirst = false; render(); }
 
 function renderOpStats(rows) {
   // Sum operational metrics
@@ -600,7 +615,6 @@ function renderTable(rows) {
         ${kpiLabel(worstKey)} <span class="${worstPct < 50 ? 'text-danger' : 'text-muted'}">(${worstPct.toFixed(0)}%)</span>
       </td>
       <td>
-        ${statusPill('sales', !!r.sales_submitted_at)}
         ${statusPill('eval',  !!r.dataentry_submitted_at)}
       </td>
       <td><button class="btn btn-sm" onclick="event.stopPropagation();showDetail(${r.user_id},'${r.month}')">${t("common.details")}</button></td>

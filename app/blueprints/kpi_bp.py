@@ -397,12 +397,19 @@ def report():
     timestamp (?ts_field=dataentry|sales, default 'dataentry') because the
     monthly grain has no day-level data — see CLAUDE.md "monthly grain" note.
 
+    Multi-month ranges return one row per (user, month) from the join. The
+    dashboard leaderboard wants ONE row per user (latest month wins) so the
+    same person doesn't appear three times for January / February / March.
+    Pass `?dedupe=user` to enable that collapse — front-end pages that need
+    the per-month rows for trend math leave it off.
+
     Other params:
       ?user_id=N           filter to one rep
       ?detail=1            include compute_score breakdown
     """
     user_id_filter = request.args.get("user_id")
     want_detail = request.args.get("detail") in ("1", "true", "yes")
+    dedupe_mode = (request.args.get("dedupe") or "").lower()
     ts_field = request.args.get("ts_field", "dataentry").lower()
     if ts_field not in ("dataentry", "sales"):
         ts_field = "dataentry"
@@ -444,6 +451,20 @@ def report():
                 "row_count": len(rows),
                 "cap": _RANGE_ROW_CAP,
             }, 413)
+
+        # Collapse to one-row-per-user (latest month) when the caller asks
+        # for it. Done after the row-cap guard so the cap still reflects DB
+        # work, not post-processing size.
+        if dedupe_mode == "user":
+            by_uid = {}
+            for r in rows:
+                uid = r.get("user_id")
+                m_new = r.get("month") or ""
+                prev = by_uid.get(uid)
+                if not prev or (prev.get("month") or "") < m_new:
+                    by_uid[uid] = r
+            rows = list(by_uid.values())
+            rows.sort(key=lambda r: (-(r.get("total_score") or 0), r.get("user_name") or ""))
 
         if want_detail:
             for row in rows:
