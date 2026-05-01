@@ -10,7 +10,7 @@
        wins; otherwise we follow the OS preference (prefers-color-scheme). -->
   <script>(function(){var t=localStorage.getItem('ain_theme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})()</script>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=flat42">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=flat43">
   {% block head %}{% endblock %}
 </head>
 <body>
@@ -142,8 +142,8 @@
     </main>
   </div>
 
-  <script src="{{ url_for('static', filename='js/i18n.js') }}?v=flat42"></script>
-  <script src="{{ url_for('static', filename='js/common.js') }}?v=flat42"></script>
+  <script src="{{ url_for('static', filename='js/i18n.js') }}?v=flat43"></script>
+  <script src="{{ url_for('static', filename='js/common.js') }}?v=flat43"></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

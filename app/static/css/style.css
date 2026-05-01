@@ -3831,6 +3831,65 @@ body:has(.auth-shell) { overflow-x: hidden; }
 .plotly-container.tall { min-height: 380px; }
 
 /* ──────────────────────────────────────────────────────────────────
+   CUSTOM TREEMAP — replaces Plotly's treemap on the finance page
+   so we get a guaranteed-no-gaps layout. The .ct-treemap class is
+   added by Charts.drawTreemap() to whatever element it renders into.
+   ────────────────────────────────────────────────────────────────── */
+.ct-treemap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: inherit;
+  overflow: hidden;
+  border-radius: var(--radius);
+}
+.ct-tile {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  /* Subtle inset shadow on hover replaces Plotly's drill-down zoom —
+     the user gets visual feedback without the layout shifting. */
+  transition: filter 0.18s var(--ease), transform 0.18s var(--ease);
+  cursor: default;
+  /* Anti-aliased corners — small radius keeps the mosaic feel without
+     making tiles look like badges. */
+  border-radius: 4px;
+  overflow: hidden;
+}
+.ct-tile:hover {
+  filter: brightness(1.08);
+  z-index: 2;
+}
+.ct-tile-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 8px;
+  line-height: 1.25;
+  max-width: 100%;
+  max-height: 100%;
+}
+.ct-tile-label {
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.ct-tile-value {
+  font-weight: 500;
+  margin-top: 2px;
+  opacity: 0.92;
+  white-space: nowrap;
+}
+
+/* ──────────────────────────────────────────────────────────────────
    LOADING / EMPTY
    ────────────────────────────────────────────────────────────────── */
 .loading {

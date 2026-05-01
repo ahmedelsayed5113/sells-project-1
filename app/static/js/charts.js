@@ -173,6 +173,15 @@ function _attachResizeObserver(el) {
       _resizeDebounce.delete(el.id);
       // Element may have been detached (route change / template re-render).
       if (!el.isConnected) return;
+      // Custom (non-Plotly) renderers tag themselves so we can re-run
+      // their tracked draw closure on resize instead of asking Plotly to
+      // resize a chart it didn't render. Currently used by the custom
+      // CSS treemap.
+      if (el.classList.contains('ct-treemap')) {
+        const fn = _redrawCallbacks.get(el.id);
+        if (fn) { try { fn(); } catch (_) {} }
+        return;
+      }
       try {
         if (typeof Plotly !== 'undefined' && Plotly.Plots && Plotly.Plots.resize) {
           Plotly.Plots.resize(el);
@@ -467,10 +476,21 @@ function drawDonut(containerId, data, options = {}) {
   const el = document.getElementById(containerId);
   if (!el) return;
 
+  const containerW = el.clientWidth || el.offsetWidth || 600;
+  const isNarrow = containerW < 480;
+
   // Single-category donut renders as a full ring; the legend is redundant
   // and overlaps the slice label. Drop it and shrink the bottom margin.
   const isSingle = !data.values || data.values.length <= 1;
   const showLegend = isSingle ? false : (options.showlegend !== false);
+
+  const sliceColors = data.colors || PALETTE;
+  // Per-slice inside text colour — light pastel slices need dark text,
+  // deep purples need white. Plotly's pie textfont.color accepts an array
+  // matched to slice order.
+  const insideTextColors = Array.isArray(sliceColors)
+    ? sliceColors.map(_contrastTextColor)
+    : _contrastTextColor(sliceColors);
 
   const trace = {
     type: 'pie',
@@ -478,24 +498,43 @@ function drawDonut(containerId, data, options = {}) {
     values: data.values,
     hole: 0.62,
     marker: {
-      colors: data.colors || PALETTE,
-      line: { color: '#ffffff', width: 3 },
+      colors: sliceColors,
+      // Separator matches the page surface — invisible against the card,
+      // visible cuts between adjacent slices.
+      line: { color: CHART_COLORS.bg, width: 2 },
     },
+    // 'label+percent' inside the slice if it fits, else label leaders out
+    // of the donut so we never get the truncated half-words the user
+    // pointed out.
     textinfo: options.textinfo || 'label+percent',
-    textfont: { size: 12, color: CHART_COLORS.text, family: _chartFontFamily() },
+    textposition: options.textposition || 'auto',
     insidetextorientation: 'horizontal',
+    insidetextfont: { color: insideTextColors, size: isNarrow ? 11 : 12, family: _chartFontFamily(), weight: 600 },
+    outsidetextfont: { color: CHART_COLORS.text, size: isNarrow ? 11 : 12, family: _chartFontFamily(), weight: 600 },
+    automargin: true, // Plotly auto-grows margins so outside labels never clip
     hovertemplate: '<b>%{label}</b><br>%{value} (%{percent})<extra></extra>',
     sort: false,
   };
 
   const layout = chartLayout({
     showlegend: showLegend,
-    legend: { orientation: 'h', y: -0.05, x: 0.5, xanchor: 'center' },
-    margin: { t: 20, r: 20, b: showLegend ? 90 : 30, l: 20 },
+    legend: {
+      orientation: 'h',
+      y: -0.08,
+      x: 0.5,
+      xanchor: 'center',
+      font: { color: CHART_COLORS.text, size: isNarrow ? 11 : 12, family: _chartFontFamily() },
+    },
+    margin: {
+      t: 24,
+      r: isNarrow ? 24 : 40,
+      b: showLegend ? (isNarrow ? 70 : 80) : 24,
+      l: isNarrow ? 24 : 40,
+    },
     annotations: options.centerText ? [{
       text: options.centerText,
       showarrow: false,
-      font: { size: 22, color: CHART_COLORS.text, family: _chartFontFamily(), weight: 700 },
+      font: { size: isNarrow ? 18 : 22, color: CHART_COLORS.text, family: _chartFontFamily(), weight: 700 },
     }] : [],
     ...options,
   });
@@ -743,99 +782,213 @@ function drawHeatmap(containerId, data, options = {}) {
  * `options.compactValues = false` falls back to raw values for callers that
  * need exact numbers (e.g. count breakdowns under 1k).
  */
+// ───────────────────────────────────────────────────────────────────
+//  Custom treemap (CSS + squarify)
+//
+//  We dropped Plotly's treemap because, on the small-and-similar value
+//  distributions this dataset produces, the squarify implementation
+//  there leaves visible empty rectangles between tiles regardless of
+//  config combination. Click also triggered a drill-down state that
+//  recoloured tiles. The custom version:
+//    • runs a textbook squarify that GUARANTEES every pixel of the
+//      container is covered (no gaps);
+//    • paints absolute-positioned divs we fully control;
+//    • gives every tile a per-tile contrast text colour;
+//    • re-renders on container resize and on theme change;
+//    • doesn't drill down on click — flat data, flat behaviour.
+// ───────────────────────────────────────────────────────────────────
+
+// Standard squarify: lay out items into the container so the resulting
+// tile aspect ratios stay close to 1. Items must be sorted by `value`
+// descending. Returns an array of {item, x, y, w, h}.
+function _squarifyLayout(items, x, y, w, h) {
+  if (!items.length) return [];
+  const total = items.reduce((s, i) => s + (i.value || 0), 0);
+  if (total <= 0 || w <= 0 || h <= 0) return [];
+
+  const totalArea = w * h;
+  const withArea = items.map(it => ({
+    item: it,
+    area: ((it.value || 0) / total) * totalArea,
+  }));
+  return _squarifyRecurse(withArea, x, y, w, h);
+}
+
+function _squarifyRecurse(items, x, y, w, h) {
+  if (!items.length) return [];
+  if (w <= 0 || h <= 0) return [];
+  if (items.length === 1) {
+    return [{ ...items[0].item, x, y, w, h }];
+  }
+
+  const shortSide = Math.min(w, h);
+
+  let row = [];
+  let rowSum = 0;
+  let bestRatio = Infinity;
+  let i = 0;
+  while (i < items.length) {
+    const candidate = [...row, items[i]];
+    const candSum = rowSum + items[i].area;
+    const candRatio = _worstAspect(candidate, shortSide, candSum);
+    if (row.length === 0 || candRatio < bestRatio) {
+      row = candidate;
+      rowSum = candSum;
+      bestRatio = candRatio;
+      i++;
+    } else {
+      break;
+    }
+  }
+
+  // Lay out the chosen row along the short side; remaining items fill
+  // the rectangle to the right of (or below) the row.
+  const rowLen = rowSum / shortSide;
+  const placed = [];
+
+  if (w >= h) {
+    // Row sits as a column on the left, item heights vary along the
+    // short side (h).
+    let cy = y;
+    for (const r of row) {
+      const itemH = r.area / rowLen;
+      placed.push({ ...r.item, x: x, y: cy, w: rowLen, h: itemH });
+      cy += itemH;
+    }
+    // Force last tile to extend to the bottom edge to avoid sub-pixel
+    // gaps from accumulated rounding.
+    if (placed.length) {
+      const last = placed[placed.length - 1];
+      last.h = (y + h) - last.y;
+    }
+    const rest = _squarifyRecurse(items.slice(row.length), x + rowLen, y, w - rowLen, h);
+    return [...placed, ...rest];
+  } else {
+    // Row sits as a strip on top, widths vary along the short side (w).
+    let cx = x;
+    for (const r of row) {
+      const itemW = r.area / rowLen;
+      placed.push({ ...r.item, x: cx, y: y, w: itemW, h: rowLen });
+      cx += itemW;
+    }
+    if (placed.length) {
+      const last = placed[placed.length - 1];
+      last.w = (x + w) - last.x;
+    }
+    const rest = _squarifyRecurse(items.slice(row.length), x, y + rowLen, w, h - rowLen);
+    return [...placed, ...rest];
+  }
+}
+
+function _worstAspect(row, shortSide, rowSum) {
+  if (!row.length) return Infinity;
+  let max = 0, min = Infinity;
+  for (const r of row) {
+    if (r.area > max) max = r.area;
+    if (r.area < min) min = r.area;
+  }
+  const w2 = shortSide * shortSide;
+  const s2 = rowSum * rowSum;
+  return Math.max((w2 * max) / s2, s2 / (w2 * min));
+}
+
+function _escapeHTML(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
 function drawTreemap(containerId, data, options = {}) {
   const el = document.getElementById(containerId);
   if (!el) return;
 
+  // Make the host a positioning context for absolute children.
+  el.classList.add('ct-treemap');
+
   const labels = data.labels || [];
   const values = data.values || [];
+  if (!labels.length) {
+    el.innerHTML = `<div class="empty-state" style="padding:30px">${(typeof t === 'function' ? t('dash.no_data') : 'No data')}</div>`;
+    return;
+  }
+
   const useCompact = options.compactValues !== false;
   const valueFormatter = options.valueFormatter
     || (typeof window !== 'undefined' && window.fmtCompactMoney
         ? window.fmtCompactMoney
         : (v) => (typeof v === 'number' ? v.toLocaleString() : String(v)));
 
-  // Tile colours (resolved here so we can derive a matching contrast text
-  // colour per tile — light pastels need dark text, deep purples/blues
-  // need white). PALETTE is mutated in place on theme change so the
-  // closure replay picks up new colours.
-  const tileColors = (data.colors && data.colors.length)
+  // Resolve colours fresh each call so theme switches pick up the new
+  // palette via the page-level onThemeChange path.
+  const colors = (data.colors && data.colors.length)
     ? data.colors
     : labels.map((_, i) => PALETTE[i % PALETTE.length]);
-  const tileTextColors = tileColors.map(_contrastTextColor);
 
-  // Pre-built per-tile text: name on the first line, compact value on the
-  // second. We DON'T wrap the second line in a styled <span> — Plotly's
-  // SVG text renderer accepts a few inline tags but stripping them out
-  // gives Plotly the cleanest input to compute layout with.
-  const text = labels.map((lbl, i) => {
-    const v = values[i];
-    const formatted = useCompact ? valueFormatter(v) : (typeof v === 'number' ? v.toLocaleString() : String(v));
-    return `<b>${lbl}</b><br>${formatted}`;
-  });
+  // Build sortable items. Sort descending by value — required by the
+  // squarify algorithm to produce roughly-square tiles.
+  const items = labels
+    .map((lbl, i) => ({
+      label: lbl,
+      value: values[i] || 0,
+      color: colors[i % colors.length],
+      formatted: useCompact
+        ? valueFormatter(values[i] || 0)
+        : (typeof values[i] === 'number' ? values[i].toLocaleString() : String(values[i] || '')),
+    }))
+    .filter(it => it.value > 0)
+    .sort((a, b) => b.value - a.value);
 
-  // Synthetic root — Plotly treemap with all tiles having empty parents
-  // produced a flat tree with each tile as its own root, which on certain
-  // value distributions left visible empty rectangles in the canvas. A
-  // single hidden root with `branchvalues: 'total'` lets the squarify
-  // algorithm pack ALL tiles into one rectangle that fills the container.
-  const rootId = '__root__';
-  const treeLabels  = [rootId, ...labels];
-  const treeParents = ['',     ...labels.map(() => rootId)];
-  const treeValues  = [values.reduce((a, b) => a + (b || 0), 0), ...values];
-  const treeText    = ['',     ...text];
-  // Root tile gets a transparent fill so it's invisible behind the children
-  // — only the leaves are rendered.
-  const treeMarkerColors = ['rgba(0,0,0,0)', ...tileColors];
-  // Root contrast text doesn't matter (it's empty); use the page text colour.
-  const treeInsideTextColors = [CHART_COLORS.text, ...tileTextColors];
+  if (!items.length) {
+    el.innerHTML = `<div class="empty-state" style="padding:30px">${(typeof t === 'function' ? t('dash.no_data') : 'No data')}</div>`;
+    return;
+  }
 
-  const trace = {
-    type: 'treemap',
-    labels: treeLabels,
-    parents: treeParents,
-    values: treeValues,
-    // 'total' = the root's value already equals the sum of children, so
-    // Plotly should not redistribute. With a real root present this packs
-    // children into the full canvas with no leftover air.
-    branchvalues: 'total',
-    text: treeText,
-    textinfo: 'label+text',
-    textposition: 'middle center',
-    texttemplate: '%{text}',
-    tiling: {
-      packing: 'squarify',
-      squarifyratio: 1,
-    },
-    pathbar: { visible: false },
-    marker: {
-      colors: treeMarkerColors,
-      // 1px separator instead of 2px — less visual "gap" between tiles
-      // while still making the category boundaries readable.
-      line: { color: CHART_COLORS.bg, width: 1 },
-      pad: { t: 0, r: 0, b: 0, l: 0 },
-    },
-    insidetextfont: {
-      color: treeInsideTextColors,
-      size: 13,
-      family: _chartFontFamily(),
-    },
-    outsidetextfont: {
-      color: CHART_COLORS.text,
-      size: 12,
-      family: _chartFontFamily(),
-    },
-    hovertemplate: '<b>%{label}</b><br>' + (useCompact ? '%{value:,.0f}' : '%{value}') + '<extra></extra>',
-  };
+  // Use the host's actual rendered dimensions. If the host hasn't been
+  // laid out yet (display:none parent, deferred mount), fall back to
+  // the CSS min-height and full row width — the ResizeObserver below
+  // will redraw once real dimensions are available.
+  let containerW = el.clientWidth || el.offsetWidth;
+  let containerH = el.clientHeight || el.offsetHeight;
+  if (containerW < 50 || containerH < 50) {
+    containerW = Math.max(containerW, 320);
+    containerH = Math.max(containerH, 280);
+  }
 
-  const layout = chartLayout({
-    margin: { t: 0, r: 0, b: 0, l: 0 },
-    showlegend: false,
-    uniformtext: { mode: 'hide', minsize: 9 },
-    ...options,
-  });
+  const tiles = _squarifyLayout(items, 0, 0, containerW, containerH);
 
-  _drawChart(el, [trace], layout, _chartConfig());
+  // Build the DOM in one shot — innerHTML is faster than per-tile
+  // appendChild and avoids visible flicker on redraw.
+  const sep = 1; // separator gutter in px (renders as inset, not gap)
+  const html = tiles.map(tile => {
+    const textCol = _contrastTextColor(tile.color);
+    const isTiny = tile.w < 70 || tile.h < 44;
+    const isSmall = tile.w < 110 || tile.h < 70;
+    const labelSize = isTiny ? 10 : (isSmall ? 12 : 14);
+    const valueSize = isTiny ? 9 : (isSmall ? 11 : 12);
+    return `
+      <div class="ct-tile"
+           style="left:${tile.x}px;top:${tile.y}px;
+                  width:${Math.max(0, tile.w - sep)}px;
+                  height:${Math.max(0, tile.h - sep)}px;
+                  background:${tile.color};
+                  color:${textCol};"
+           title="${_escapeHTML(tile.label)} · ${_escapeHTML(tile.formatted)}">
+        <div class="ct-tile-inner">
+          <div class="ct-tile-label" style="font-size:${labelSize}px">${_escapeHTML(tile.label)}</div>
+          ${!isTiny ? `<div class="ct-tile-value" style="font-size:${valueSize}px">${_escapeHTML(tile.formatted)}</div>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+
+  // Cancel any pending Plotly draw on this id from earlier (the tracked
+  // closure system might still hold one) so it doesn't paint over us.
+  if (typeof Plotly !== 'undefined' && Plotly.purge) {
+    try { Plotly.purge(el); } catch (_) {}
+  }
+  _bumpToken(el.id);
+  el.innerHTML = html;
+
+  _attachResizeObserver(el);
 }
 
 /**
