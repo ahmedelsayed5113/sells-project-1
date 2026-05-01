@@ -90,10 +90,6 @@ def get_campaign(cid):
             conn.close()
         if not row:
             return _json({"error_code": "not_found", "error": "not_found"}, 404)
-        uid = session.get("user_id")
-        role = session.get("role")
-        if role == "marketing" and row["user_id"] != uid:
-            return _json({"error_code": "forbidden", "error": "forbidden"}, 403)
         return _json(dict(row))
     except Exception as e:
         return _json({"error": str(e)}, 500)
@@ -154,12 +150,9 @@ def update_campaign(cid):
         conn = get_conn()
         try:
             with conn.cursor() as cur:
-                cur.execute("SELECT user_id FROM marketing_campaigns WHERE id = %s", (cid,))
-                row = cur.fetchone()
-                if not row:
+                cur.execute("SELECT id FROM marketing_campaigns WHERE id = %s", (cid,))
+                if not cur.fetchone():
                     return _json({"error_code": "not_found", "error": "not_found"}, 404)
-                if session.get("role") == "marketing" and row[0] != session["user_id"]:
-                    return _json({"error_code": "forbidden", "error": "forbidden"}, 403)
 
                 cur.execute("""
                     UPDATE marketing_campaigns SET
@@ -457,12 +450,9 @@ def delete_campaign(cid):
         conn = get_conn()
         try:
             with conn.cursor() as cur:
-                cur.execute("SELECT user_id FROM marketing_campaigns WHERE id = %s", (cid,))
-                row = cur.fetchone()
-                if not row:
+                cur.execute("SELECT id FROM marketing_campaigns WHERE id = %s", (cid,))
+                if not cur.fetchone():
                     return _json({"error_code": "not_found", "error": "not_found"}, 404)
-                if session.get("role") == "marketing" and row[0] != session["user_id"]:
-                    return _json({"error_code": "forbidden", "error": "forbidden"}, 403)
                 cur.execute("DELETE FROM marketing_campaigns WHERE id = %s", (cid,))
             conn.commit()
         finally:
