@@ -273,6 +273,12 @@ function chartLayout(opts = {}) {
       size: 12,
     },
     margin: { t: 16, r: 24, b: 44, l: 56, ...opts.margin },
+    // Charts are explanatory, not exploratory — zoom/pan add complexity
+    // (accidental scroll-zoom on touchpads, stuck zoom states) without
+    // earning their keep on dashboards. dragmode:false kills canvas
+    // drag-to-zoom; fixedrange on each axis kills axis-level zoom and
+    // double-click-to-reset. Hover tooltips are unaffected.
+    dragmode: false,
     xaxis: {
       gridcolor: CHART_COLORS.grid,
       linecolor: CHART_COLORS.grid,
@@ -281,6 +287,7 @@ function chartLayout(opts = {}) {
       color: CHART_COLORS.textMuted,
       tickfont: { size: 11 },
       automargin: true,
+      fixedrange: true,
       ...opts.xaxis,
     },
     yaxis: {
@@ -291,6 +298,7 @@ function chartLayout(opts = {}) {
       color: CHART_COLORS.textMuted,
       tickfont: { size: 11 },
       automargin: true,
+      fixedrange: true,
       ...opts.yaxis,
     },
     showlegend: opts.showlegend !== false,
@@ -315,13 +323,22 @@ function chartLayout(opts = {}) {
   };
 }
 
-// Default chart config — show modebar on hover (export to PNG, autoscale).
-// drawGauge overrides this since modebar makes no sense on a single indicator.
+// Default chart config — modebar is hidden by default. Zoom/pan are
+// disabled at the layout level (dragmode:false + axis fixedrange) so
+// the only useful modebar button left would be toImage (PNG export);
+// that's not common enough to justify the extra UI noise on every chart.
+// Pages that want it can pass {displayModeBar: 'hover'} per-chart.
 function _chartConfig(overrides = {}) {
   return {
-    displayModeBar: 'hover',
+    displayModeBar: false,
     displaylogo: false,
-    modeBarButtonsToRemove: ['lasso2d', 'select2d', 'autoScale2d'],
+    scrollZoom: false,
+    doubleClick: false,
+    modeBarButtonsToRemove: [
+      'zoom2d', 'pan2d', 'zoomIn2d', 'zoomOut2d',
+      'autoScale2d', 'resetScale2d',
+      'lasso2d', 'select2d',
+    ],
     responsive: true,
     locale: _chartLocale(),
     ...overrides,
@@ -671,6 +688,7 @@ function drawRadarChart(containerId, data, options = {}) {
         linecolor: CHART_COLORS.grid,
         tickfont: { size: 10, color: CHART_COLORS.muted },
         showline: false,
+        fixedrange: true,
       },
       angularaxis: {
         gridcolor: CHART_COLORS.grid,
@@ -1120,12 +1138,15 @@ function drawComboBarLine(containerId, barSeries, lineSeries, xLabels, options =
 
   const layout = chartLayout({
     yaxis: { title: barSeries.name, side: 'left', gridcolor: CHART_COLORS.grid },
+    // The secondary axis isn't covered by chartLayout's default fixedrange,
+    // so set it inline to keep the no-zoom contract consistent here too.
     yaxis2: {
       title: lineSeries.name,
       side: 'right',
       overlaying: 'y',
       showgrid: false,
       tickfont: { size: 11, color: CHART_COLORS.textMuted },
+      fixedrange: true,
     },
     bargap: 0.4,
     legendOrientation: 'h',
