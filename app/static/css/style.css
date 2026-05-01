@@ -3741,30 +3741,70 @@ body:has(.auth-shell) { overflow-x: hidden; }
    tall headline (charts, summary cards) before the actual list use this
    so search/filter inputs remain visible while the user scrolls through
    results. The bar lifts onto a glass surface with a subtle shadow when
-   pinned. */
+   pinned, and CRITICALLY shrinks when stuck so it doesn't eat half the
+   viewport on mobile. The .is-stuck class is toggled by an
+   IntersectionObserver in common.js once the bar pins to the top. */
 .controls-sticky {
   position: sticky;
-  top: 8px;
+  top: 6px;
   z-index: 30;
   background: var(--surface-solid, var(--surface));
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
+  transition: padding 0.18s var(--ease), gap 0.18s var(--ease),
+              box-shadow 0.18s var(--ease), border-radius 0.18s var(--ease);
 }
-.controls-sticky::after {
-  content: "";
-  position: absolute;
-  inset-inline: 12px;
-  bottom: -1px;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--border), transparent);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.18s var(--ease);
+.controls-sticky.is-stuck {
+  box-shadow: var(--shadow-sm);
+  padding: 8px 12px;
+  gap: 8px;
 }
-@supports (selector(:is(.foo))) {
-  /* Reveal the divider only once the bar is pinned — avoids the line
-     showing in normal flow at the top of the page. */
-  .controls-sticky:where(.is-stuck)::after { opacity: 1; }
+/* When stuck, drop the field labels — they're permanent decoration that
+   doubles the bar's height for no information gain once the user knows
+   what each input does. The placeholder text on the search input still
+   carries the hint. */
+.controls-sticky.is-stuck label {
+  display: none;
+}
+.controls-sticky.is-stuck .field {
+  margin-bottom: 0;
+  gap: 0;
+}
+.controls-sticky.is-stuck .field input,
+.controls-sticky.is-stuck .field select,
+.controls-sticky.is-stuck .field button {
+  padding: 6px 10px;
+  font-size: 13px;
+  min-height: 34px;
+}
+.controls-sticky.is-stuck #progress {
+  font-size: 11px !important;
+}
+
+@media (max-width: 720px) {
+  /* On mobile the controls always wrap to multi-line; once stuck we
+     switch to a horizontal scroller so all inputs sit on one row and
+     the bar stays one-line tall regardless of how many filters there
+     are. The user swipes horizontally to reach the right-most filter. */
+  .controls-sticky.is-stuck {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 6px 8px;
+    gap: 6px;
+  }
+  .controls-sticky.is-stuck .field {
+    flex: 0 0 auto;
+    min-width: 0;
+    width: auto;
+  }
+  .controls-sticky.is-stuck #progress,
+  .controls-sticky.is-stuck .spacer {
+    display: none;
+  }
+  /* Search field gets priority width so the user can actually type. */
+  .controls-sticky.is-stuck #searchBox { width: 180px; }
+  .controls-sticky.is-stuck select { width: 110px; }
 }
 
 /* ──────────────────────────────────────────────────────────────────

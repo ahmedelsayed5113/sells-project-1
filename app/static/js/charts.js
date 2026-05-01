@@ -337,12 +337,18 @@ function drawBarChart(containerId, data, options = {}) {
     ? options.xangle
     : (isNarrow ? -35 : 0);
 
+  const barColors = data.colors || PALETTE[0];
+  // Per-bar contrast colour for inside-positioned labels — white on light
+  // mint or pastel teal was unreadable. `insidetextfont.color` accepts an
+  // array, so each bar's label gets the right colour for its own fill.
+  const insideTextColors = _contrastTextColors(barColors);
+
   const trace = {
     type: 'bar',
     x: data.x,
     y: data.y,
     marker: {
-      color: data.colors || PALETTE[0],
+      color: barColors,
       line: { width: 0 },
     },
     text: data.labels || data.y.map(v => typeof v === 'number' ? v.toFixed(1) : v),
@@ -350,7 +356,9 @@ function drawBarChart(containerId, data, options = {}) {
     // prevents the outside label from being clipped at the top of the
     // chart on narrow viewports.
     textposition: isVeryNarrow ? 'inside' : 'auto',
-    textfont: { color: CHART_COLORS.text, size: fontSize, family: _chartFontFamily() },
+    insidetextanchor: 'middle',
+    insidetextfont: { color: insideTextColors, size: fontSize, family: _chartFontFamily(), weight: 700 },
+    outsidetextfont: { color: CHART_COLORS.text, size: fontSize, family: _chartFontFamily(), weight: 600 },
     cliponaxis: false,
     hovertemplate: (options.hovertemplate || '<b>%{x}</b><br>%{y}<extra></extra>'),
   };
@@ -397,13 +405,16 @@ function drawHorizontalBar(containerId, data, options = {}) {
 
   const fontSize = isVeryNarrow ? 10 : (isNarrow ? 11 : 11);
 
+  const barColors = data.colors || PALETTE[0];
+  const insideTextColors = _contrastTextColors(barColors);
+
   const trace = {
     type: 'bar',
     orientation: 'h',
     x: data.x,
     y: data.y,
     marker: {
-      color: data.colors || PALETTE[0],
+      color: barColors,
       line: { width: 0 },
     },
     text: data.labels || data.x.map(v => typeof v === 'number' ? v.toFixed(1) + '%' : v),
@@ -413,7 +424,10 @@ function drawHorizontalBar(containerId, data, options = {}) {
     // never collide with the y-axis tick numbers.
     textposition: isVeryNarrow ? 'inside' : 'auto',
     insidetextanchor: 'end',
-    textfont: { color: CHART_COLORS.text, size: fontSize, family: _chartFontFamily() },
+    // Per-bar inside text colour so labels stay readable on light pastels
+    // (mint, light teal). Outside labels use the surface text colour.
+    insidetextfont: { color: insideTextColors, size: fontSize, family: _chartFontFamily(), weight: 700 },
+    outsidetextfont: { color: CHART_COLORS.text, size: fontSize, family: _chartFontFamily(), weight: 600 },
     cliponaxis: false,
     hovertemplate: '<b>%{y}</b><br>%{x}<extra></extra>',
   };
@@ -741,55 +755,69 @@ function drawTreemap(containerId, data, options = {}) {
         ? window.fmtCompactMoney
         : (v) => (typeof v === 'number' ? v.toLocaleString() : String(v)));
 
-  // Pre-built per-tile text: name + (compact) value on a second line.
-  // Survives crop-to-fit better than Plotly's default templated stacking.
+  // Tile colours (resolved here so we can derive a matching contrast text
+  // colour per tile — light pastels need dark text, deep purples/blues
+  // need white). PALETTE is mutated in place on theme change so the
+  // closure replay picks up new colours.
+  const tileColors = (data.colors && data.colors.length)
+    ? data.colors
+    : labels.map((_, i) => PALETTE[i % PALETTE.length]);
+  const tileTextColors = tileColors.map(_contrastTextColor);
+
+  // Pre-built per-tile text: name on the first line, compact value on the
+  // second. We DON'T wrap the second line in a styled <span> — Plotly's
+  // SVG text renderer accepts a few inline tags but stripping them out
+  // gives Plotly the cleanest input to compute layout with.
   const text = labels.map((lbl, i) => {
     const v = values[i];
     const formatted = useCompact ? valueFormatter(v) : (typeof v === 'number' ? v.toLocaleString() : String(v));
-    return `${lbl}<br><span style="font-size:11px;font-weight:500;opacity:0.92">${formatted}</span>`;
+    return `<b>${lbl}</b><br>${formatted}`;
   });
+
+  // Synthetic root — Plotly treemap with all tiles having empty parents
+  // produced a flat tree with each tile as its own root, which on certain
+  // value distributions left visible empty rectangles in the canvas. A
+  // single hidden root with `branchvalues: 'total'` lets the squarify
+  // algorithm pack ALL tiles into one rectangle that fills the container.
+  const rootId = '__root__';
+  const treeLabels  = [rootId, ...labels];
+  const treeParents = ['',     ...labels.map(() => rootId)];
+  const treeValues  = [values.reduce((a, b) => a + (b || 0), 0), ...values];
+  const treeText    = ['',     ...text];
+  // Root tile gets a transparent fill so it's invisible behind the children
+  // — only the leaves are rendered.
+  const treeMarkerColors = ['rgba(0,0,0,0)', ...tileColors];
+  // Root contrast text doesn't matter (it's empty); use the page text colour.
+  const treeInsideTextColors = [CHART_COLORS.text, ...tileTextColors];
 
   const trace = {
     type: 'treemap',
-    labels: labels,
-    parents: data.parents || labels.map(() => ''),
-    values: values,
-    // 'total' tells Plotly each tile already represents its own absolute
-    // amount — required for flat (parentless) treemaps to size tiles by
-    // their literal values rather than by remainder-after-children math.
+    labels: treeLabels,
+    parents: treeParents,
+    values: treeValues,
+    // 'total' = the root's value already equals the sum of children, so
+    // Plotly should not redistribute. With a real root present this packs
+    // children into the full canvas with no leftover air.
     branchvalues: 'total',
-    text: text,
-    textinfo: 'text',
+    text: treeText,
+    textinfo: 'label+text',
     textposition: 'middle center',
     texttemplate: '%{text}',
-    // Squarified packing, ratio = 1 favours square tiles. NB: `tiling.pad`
-    // is NOT a Plotly treemap property (only sunburst has it) — padding
-    // lives on `marker.pad` below. Putting it here was a no-op AND was
-    // the source of the visible empty rows; without it the squarify
-    // algorithm fills the rectangle with no leftover gap.
     tiling: {
       packing: 'squarify',
       squarifyratio: 1,
     },
-    // Hide the breadcrumb pathbar — there's no hierarchy to navigate, so
-    // the bar just steals vertical space and looks broken when empty.
     pathbar: { visible: false },
     marker: {
-      colors: data.colors || PALETTE,
-      // Thin separator line between tiles instead of padding — keeps the
-      // tiles touching (no visible dark gaps) while still making the
-      // category boundaries obvious.
-      line: { color: CHART_COLORS.bg, width: 2 },
+      colors: treeMarkerColors,
+      // 1px separator instead of 2px — less visual "gap" between tiles
+      // while still making the category boundaries readable.
+      line: { color: CHART_COLORS.bg, width: 1 },
       pad: { t: 0, r: 0, b: 0, l: 0 },
     },
-    textfont: {
-      color: '#ffffff',
-      size: 14,
-      family: _chartFontFamily(),
-    },
     insidetextfont: {
-      color: '#ffffff',
-      size: 14,
+      color: treeInsideTextColors,
+      size: 13,
       family: _chartFontFamily(),
     },
     outsidetextfont: {
@@ -941,6 +969,33 @@ function hexToRgba(hex, alpha = 1) {
   const g = parseInt(m[2], 16);
   const b = parseInt(m[3], 16);
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+// Pick a foreground text colour that stays readable on `bgHex`. Returns
+// near-black for light fills (light teal, light purple, mint, peach) and
+// off-white for dark fills (deep purple, dark blue, etc.). Threshold is
+// tuned to WCAG luminance — values ≥ 0.55 read as "light bg, use dark
+// text", everything else uses light text. Returns CHART_COLORS.text
+// for any input we can't parse so callers always get a usable colour.
+function _contrastTextColor(bgHex) {
+  if (!bgHex) return CHART_COLORS.text;
+  const m = /^#([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(String(bgHex));
+  if (!m) return CHART_COLORS.text;
+  const r = parseInt(m[1], 16) / 255;
+  const g = parseInt(m[2], 16) / 255;
+  const b = parseInt(m[3], 16) / 255;
+  // sRGB → linearised luminance approximation (cheap; full WCAG is overkill
+  // for picking between two text colours).
+  const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return lum > 0.55 ? '#1a1d2c' : '#ffffff';
+}
+
+// Map a colour or array of colours to their per-cell contrast text colour.
+// Bar / treemap drawers feed this into Plotly's `insidetextfont.color`
+// which accepts an array (one colour per data point).
+function _contrastTextColors(bgColors) {
+  if (Array.isArray(bgColors)) return bgColors.map(_contrastTextColor);
+  return _contrastTextColor(bgColors);
 }
 
 // Wrap every public draw function so its call args are remembered against

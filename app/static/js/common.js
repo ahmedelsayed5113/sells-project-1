@@ -495,6 +495,32 @@ function initReveal() {
   document.querySelectorAll(".reveal").forEach(el => io.observe(el));
 }
 
+// Toggles `.is-stuck` on every `.controls-sticky` bar once it pins to the
+// top of the viewport. Uses a 1px sentinel placed just before the bar
+// rather than IntersectionObserver on the bar itself — observing the bar
+// directly would trigger on its full vertical extent and produce a half-
+// stuck state during the transition. The sentinel goes from "in view" to
+// "out of view" the instant scrolling pins the bar, which is exactly the
+// signal we want for shrinking the bar's padding/labels.
+function initStickyShrink() {
+  if (typeof IntersectionObserver === 'undefined') return;
+  document.querySelectorAll('.controls-sticky').forEach(bar => {
+    if (bar.dataset._stickyWired === '1') return;
+    bar.dataset._stickyWired = '1';
+    const sentinel = document.createElement('div');
+    sentinel.style.cssText =
+      'position:absolute;top:0;left:0;width:1px;height:1px;pointer-events:none;visibility:hidden;';
+    bar.parentNode.insertBefore(sentinel, bar);
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        bar.classList.toggle('is-stuck', !entry.isIntersecting);
+      },
+      { threshold: 0, rootMargin: '0px 0px 0px 0px' }
+    );
+    obs.observe(sentinel);
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   initUserDropdown();
   initBurger();
@@ -503,6 +529,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initReveal();
   initPasswordToggles();
   initPassfailToggles();
+  initStickyShrink();
   document.addEventListener("keydown", _onSidebarKeydown);
   document.addEventListener("keydown", _onModalKeydown);
   document.querySelectorAll(".modal-backdrop").forEach(m => {
