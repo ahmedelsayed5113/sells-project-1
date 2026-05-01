@@ -1078,6 +1078,116 @@ html[dir="rtl"] tbody tr.clickable:hover { transform: translateX(-2px); }
   color: var(--text);
 }
 
+/* Finance tile expand-to-breakdown — one panel below the tiles row,
+   populated when any KPI tile is clicked. Active tile gets a brand
+   ring so the user knows which metric is being broken down. */
+.kpi-tile.is-active {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.fin-tile-breakdown {
+  background: var(--surface-solid);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px 18px;
+  margin-bottom: 22px;
+  box-shadow: var(--shadow-xs);
+  animation: fadeIn 0.25s var(--ease) both;
+}
+.fin-tile-breakdown-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.fin-tile-breakdown-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+.fin-tile-breakdown-sub {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+}
+.fin-tile-breakdown-close {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--outline-variant);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s var(--ease), color 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+.fin-tile-breakdown-close:hover {
+  background: var(--tint-soft);
+  color: var(--brand);
+  border-color: var(--brand);
+}
+.fin-tile-breakdown-close .material-symbols-outlined { font-size: 18px; }
+
+.fin-tile-breakdown-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+.fin-tile-breakdown-cell {
+  background: var(--tint-soft);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: background 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+.fin-tile-breakdown-cell:hover {
+  background: var(--tint-soft-strong);
+  border-color: var(--border);
+}
+.fin-tile-breakdown-month {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.fin-tile-breakdown-value {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+/* Peak month — best in the range. Low — worst. Both painted on the
+   border + tint so the cell still reads as a number, not a badge. */
+.fin-tile-breakdown-cell.is-peak {
+  border-color: color-mix(in srgb, var(--accent, #006762) 50%, var(--border));
+  background: color-mix(in srgb, var(--accent, #006762) 10%, var(--tint-soft));
+}
+.fin-tile-breakdown-cell.is-peak .fin-tile-breakdown-value { color: var(--accent, #006762); }
+.fin-tile-breakdown-cell.is-low {
+  border-color: color-mix(in srgb, var(--warning, #c47200) 40%, var(--border));
+  background: color-mix(in srgb, var(--warning, #c47200) 8%, var(--tint-soft));
+}
+
+@media (max-width: 720px) {
+  .fin-tile-breakdown { padding: 12px 12px 14px; }
+  .fin-tile-breakdown-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .fin-tile-breakdown-cell { padding: 10px 12px; }
+  .fin-tile-breakdown-value { font-size: 16px; }
+}
+
 /* Finance report — expandable per-rep activity breakdown.
    Each rep occupies two <tr>s: a clickable summary row and a detail
    row that's hidden until the user expands it. The detail row uses a

@@ -17,8 +17,11 @@
   </div>
 </div>
 
-<!-- Top financial tiles (powered by computed totals) -->
+<!-- Top financial tiles (powered by computed totals).
+     Click any tile to expand a per-month breakdown of that metric in
+     the panel below. -->
 <div class="bento" id="topTotals"></div>
+<div id="finTileBreakdown" class="fin-tile-breakdown" hidden></div>
 
 <div class="controls">
   <div class="field">
@@ -111,8 +114,8 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/charts.js') }}?v=flat47"></script>
-<script src="{{ url_for('static', filename='js/date_range.js') }}?v=flat47"></script>
+<script src="{{ url_for('static', filename='js/charts.js') }}?v=flat48"></script>
+<script src="{{ url_for('static', filename='js/date_range.js') }}?v=flat48"></script>
 <script>
 let reportData = null;
 let trendData = null;
@@ -203,18 +206,26 @@ function renderTopTiles(totals) {
   _wireFinanceTileClicks();
 }
 
-// Action 2 — finance tile click actions. Sort the by-rep table on the chosen
-// dimension and scroll to it. Tile-revenue keeps the default sort (revenue desc).
+// Finance tile click actions:
+//  1. Sort the by-rep table on the chosen dimension (existing behaviour).
+//  2. Toggle an inline per-month breakdown panel just under the tiles
+//     showing that metric's value broken out by date.
+//
+// Clicking the same tile again closes the panel; clicking a different
+// tile switches metrics without closing.
 let _financeSort = 'total_revenue';
+let _activeBreakdownMetric = null;
+
 function _wireFinanceTileClicks() {
-  const wire = (id, sortKey) => {
+  const wire = (id, metricKey) => {
     const el = document.getElementById(id);
     if (!el) return;
     const handler = () => {
-      _financeSort = sortKey;
-      if (reportData) renderTable(reportData.breakdown);
-      const tbl = document.querySelector('.table-wrap');
-      if (tbl) tbl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      _financeSort = metricKey;
+      if (reportData) {
+        renderTable(reportData.breakdown);
+        toggleTileBreakdown(metricKey, el);
+      }
     };
     el.onclick = handler;
     el.onkeydown = e => {
@@ -225,6 +236,97 @@ function _wireFinanceTileClicks() {
   wire('ftile_commission',   'total_commission');
   wire('ftile_deals',        'deals_count');
   wire('ftile_reservations', 'reservations_count');
+}
+
+// Aggregate the per-(user, month) breakdown rows by month and render
+// the active metric as a chronological grid of "month → value" cells.
+// If the same metric is already open, close the panel instead.
+function toggleTileBreakdown(metricKey, sourceTile) {
+  const panel = document.getElementById('finTileBreakdown');
+  if (!panel || !reportData) return;
+
+  // Toggle off if user clicks the active tile.
+  if (_activeBreakdownMetric === metricKey) {
+    panel.hidden = true;
+    panel.innerHTML = '';
+    _activeBreakdownMetric = null;
+    document.querySelectorAll('#topTotals .kpi-tile').forEach(el => el.classList.remove('is-active'));
+    return;
+  }
+
+  _activeBreakdownMetric = metricKey;
+  document.querySelectorAll('#topTotals .kpi-tile').forEach(el => el.classList.remove('is-active'));
+  if (sourceTile) sourceTile.classList.add('is-active');
+
+  // Sum across users per month.
+  const byMonth = new Map();
+  for (const r of reportData.breakdown) {
+    const m = r.month;
+    if (!byMonth.has(m)) {
+      byMonth.set(m, { month: m, total_revenue: 0, total_commission: 0, deals_count: 0, reservations_count: 0 });
+    }
+    const agg = byMonth.get(m);
+    agg.total_revenue      += r.total_revenue || 0;
+    agg.total_commission   += r.total_commission || 0;
+    agg.deals_count        += r.deals_count || 0;
+    agg.reservations_count += r.reservations_count || 0;
+  }
+  const months = [...byMonth.values()].sort((a, b) =>
+    (a.month || "").localeCompare(b.month || "")
+  );
+
+  if (!months.length) {
+    panel.hidden = true;
+    panel.innerHTML = '';
+    _activeBreakdownMetric = null;
+    return;
+  }
+
+  const labels = {
+    total_revenue:      t("fin.total_revenue"),
+    total_commission:   t("fin.total_commission"),
+    deals_count:        t("fin.total_deals"),
+    reservations_count: t("fin.total_reservations"),
+  };
+  const isMoney = metricKey === 'total_revenue' || metricKey === 'total_commission';
+
+  // Best/worst highlighting helps the eye spot peaks at a glance.
+  const values = months.map(m => m[metricKey] || 0);
+  const maxVal = Math.max(...values);
+  const minVal = Math.min(...values);
+
+  const cells = months.map(m => {
+    const v = m[metricKey] || 0;
+    const isPeak = values.length > 1 && v === maxVal && maxVal > 0;
+    const isLow  = values.length > 1 && v === minVal && minVal < maxVal;
+    const cls = isPeak ? 'is-peak' : (isLow ? 'is-low' : '');
+    return `
+      <div class="fin-tile-breakdown-cell ${cls}">
+        <div class="fin-tile-breakdown-month">${escapeHTML(fmtMonth(m.month))}</div>
+        <div class="fin-tile-breakdown-value">${isMoney ? fmtCompactMoney(v) : fmtNum(v)}</div>
+      </div>`;
+  }).join('');
+
+  panel.innerHTML = `
+    <div class="fin-tile-breakdown-head">
+      <div>
+        <div class="fin-tile-breakdown-title">${escapeHTML(labels[metricKey] || metricKey)}</div>
+        <div class="fin-tile-breakdown-sub">${escapeHTML(t('fin.activity_breakdown'))} · ${months.length} ${escapeHTML(t('fin.months_label'))}</div>
+      </div>
+      <button class="fin-tile-breakdown-close" type="button" onclick="closeTileBreakdown()" aria-label="${escapeHTML(t('common.close'))}">
+        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+      </button>
+    </div>
+    <div class="fin-tile-breakdown-grid">${cells}</div>
+  `;
+  panel.hidden = false;
+}
+
+function closeTileBreakdown() {
+  const panel = document.getElementById('finTileBreakdown');
+  if (panel) { panel.hidden = true; panel.innerHTML = ''; }
+  _activeBreakdownMetric = null;
+  document.querySelectorAll('#topTotals .kpi-tile').forEach(el => el.classList.remove('is-active'));
 }
 
 function renderTotals(totals) {
