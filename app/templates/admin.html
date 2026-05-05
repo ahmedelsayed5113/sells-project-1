@@ -46,8 +46,10 @@
     <label data-i18n="admin.filter_status"></label>
     <select id="statusFilter" onchange="render()">
       <option value="all" data-i18n="common.all"></option>
-      <option value="active" data-i18n="common.active"></option>
-      <option value="inactive" data-i18n="common.inactive"></option>
+      <option value="online" data-i18n="common.online"></option>
+      <option value="offline" data-i18n="common.offline"></option>
+      <option value="disabled" data-i18n="common.disabled"></option>
+      <option value="pending" data-i18n="admin.status_pending"></option>
     </select>
   </div>
   <div class="field">
@@ -74,6 +76,19 @@
 
 <div id="chipsRow" class="pf-chips" style="margin-bottom:12px"></div>
 
+<!-- Pending sign-up requests — collapsed by default; expands when there's at
+     least one row so admins notice without it shouting from the top. -->
+<details class="card pending-card" id="pendingSection" hidden style="margin-bottom:16px">
+  <summary class="pending-summary">
+    <span class="material-symbols-outlined" aria-hidden="true">how_to_reg</span>
+    <span class="pending-title" data-i18n="admin.pending_section"></span>
+    <span class="badge badge-pending" id="pendingCount">0</span>
+    <span class="material-symbols-outlined pending-chev" aria-hidden="true">expand_more</span>
+  </summary>
+  <p class="text-muted" style="font-size:12px;margin:6px 0 14px" data-i18n="admin.pending_section_hint"></p>
+  <div id="pendingList"></div>
+</details>
+
 <div class="table-wrap reveal">
   <table>
     <thead><tr>
@@ -81,7 +96,7 @@
       <th data-i18n="admin.role"></th>
       <th data-i18n="filters.team"></th>
       <th data-i18n="admin.contact"></th>
-      <th data-i18n="common.active"></th>
+      <th data-i18n="admin.status"></th>
       <th data-i18n="admin.actions"></th>
     </tr></thead>
     <tbody id="tbody"></tbody>
@@ -213,6 +228,31 @@ let editingId = null;
 
 const ROLES = ["admin","manager","team_leader","marketing","dataentry","sales"];
 
+// Status precedence for the new Online/Offline/Disabled/Pending column.
+// pending (signup awaiting approval) and disabled (admin-blocked) are sticky
+// regardless of last_seen — the user can't actually be using the app.
+function userStatus(u) {
+  if (u.approval_status === "pending") return "pending";
+  if (!u.active) return "disabled";
+  return u.is_online ? "online" : "offline";
+}
+
+const _STATUS_BADGE_META = {
+  online:   { cls: "badge-excellent", icon: "circle",            key: "common.online" },
+  offline:  { cls: "badge-pending",   icon: "circle",            key: "common.offline" },
+  disabled: { cls: "badge-bad",       icon: "block",             key: "common.disabled" },
+  pending:  { cls: "badge-pending",   icon: "hourglass_top",     key: "admin.status_pending" },
+};
+
+function statusBadge(u) {
+  const s = userStatus(u);
+  const m = _STATUS_BADGE_META[s] || _STATUS_BADGE_META.offline;
+  return `<span class="badge ${m.cls}" style="display:inline-flex;align-items:center;gap:4px">
+    <span class="material-symbols-outlined" aria-hidden="true" style="font-size:13px${s==='online'?';color:#10b981':''}">${m.icon}</span>
+    <span>${t(m.key)}</span>
+  </span>`;
+}
+
 function onAdminSearchInput() {
   const sb = document.getElementById("searchBox");
   const clr = document.getElementById("adminSearchClear");
@@ -228,17 +268,94 @@ function clearAdminSearch() {
 
 async function loadUsers() {
   try {
-    const [u, ts] = await Promise.all([
+    const [u, ts, pending] = await Promise.all([
       api("/api/users"),
       teams.length ? Promise.resolve(teams) : api("/api/teams").catch(() => []),
+      api("/api/users/pending").catch(() => []),
     ]);
     users = u;
     teams = ts || [];
+    pendingRequests = pending || [];
     populateTeamFilter();
     renderTilesAndCharts();
+    renderPending();
     render();
   }
   catch (e) { toastError(e); }
+}
+
+let pendingRequests = [];
+
+const _SIGNUP_ROLES = ["sales", "marketing", "team_leader", "dataentry"];
+
+function renderPending() {
+  const section = document.getElementById("pendingSection");
+  const list = document.getElementById("pendingList");
+  const countEl = document.getElementById("pendingCount");
+  if (!section || !list) return;
+  const rows = pendingRequests || [];
+  countEl.textContent = String(rows.length);
+  // Hide the whole card when empty so the admin page doesn't carry a dead
+  // section on it. Auto-expand once at least one request lands so it's
+  // immediately actionable without a click.
+  if (!rows.length) {
+    section.hidden = true;
+    section.open = false;
+    list.innerHTML = "";
+    return;
+  }
+  section.hidden = false;
+  section.open = true;
+  list.innerHTML = rows.map(p => {
+    const initial = escapeHTML((p.full_name || "?")[0]);
+    const roleOpts = _SIGNUP_ROLES
+      .filter(r => canManageRow(r))
+      .map(r => `<option value="${r}"${r === p.role ? " selected" : ""}>${t("role." + r)}</option>`)
+      .join("");
+    const created = p.created_at ? new Date(p.created_at).toLocaleString(getLang() === "ar" ? "ar-EG" : "en-US") : "";
+    return `
+      <div class="pending-row">
+        <div class="row-actor">
+          <div class="avatar avatar-sm">${initial}</div>
+          <div>
+            <div class="row-actor-name">${escapeHTML(p.full_name || "—")}</div>
+            <div class="row-actor-sub">@${escapeHTML(p.username)} · ${escapeHTML(p.email || "")}</div>
+            ${created ? `<div class="row-actor-sub" style="font-size:10px">${escapeHTML(created)}</div>` : ""}
+          </div>
+        </div>
+        <div class="pending-row-controls">
+          <select class="pending-role-select" data-pid="${p.id}" aria-label="${t("admin.role")}">
+            ${roleOpts || `<option value="${p.role}">${t("role." + p.role)}</option>`}
+          </select>
+          <button class="btn btn-sm btn-primary" onclick="approvePending(${p.id})">
+            <span class="material-symbols-outlined" aria-hidden="true">check</span>
+            <span>${t("admin.approve")}</span>
+          </button>
+          <button class="btn btn-sm btn-danger" onclick="rejectPending(${p.id})">
+            <span class="material-symbols-outlined" aria-hidden="true">close</span>
+            <span>${t("admin.reject")}</span>
+          </button>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+async function approvePending(id) {
+  const sel = document.querySelector(`.pending-role-select[data-pid="${id}"]`);
+  const role = sel ? sel.value : null;
+  try {
+    await api(`/api/users/${id}/approve`, { method: "POST", body: { role } });
+    toast(t("admin.approved_toast"), "success");
+    loadUsers();
+  } catch (e) { toastError(e); }
+}
+
+async function rejectPending(id) {
+  try {
+    await api(`/api/users/${id}/reject`, { method: "POST" });
+    toast(t("admin.rejected_toast"), "success");
+    loadUsers();
+  } catch (e) { toastError(e); }
 }
 
 function populateTeamFilter() {
@@ -258,8 +375,10 @@ function populateTeamFilter() {
 
 function renderTilesAndCharts() {
   const total = users.length;
-  const active = users.filter(u => u.active).length;
-  const inactive = total - active;
+  const online   = users.filter(u => userStatus(u) === "online").length;
+  const offline  = users.filter(u => userStatus(u) === "offline").length;
+  const disabled = users.filter(u => userStatus(u) === "disabled").length;
+  const pending  = users.filter(u => userStatus(u) === "pending").length;
   const teamCount = new Set(users.filter(u => u.team_id).map(u => u.team_id)).size;
   const noTeam = users.filter(u => u.team_id == null && (u.role === 'sales' || u.role === 'team_leader')).length;
 
@@ -268,16 +387,16 @@ function renderTilesAndCharts() {
       <div class="kpi-tile-head"><div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">manage_accounts</span></div><div class="kpi-tile-label">${t("admin.title")}</div></div>
       <div class="kpi-tile-value">${total}</div>
     </div>
-    <div class="kpi-tile tile-accent span-3 is-clickable" id="atile_active" data-i18n-aria-label="dash.tile_action_active" tabindex="0" role="button">
-      <div class="kpi-tile-head"><div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">check_circle</span></div><div class="kpi-tile-label">${t("common.active")}</div></div>
-      <div class="kpi-tile-value">${active}</div>
-      <div class="kpi-tile-sub">${total ? Math.round(active/total*100) : 0}%</div>
+    <div class="kpi-tile tile-accent span-3 is-clickable" id="atile_online" data-i18n-aria-label="dash.tile_action_active" tabindex="0" role="button">
+      <div class="kpi-tile-head"><div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">circle</span></div><div class="kpi-tile-label">${t("common.online")}</div></div>
+      <div class="kpi-tile-value">${online}</div>
+      <div class="kpi-tile-sub">${total ? Math.round(online/total*100) : 0}%</div>
     </div>
-    <div class="kpi-tile tile-coral span-3 is-clickable" id="atile_teams" data-i18n-aria-label="dash.tile_action_teams" tabindex="0" role="button">
-      <div class="kpi-tile-head"><div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">groups</span></div><div class="kpi-tile-label">${t("nav.teams")}</div></div>
-      <div class="kpi-tile-value">${teamCount}</div>
+    <div class="kpi-tile tile-warm span-3 is-clickable" id="atile_pending" tabindex="0" role="button">
+      <div class="kpi-tile-head"><div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">hourglass_top</span></div><div class="kpi-tile-label">${t("admin.status_pending")}</div></div>
+      <div class="kpi-tile-value">${pending}</div>
     </div>
-    <div class="kpi-tile tile-warm span-3 is-clickable" id="atile_no_team" data-i18n-aria-label="dash.tile_action_no_team" tabindex="0" role="button">
+    <div class="kpi-tile tile-coral span-3 is-clickable" id="atile_no_team" data-i18n-aria-label="dash.tile_action_no_team" tabindex="0" role="button">
       <div class="kpi-tile-head"><div class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">warning</span></div><div class="kpi-tile-label">${t("filters.no_team")}</div></div>
       <div class="kpi-tile-value">${noTeam}</div>
     </div>
@@ -308,10 +427,12 @@ function renderTilesAndCharts() {
     Charts.drawDonut("chartRoles", { labels: fLabels, values: fValues, colors: fColors }, { centerText: total + "" });
   }
 
-  // Active vs Inactive
+  // Online / Offline / Disabled / Pending split
   const sLabels = [], sValues = [], sColors = [];
-  if (active)   { sLabels.push(t("common.active"));   sValues.push(active);   sColors.push(Charts.COLORS.accent2); }
-  if (inactive) { sLabels.push(t("common.inactive")); sValues.push(inactive); sColors.push(Charts.COLORS.danger2); }
+  if (online)   { sLabels.push(t("common.online"));         sValues.push(online);   sColors.push(Charts.COLORS.accent2); }
+  if (offline)  { sLabels.push(t("common.offline"));        sValues.push(offline);  sColors.push(Charts.COLORS.info); }
+  if (disabled) { sLabels.push(t("common.disabled"));       sValues.push(disabled); sColors.push(Charts.COLORS.danger2); }
+  if (pending)  { sLabels.push(t("admin.status_pending"));  sValues.push(pending);  sColors.push(Charts.COLORS.warning2); }
   if (sValues.length) {
     Charts.drawDonut("chartStatus", { labels: sLabels, values: sValues, colors: sColors }, { centerText: total + "" });
   }
@@ -339,7 +460,13 @@ function renderChips() {
   if (role && role !== "all")
     chips.push(`<span class="pf-chip">${t("admin.role")}: ${escapeHTML(t("role." + role))}<button onclick="clearChip('roleFilter','all')">✕</button></span>`);
   if (status && status !== "all") {
-    const lbl = status === "active" ? t("common.active") : t("common.inactive");
+    const lblMap = {
+      online:   t("common.online"),
+      offline:  t("common.offline"),
+      disabled: t("common.disabled"),
+      pending:  t("admin.status_pending"),
+    };
+    const lbl = lblMap[status] || status;
     chips.push(`<span class="pf-chip">${t("admin.filter_status")}: ${escapeHTML(lbl)}<button onclick="clearChip('statusFilter','all')">✕</button></span>`);
   }
   if (teamVal) {
@@ -363,7 +490,12 @@ function render() {
 
   let rows = [...users];
   if (role !== "all") rows = rows.filter(u => u.role === role);
-  if (status !== "all") rows = rows.filter(u => status === "active" ? u.active : !u.active);
+  if (status !== "all") {
+    rows = rows.filter(u => {
+      const s = userStatus(u);
+      return s === status;
+    });
+  }
   if (teamVal === "none") rows = rows.filter(u => u.team_id == null);
   else if (teamVal) rows = rows.filter(u => String(u.team_id || "") === teamVal);
   if (search) rows = rows.filter(u =>
@@ -413,20 +545,21 @@ function render() {
     <td class="admin-cell-sub">
       ${escapeHTML(u.email || "—")}${u.phone ? "<br>" + escapeHTML(u.phone) : ""}
     </td>
-    <td>${u.active
-      ? '<span class="badge badge-excellent">' + t("common.active") + '</span>'
-      : '<span class="badge badge-pending">' + t("common.inactive") + '</span>'}</td>
+    <td>${statusBadge(u)}</td>
     <td>
       <div class="flex gap-1 admin-row-actions">
-        ${canManageRow(u.role) ? `
-        <button class="btn btn-sm btn-primary" onclick="openEdit(${u.id})">${t("common.edit")}</button>
-        <button class="btn btn-sm" onclick="toggleActive(${u.id}, ${!u.active})">
-          ${u.active ? t("admin.deactivate") : t("admin.activate")}
-        </button>
-        ${u.id !== CURRENT_USER_ID
-          ? `<button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id})">${t("common.delete")}</button>`
-          : ''}
-        ` : `<span class="text-muted" style="font-size:11px">—</span>`}
+        ${canManageRow(u.role) ? (
+          u.approval_status === "pending"
+            ? `<button class="btn btn-sm btn-primary" onclick="approvePending(${u.id})">${t("admin.approve")}</button>
+               <button class="btn btn-sm btn-danger" onclick="rejectPending(${u.id})">${t("admin.reject")}</button>`
+            : `<button class="btn btn-sm btn-primary" onclick="openEdit(${u.id})">${t("common.edit")}</button>
+               <button class="btn btn-sm" onclick="toggleActive(${u.id}, ${!u.active})">
+                 ${u.active ? t("admin.deactivate") : t("admin.activate")}
+               </button>
+               ${u.id !== CURRENT_USER_ID
+                 ? `<button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id})">${t("common.delete")}</button>`
+                 : ''}`
+        ) : `<span class="text-muted" style="font-size:11px">—</span>`}
       </div>
     </td>
   </tr>`).join("");
@@ -648,7 +781,7 @@ async function confirmUserDelete() {
   }
 }
 
-function onLangChange() { renderTilesAndCharts(); render(); }
+function onLangChange() { renderTilesAndCharts(); renderPending(); render(); }
 
 // Action 2 — admin tile click actions.
 function _wireAdminTileClicks() {
@@ -663,14 +796,17 @@ function _wireAdminTileClicks() {
     resetFilters();
     document.querySelector('.table-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
-  wire('atile_active', () => {
-    document.getElementById('statusFilter').value = 'active';
+  wire('atile_online', () => {
+    document.getElementById('statusFilter').value = 'online';
     document.getElementById('roleFilter').value = 'all';
     render();
     document.querySelector('.table-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
-  wire('atile_teams', () => {
-    window.location.href = '/teams';
+  wire('atile_pending', () => {
+    document.getElementById('statusFilter').value = 'pending';
+    document.getElementById('roleFilter').value = 'all';
+    render();
+    document.querySelector('.table-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
   wire('atile_no_team', () => {
     document.getElementById('teamFilter').value = 'none';

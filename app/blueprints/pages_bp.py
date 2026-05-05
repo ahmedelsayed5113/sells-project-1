@@ -23,8 +23,9 @@ def login_page():
 
 @pages_bp.route("/register")
 def register_page():
-    # Self-registration is disabled; accounts are created by the admin only.
-    return redirect("/login")
+    if "user_id" in session:
+        return redirect(role_home(session["role"]))
+    return render_template("register.html")
 
 
 @pages_bp.route("/forgot-password")

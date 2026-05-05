@@ -20,6 +20,11 @@ from app.auth import (
     validate_username,
 )
 from app.database import get_conn
+from app.mailer import (
+    send_mail,
+    signup_approved_email,
+    signup_rejected_email,
+)
 
 log = logging.getLogger(__name__)
 users_bp = Blueprint("users", __name__, url_prefix="/api/users")
@@ -27,7 +32,7 @@ users_bp = Blueprint("users", __name__, url_prefix="/api/users")
 
 def _user_to_dict(row):
     d = dict(row)
-    for k in ("created_at", "updated_at", "last_login"):
+    for k in ("created_at", "updated_at", "last_login", "last_seen"):
         if d.get(k):
             d[k] = d[k].isoformat()
     d.pop("password_hash", None)
@@ -54,12 +59,13 @@ def list_users():
             # team_leader_id/team_leader_name: only meaningful for sales reps
             # (their TL is tm.leader_id). NULL for all other roles.
             q = """SELECT u.id, u.username, u.full_name, u.role, u.email, u.phone,
-                          u.active, u.avatar_url,
+                          u.active, u.avatar_url, u.approval_status,
                           COALESCE(tl.id,   u.team_id) AS team_id,
                           COALESCE(tl.name, tm.name)   AS team_name,
                           CASE WHEN u.role = 'sales' THEN tm.leader_id END AS team_leader_id,
                           CASE WHEN u.role = 'sales' THEN tlu.full_name END AS team_leader_name,
-                          u.created_at, u.updated_at, u.last_login
+                          u.created_at, u.updated_at, u.last_login, u.last_seen,
+                          (u.last_seen IS NOT NULL AND u.last_seen > NOW() - INTERVAL '2 minutes') AS is_online
                    FROM users u
                    LEFT JOIN teams tm ON tm.id        = u.team_id
                    LEFT JOIN teams tl ON tl.leader_id = u.id
@@ -101,7 +107,8 @@ def get_user(user_id):
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute("""
                 SELECT id, username, full_name, role, email, phone, active, avatar_url,
-                       created_at, updated_at, last_login
+                       approval_status, created_at, updated_at, last_login, last_seen,
+                       (last_seen IS NOT NULL AND last_seen > NOW() - INTERVAL '2 minutes') AS is_online
                 FROM users WHERE id = %s
             """, (user_id,))
             row = cur.fetchone()
@@ -335,6 +342,129 @@ def deactivate_user(user_id):
         return jsonify({"ok": True})
     except Exception as e:
         log.error("deactivate_user: %s", e)
+        return error_response("server", 500)
+    finally:
+        if conn:
+            conn.close()
+
+
+@users_bp.route("/pending", methods=["GET"])
+@role_required("admin", "manager")
+def list_pending():
+    """Pending signup requests — surfaced in the admin panel."""
+    conn = None
+    try:
+        conn = get_conn()
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("""
+                SELECT id, username, full_name, email, phone, role, created_at
+                FROM users
+                WHERE approval_status = 'pending'
+                ORDER BY created_at DESC
+            """)
+            rows = [_user_to_dict(r) for r in cur.fetchall()]
+        return jsonify(rows)
+    except Exception as e:
+        log.error("list_pending: %s", e)
+        return error_response("server", 500)
+    finally:
+        if conn:
+            conn.close()
+
+
+@users_bp.route("/<int:user_id>/approve", methods=["POST"])
+@role_required("admin", "manager")
+def approve_user(user_id):
+    """Approve a pending signup. Admin can override the role at approve time
+    via the JSON body's "role" field; default keeps whatever the user picked
+    at signup."""
+    data = request.get_json(silent=True) or {}
+    new_role = (data.get("role") or "").strip() or None
+    if new_role and new_role not in ROLES:
+        return error_response("invalid_role", 400)
+
+    conn = None
+    try:
+        conn = get_conn()
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("""
+                SELECT id, full_name, email, role, approval_status
+                FROM users WHERE id = %s
+            """, (user_id,))
+            row = cur.fetchone()
+            if not row:
+                return error_response("not_found", 404)
+            if row["approval_status"] != "pending":
+                return error_response("not_pending", 400)
+            # Hierarchy guard: actor must be allowed to manage the *resulting* role.
+            target_role = new_role or row["role"]
+            if not can_create_role(session.get("role"), target_role):
+                return error_response("role_not_allowed", 403)
+
+            cur.execute("""
+                UPDATE users SET active = true,
+                                 approval_status = 'approved',
+                                 role = COALESCE(%s, role),
+                                 failed_logins = 0,
+                                 locked_until = NULL,
+                                 updated_at = NOW()
+                WHERE id = %s
+            """, (new_role, user_id))
+        conn.commit()
+        log.info("✅ User %s approved by uid=%s as role=%s",
+                 user_id, session.get("user_id"), target_role)
+
+        if row.get("email"):
+            try:
+                subject, text, html = signup_approved_email(row["full_name"] or "")
+                send_mail(row["email"], subject, text, html)
+            except Exception as e:
+                log.warning("approve email failed for %s: %s", row["email"], e)
+
+        return jsonify({"ok": True})
+    except Exception as e:
+        log.error("approve_user: %s", e)
+        return error_response("server", 500)
+    finally:
+        if conn:
+            conn.close()
+
+
+@users_bp.route("/<int:user_id>/reject", methods=["POST"])
+@role_required("admin", "manager")
+def reject_user(user_id):
+    """Reject a pending signup. Hard-deletes the row — keeping rejected
+    accounts around just clutters the table and they can re-apply if they
+    were rejected by mistake."""
+    conn = None
+    try:
+        conn = get_conn()
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("""
+                SELECT id, full_name, email, role, approval_status
+                FROM users WHERE id = %s
+            """, (user_id,))
+            row = cur.fetchone()
+            if not row:
+                return error_response("not_found", 404)
+            if row["approval_status"] != "pending":
+                return error_response("not_pending", 400)
+            if not can_create_role(session.get("role"), row["role"]):
+                return error_response("role_not_allowed", 403)
+            cur.execute("DELETE FROM users WHERE id = %s", (user_id,))
+        conn.commit()
+        log.info("🚫 User %s rejected by uid=%s", user_id, session.get("user_id"))
+
+        if row.get("email"):
+            try:
+                subject, text, html = signup_rejected_email(row["full_name"] or "")
+                send_mail(row["email"], subject, text, html)
+            except Exception as e:
+                log.warning("reject email failed for %s: %s", row["email"], e)
+
+        return jsonify({"ok": True})
+    except Exception as e:
+        log.error("reject_user: %s", e)
         return error_response("server", 500)
     finally:
         if conn:

@@ -78,11 +78,14 @@
     </h2>
     <div id="ovDynamicHeadline" class="mkt-headline-row"></div>
 
-    <!-- Inline actuals entry card -->
+    <!-- Inline actuals entry card — always open so marketing users can edit existing values without hunting for a toggle. -->
     <div id="actualsInlineCard" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;margin-top:16px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
         <span id="actualsInlineTitle" style="font-weight:600;font-size:15px;color:var(--text)"></span>
-        <button id="actualsToggleBtn" class="btn btn-sm" onclick="toggleActualsForm()" style="display:none"></button>
+        <span id="actualsSavedHint" style="font-size:12px;color:var(--text-muted);display:none">
+          <span class="material-symbols-outlined" aria-hidden="true" style="font-size:14px;vertical-align:-2px">check_circle</span>
+          <span data-i18n="mk.actuals_saved"></span>
+        </span>
       </div>
       <div id="actualsInlineBody">
         <p id="actualsInlineHint" style="font-size:13px;color:var(--text-muted);margin-bottom:14px"></p>
@@ -678,13 +681,17 @@ function renderDynamicBySpend() {
       <div class="mkt-headline-value">${egp(d.actual_spend)}</div>
     </div>`;
 
-  // Inline actuals form
+  // Inline actuals form — always open. Hiding it behind a toggle made
+  // marketing users assume the values weren't editable; the brief was
+  // explicitly "make it dynamic and simple" so the form stays visible
+  // and pre-populated whether actuals exist or not.
   const card     = document.getElementById("actualsInlineCard");
   const titleEl  = document.getElementById("actualsInlineTitle");
   const hintEl   = document.getElementById("actualsInlineHint");
-  const toggleBtn= document.getElementById("actualsToggleBtn");
+  const savedHint= document.getElementById("actualsSavedHint");
   const body     = document.getElementById("actualsInlineBody");
   card.style.display = "";
+  body.style.display = "";
   hintEl.textContent = t("mk.actuals_form_hint");
   document.getElementById("a_spend").value = a.actual_spend  || "";
   document.getElementById("a_leads").value = a.actual_leads  || "";
@@ -692,16 +699,10 @@ function renderDynamicBySpend() {
   document.getElementById("a_meet").value  = a.actual_meetings || "";
   document.getElementById("a_fu").value    = a.actual_follow_ups || "";
   document.getElementById("a_deals").value = a.actual_deals  || "";
-  if (!d.actuals_present) {
-    titleEl.textContent = t("mk.enter_actuals_title");
-    toggleBtn.style.display = "none";
-    body.style.display = "";
-  } else {
-    titleEl.textContent = t("mk.update_actuals_title");
-    toggleBtn.style.display = "";
-    toggleBtn.textContent = t("mk.show_entry_form");
-    body.style.display = "none";
-  }
+  titleEl.textContent = d.actuals_present
+    ? t("mk.update_actuals_title")
+    : t("mk.enter_actuals_title");
+  savedHint.style.display = d.actuals_present ? "" : "none";
 
   if (!d.actuals_present) {
     document.getElementById("ovDynamicVolume").innerHTML =
@@ -963,14 +964,6 @@ function renderFormulas() {
 }
 
 // ─── Actuals entry ──────────────────────────────────────────────────────
-function toggleActualsForm() {
-  const body = document.getElementById("actualsInlineBody");
-  const btn  = document.getElementById("actualsToggleBtn");
-  const open = body.style.display === "none";
-  body.style.display = open ? "" : "none";
-  btn.textContent = open ? t("mk.hide_entry_form") : t("mk.show_entry_form");
-}
-
 async function saveActuals() {
   if (!currentCamp) return;
   const body = {

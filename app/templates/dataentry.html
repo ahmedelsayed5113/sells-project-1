@@ -302,6 +302,7 @@ function startNewEvaluation() {
   // If the card is already in the DOM and visible, scroll directly.
   const existing = document.querySelector(`.card[data-user-id="${repId}"]`);
   if (existing && !existing.classList.contains("is-hidden")) {
+    expandCard(Number(repId));
     existing.scrollIntoView({ behavior: "smooth", block: "start" });
     const first = existing.querySelector("input[type='number']");
     if (first) first.focus();
@@ -492,7 +493,7 @@ function renderCard(user, entry) {
   const ownerAttr = (entry && entry.dataentry_by != null) ? String(entry.dataentry_by) : "";
 
   return `<div class="card de-card" data-user-id="${user.id}" data-status="${status}" data-team="${escapeHTML(teamAttr)}" data-search="${escapeHTML(searchHay)}" data-owner="${escapeHTML(ownerAttr)}">
-    <div class="de-card-head">
+    <div class="de-card-head" role="button" tabindex="0" aria-expanded="false" aria-controls="body-${user.id}" onclick="toggleCard(${user.id})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCard(${user.id});}">
       <div class="row-actor">
         <div class="avatar">${escapeHTML((user.full_name || "?")[0])}</div>
         <div>
@@ -503,36 +504,61 @@ function renderCard(user, entry) {
       <div class="de-card-status">
         ${statusBadges.join("")}
         ${scoreBlock}
+        <span class="de-card-toggle" aria-hidden="true">
+          <span class="material-symbols-outlined">expand_more</span>
+        </span>
       </div>
     </div>
 
-    <form id="form-${user.id}" onsubmit="event.preventDefault();saveEval(${user.id})">
-      <div class="form-section-title de-section-title">${t("sales.numeric_perf")}</div>
-      <div class="field-row four de-field-grid">${numericInputs}</div>
+    <div class="de-card-body" id="body-${user.id}">
+      <form id="form-${user.id}" onsubmit="event.preventDefault();saveEval(${user.id})">
+        <div class="form-section-title de-section-title">${t("sales.numeric_perf")}</div>
+        <div class="field-row four de-field-grid">${numericInputs}</div>
 
-      <div class="form-section-title">${t("tl_eval.personal_eval")}</div>
-      <div class="field-row five de-field-grid">${passfailInputs}</div>
+        <div class="form-section-title">${t("tl_eval.personal_eval")}</div>
+        <div class="field-row five de-field-grid">${passfailInputs}</div>
 
-      <div class="field notes-field">
-        <label for="notes-${user.id}">${t("de.notes")}</label>
-        <textarea id="notes-${user.id}" rows="2" maxlength="400"
-                  placeholder="${t("de.notes_ph")}"
-                  data-char-counter="counter-${user.id}">${escapeHTML(entry && entry.notes ? entry.notes : '')}</textarea>
-        <small id="counter-${user.id}" class="char-count">${(entry && entry.notes ? entry.notes : '').length}/400</small>
-      </div>
+        <div class="field notes-field">
+          <label for="notes-${user.id}">${t("de.notes")}</label>
+          <textarea id="notes-${user.id}" rows="2" maxlength="400"
+                    placeholder="${t("de.notes_ph")}"
+                    data-char-counter="counter-${user.id}">${escapeHTML(entry && entry.notes ? entry.notes : '')}</textarea>
+          <small id="counter-${user.id}" class="char-count">${(entry && entry.notes ? entry.notes : '').length}/400</small>
+        </div>
 
-      <div class="de-warn" id="warn-${user.id}" role="alert" hidden>
-        <span class="material-symbols-outlined" aria-hidden="true">info</span>
-        <span>${t("de.confirm_no_numeric")}</span>
-        <button type="submit" class="de-warn-confirm">${t("de.save_anyway")}</button>
-      </div>
-      <div class="de-card-actions">
-        <span class="de-preview" id="preview-${user.id}" aria-live="polite"></span>
-        <button type="submit" class="btn btn-primary">${t("de.save_eval")}</button>
-        ${entry ? `<button type="button" class="btn" onclick="showDetail(${user.id})">${t("common.details")}</button>` : ''}
-      </div>
-    </form>
+        <div class="de-warn" id="warn-${user.id}" role="alert" hidden>
+          <span class="material-symbols-outlined" aria-hidden="true">info</span>
+          <span>${t("de.confirm_no_numeric")}</span>
+          <button type="submit" class="de-warn-confirm">${t("de.save_anyway")}</button>
+        </div>
+        <div class="de-card-actions">
+          <span class="de-preview" id="preview-${user.id}" aria-live="polite"></span>
+          <button type="submit" class="btn btn-primary">${t("de.save_eval")}</button>
+          ${entry ? `<button type="button" class="btn" onclick="showDetail(${user.id})">${t("common.details")}</button>` : ''}
+        </div>
+      </form>
+    </div>
   </div>`;
+}
+
+// Accordion toggle — keeps focus management for keyboard users.
+function toggleCard(userId) {
+  const card = document.querySelector(`.de-card[data-user-id="${userId}"]`);
+  if (!card) return;
+  const head = card.querySelector(".de-card-head");
+  const expand = !card.classList.contains("is-expanded");
+  card.classList.toggle("is-expanded", expand);
+  if (head) head.setAttribute("aria-expanded", expand ? "true" : "false");
+  if (expand) {
+    // Refresh derived UI now that the form is in the layout flow.
+    if (typeof refreshPreview === "function") refreshPreview(String(userId));
+  }
+}
+
+function expandCard(userId) {
+  const card = document.querySelector(`.de-card[data-user-id="${userId}"]`);
+  if (!card || card.classList.contains("is-expanded")) return;
+  toggleCard(userId);
 }
 
 // Reuse the .status-pill markup from dashboard so eval status reads consistently
@@ -721,6 +747,7 @@ renderAll = function patchedRenderAll() {
   if (_focusAfterReload != null) {
     const next = document.querySelector(`.card[data-user-id="${_focusAfterReload}"]`);
     if (next) {
+      expandCard(_focusAfterReload);
       next.scrollIntoView({ behavior: "smooth", block: "start" });
       const first = next.querySelector("input[type='number']");
       if (first) first.focus();
@@ -742,8 +769,14 @@ function onLangChange() {
   document.querySelectorAll('#list .de-warn:not([hidden])').forEach(w => {
     if (w.id) visibleWarns.add(w.id);
   });
+  const expandedCards = new Set();
+  document.querySelectorAll('#list .de-card.is-expanded').forEach(c => {
+    if (c.dataset.userId) expandedCards.add(Number(c.dataset.userId));
+  });
 
   renderAll();
+
+  expandedCards.forEach(uid => expandCard(uid));
 
   drafts.forEach((value, id) => {
     const el = document.getElementById(id);
@@ -791,7 +824,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('filterStatus').value = 'pending';
     applyFilters();
     const first = document.querySelector('#list .card[data-status="pending"]:not(.is-hidden)');
-    if (first) first.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (first) {
+      const uid = Number(first.dataset.userId);
+      if (uid) expandCard(uid);
+      first.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   };
   tile.addEventListener('click', handler);
   tile.addEventListener('keydown', e => {

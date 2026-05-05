@@ -128,6 +128,130 @@ def _send_smtp(to, subject, text_body, html_body) -> bool:
 
 # ─── Templates ──────────────────────────────────────────────────────────
 
+# ─── Signup approval lifecycle templates ────────────────────────────────
+
+_BRAND_HEADER = """
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="display:inline-flex;align-items:center;gap:10px">
+        <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#45f1bb,#c6bfff);display:inline-flex;align-items:center;justify-content:center;color:#0d0e11;font-weight:700;font-size:20px">A</div>
+        <span style="font-size:20px;font-weight:700;color:#e3e2e6">Ain Real Estate</span>
+      </div>
+    </div>
+"""
+
+
+def _wrap_html(inner: str) -> str:
+    return f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#0d0e11;font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#e3e2e6">
+  <div style="max-width:560px;margin:40px auto;background:#121316;border-radius:16px;padding:32px;border:1px solid rgba(186,202,193,0.12)">
+    {_BRAND_HEADER}
+    {inner}
+  </div>
+</body></html>"""
+
+
+def signup_pending_email(full_name: str) -> tuple:
+    name = full_name or ""
+    subject = "Ain Real Estate — Signup received / تم استلام طلب التسجيل"
+    text = f"""Hi {name},
+
+Thanks for signing up to Ain Real Estate. Your request has been queued for admin approval.
+You'll receive another email once your account is approved (or if it's declined).
+
+— Ain Real Estate team
+
+
+مرحباً {name}،
+
+شكراً لتسجيلك في Ain Real Estate. تم استلام طلبك وسيقوم الأدمين بمراجعته قريباً.
+سنرسل لك بريداً آخر فور الموافقة على حسابك (أو إذا تم رفض الطلب).
+
+— فريق Ain Real Estate
+"""
+    inner = f"""
+    <h2 style="color:#e3e2e6;font-size:18px;margin-bottom:12px">Signup received</h2>
+    <p style="color:#bacac1;font-size:14px;line-height:1.7">
+      Hi <strong>{name}</strong>, your registration is in the queue for admin approval. You'll get another
+      email once your account is approved.
+    </p>
+    <hr style="border:none;border-top:1px solid rgba(186,202,193,0.12);margin:28px 0">
+    <h2 dir="rtl" style="color:#e3e2e6;font-size:18px;margin-bottom:12px;text-align:right">تم استلام طلب التسجيل</h2>
+    <p dir="rtl" style="color:#bacac1;font-size:14px;line-height:1.7;text-align:right">
+      مرحباً <strong>{name}</strong>، طلبك في انتظار موافقة الأدمين. سنرسل لك بريداً آخر فور الموافقة على حسابك.
+    </p>
+    """
+    return subject, text, _wrap_html(inner)
+
+
+def signup_approved_email(full_name: str) -> tuple:
+    name = full_name or ""
+    subject = "Ain Real Estate — Account approved / تم تفعيل الحساب"
+    text = f"""Hi {name},
+
+Good news — your Ain Real Estate account has been approved. You can now sign in
+with the username and password you chose at registration.
+
+— Ain Real Estate team
+
+
+مرحباً {name}،
+
+تمت الموافقة على حسابك في Ain Real Estate. يمكنك تسجيل الدخول الآن باستخدام اسم المستخدم
+وكلمة المرور التي اخترتها عند التسجيل.
+
+— فريق Ain Real Estate
+"""
+    inner = f"""
+    <h2 style="color:#e3e2e6;font-size:18px;margin-bottom:12px">Account approved</h2>
+    <p style="color:#bacac1;font-size:14px;line-height:1.7">
+      Hi <strong>{name}</strong>, your account has been approved. You can sign in now using your
+      registered username and password.
+    </p>
+    <hr style="border:none;border-top:1px solid rgba(186,202,193,0.12);margin:28px 0">
+    <h2 dir="rtl" style="color:#e3e2e6;font-size:18px;margin-bottom:12px;text-align:right">تم تفعيل الحساب</h2>
+    <p dir="rtl" style="color:#bacac1;font-size:14px;line-height:1.7;text-align:right">
+      مرحباً <strong>{name}</strong>، تمت الموافقة على حسابك. يمكنك الآن تسجيل الدخول باستخدام اسم المستخدم
+      وكلمة المرور.
+    </p>
+    """
+    return subject, text, _wrap_html(inner)
+
+
+def signup_rejected_email(full_name: str) -> tuple:
+    name = full_name or ""
+    subject = "Ain Real Estate — Signup request update / تحديث طلب التسجيل"
+    text = f"""Hi {name},
+
+We're sorry — your Ain Real Estate signup request was not approved at this time.
+If you believe this was a mistake, please contact your administrator.
+
+— Ain Real Estate team
+
+
+مرحباً {name}،
+
+نأسف، لم تتم الموافقة على طلب التسجيل في Ain Real Estate. إذا كنت تعتقد أن هذا خطأ،
+يرجى التواصل مع الإدارة.
+
+— فريق Ain Real Estate
+"""
+    inner = f"""
+    <h2 style="color:#e3e2e6;font-size:18px;margin-bottom:12px">Signup request update</h2>
+    <p style="color:#bacac1;font-size:14px;line-height:1.7">
+      Hi <strong>{name}</strong>, your signup request was not approved at this time. Please contact
+      your administrator if you believe this was a mistake.
+    </p>
+    <hr style="border:none;border-top:1px solid rgba(186,202,193,0.12);margin:28px 0">
+    <h2 dir="rtl" style="color:#e3e2e6;font-size:18px;margin-bottom:12px;text-align:right">تحديث طلب التسجيل</h2>
+    <p dir="rtl" style="color:#bacac1;font-size:14px;line-height:1.7;text-align:right">
+      مرحباً <strong>{name}</strong>، لم تتم الموافقة على طلب التسجيل. يرجى التواصل مع الإدارة إذا كنت
+      تعتقد أن هذا خطأ.
+    </p>
+    """
+    return subject, text, _wrap_html(inner)
+
+
 def password_reset_email(full_name: str, reset_url: str, ttl_minutes: int) -> tuple:
     """Returns (subject, text, html) — bilingual (AR + EN) in one email."""
     name = full_name or ""

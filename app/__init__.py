@@ -3,7 +3,7 @@ Flask application factory
 """
 import logging
 import os
-from flask import Flask, request
+from flask import Flask, request, session
 from config import Config
 
 logging.basicConfig(
@@ -68,6 +68,40 @@ def create_app():
         if request.path.startswith("/api/"):
             return jsonify({"error_code": "forbidden", "error": "method_not_allowed"}), 405
         return "Method not allowed", 405
+
+    # Track last-seen for the Online/Offline status. Throttled at the SQL
+    # level via WHERE last_seen < NOW() - INTERVAL '30s' so concurrent
+    # requests don't pile up writes. Skips static assets, the /api/auth/me
+    # poll, and the login endpoints — these would either hammer the row or
+    # fire before a user_id is set.
+    _LAST_SEEN_SKIP = {"/api/auth/me", "/api/auth/login", "/api/auth/logout", "/api/auth/csrf"}
+
+    @app.before_request
+    def _touch_last_seen():
+        if request.endpoint == "static":
+            return
+        if request.path in _LAST_SEEN_SKIP:
+            return
+        uid = session.get("user_id")
+        if not uid:
+            return
+        try:
+            from app.database import get_conn
+            conn = get_conn()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "UPDATE users SET last_seen = NOW() "
+                        "WHERE id = %s AND (last_seen IS NULL OR last_seen < NOW() - INTERVAL '30 seconds')",
+                        (uid,),
+                    )
+                conn.commit()
+            finally:
+                conn.close()
+        except Exception as e:
+            # Never fail a request because heartbeat couldn't write — the
+            # admin status display is non-critical.
+            log.debug("last_seen update failed for uid=%s: %s", uid, e)
 
     # Security-hardening response headers + freshness guarantees on API
     # responses. Without an explicit Cache-Control, browsers can apply a

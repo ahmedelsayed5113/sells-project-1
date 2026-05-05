@@ -2938,6 +2938,55 @@ fieldset.field legend {
   margin-top: 4px;
 }
 
+/* Admin · Pending sign-up requests list */
+.pending-card { padding: 16px; }
+.pending-summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text);
+}
+.pending-summary::-webkit-details-marker { display: none; }
+.pending-title { flex: 1; }
+.pending-chev {
+  transition: transform 0.2s ease;
+  color: var(--text-muted);
+}
+.pending-card[open] .pending-chev { transform: rotate(180deg); }
+.pending-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 8px;
+  background: var(--surface, transparent);
+}
+.pending-row:last-child { margin-bottom: 0; }
+.pending-row-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.pending-role-select {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  min-width: 140px;
+}
+
 /* Data-entry card layout — extracted from inline styles in renderCard */
 .de-card-head {
   display: flex;
@@ -2946,6 +2995,32 @@ fieldset.field legend {
   flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 12px;
+  cursor: pointer;
+  user-select: none;
+  padding: 4px;
+  margin: -4px -4px 8px -4px;
+  border-radius: 8px;
+  transition: background-color 0.15s ease;
+}
+.de-card-head:hover { background: var(--surface-2, rgba(255,255,255,0.03)); }
+.de-card-head:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.de-card-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  color: var(--text-muted);
+  transition: transform 0.2s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+.de-card.is-expanded .de-card-toggle { transform: rotate(180deg); color: var(--brand); }
+.de-card-body { display: none; }
+.de-card.is-expanded .de-card-body { display: block; animation: deExpand 0.2s ease; }
+@keyframes deExpand {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 .de-card-name {
   font-weight: 700;
@@ -3753,6 +3828,40 @@ body:has(.auth-shell) { overflow-x: hidden; }
   transition: color 0.15s;
 }
 .auth-switch a:hover { color: var(--brand-2); text-decoration: underline; }
+.auth-switch-sep { margin: 0 8px; color: var(--text-dim); }
+.auth-switch a + a, .auth-switch a + span { margin-inline-start: 4px; }
+
+/* Sign-up success state — replaces the form once the request is queued. */
+.auth-success {
+  text-align: center;
+  padding: 24px 8px 8px;
+}
+.auth-success-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(69,241,187,0.15), rgba(198,191,255,0.15));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+.auth-success-icon .material-symbols-outlined {
+  font-size: 32px;
+  color: var(--brand);
+}
+.auth-success-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 10px;
+}
+.auth-success-body {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin: 0;
+}
 
 .auth-form-footer {
   text-align: center;

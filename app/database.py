@@ -175,6 +175,9 @@ def init_all_tables():
             cur.execute("CREATE INDEX IF NOT EXISTS idx_users_active ON users(active);")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_users_team_id ON users(team_id);")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_users_team_role_active ON users(team_id, role, active);")
+            # Partial index for the admin "pending requests" listing — the row count
+            # is always small (few open signups), so a partial index keeps it cheap.
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_users_approval_pending ON users(approval_status) WHERE approval_status = 'pending';")
 
             # Case-insensitive UNIQUE constraint on username — the column-level
             # UNIQUE is byte-exact, so without this you could end up with both
@@ -210,6 +213,14 @@ def init_all_tables():
                 # dependency. The auth endpoint caps the size to keep the row
                 # size sane.
                 ("avatar_url", "ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT"),
+                # last_seen powers the Online/Offline status in the admin UI.
+                # Updated on every authenticated request via a before_request
+                # hook in app/__init__.py, throttled to ~once per 30 seconds.
+                ("last_seen", "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP"),
+                # approval_status drives the self-signup → admin-approval flow.
+                # Existing rows default to 'approved'; new self-registrations
+                # are inserted as 'pending' until an admin approves them.
+                ("approval_status", "ALTER TABLE users ADD COLUMN IF NOT EXISTS approval_status VARCHAR(20) DEFAULT 'approved'"),
             ]:
                 if not column_exists(conn, "users", col):
                     cur.execute(ddl)

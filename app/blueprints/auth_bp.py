@@ -29,7 +29,11 @@ from app.auth import (
     verify_password,
 )
 from app.database import get_conn
-from app.mailer import password_reset_email, send_mail
+from app.mailer import (
+    password_reset_email,
+    signup_pending_email,
+    send_mail,
+)
 from config import Config
 
 log = logging.getLogger(__name__)
@@ -73,10 +77,19 @@ def login():
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute("""
                 SELECT id, username, full_name, password_hash, role, active, email,
-                       phone, avatar_url, failed_logins, locked_until
+                       phone, avatar_url, failed_logins, locked_until, approval_status
                 FROM users WHERE LOWER(username) = %s
             """, (username,))
             user = cur.fetchone()
+
+            # If credentials match a pending signup, surface a clear error so
+            # the user knows their request is queued — they otherwise get the
+            # same "invalid_credentials" as a typo, which sends them in circles.
+            # Only revealed on a correct password, so it doesn't leak existence.
+            if (user
+                and user.get("approval_status") == "pending"
+                and verify_password(password, user["password_hash"])):
+                return error_response("account_pending_approval", 403)
 
             # Constant-ish path to avoid username enumeration
             valid = bool(
@@ -145,17 +158,114 @@ def login():
             conn.close()
 
 
-# Self-registration is disabled — accounts are admin-created only. The endpoint
-# is kept as a 404 stub so external callers get a clean, enumeration-safe response.
+# Self-registration is enabled but gated by admin approval. New rows land
+# with active=false, approval_status='pending'. The user can't log in until
+# an admin approves them via /api/users/<id>/approve. Only roles below admin
+# (and below manager) are allowed at signup; admins/managers must still be
+# created from the admin panel.
+_SIGNUP_ALLOWED_ROLES = {"sales", "marketing", "team_leader", "dataentry"}
+
+
 @auth_bp.route("/register", methods=["POST"])
+@rate_limit("register", limit=5, window=600)
 def register():
-    return error_response("not_found", 404)
+    data = request.get_json(silent=True) or {}
+    username = (data.get("username") or "").strip().lower()
+    full_name = (data.get("full_name") or "").strip()
+    password = data.get("password") or ""
+    email = (data.get("email") or "").strip().lower() or None
+    phone = (data.get("phone") or "").strip() or None
+    # Role is a hint to the admin during approval; default to 'sales' if the
+    # client sent something unexpected so we never hand out elevated access.
+    role = (data.get("role") or "sales").strip().lower()
+    if role not in _SIGNUP_ALLOWED_ROLES:
+        role = "sales"
+
+    if not full_name:
+        return error_response("required_fields_missing", 400)
+    if (err := validate_username(username)):
+        return error_response(err, 400)
+    if (err := validate_email(email, required=True)):
+        return error_response(err, 400)
+    if (err := validate_phone(phone, required=False)):
+        return error_response(err, 400)
+    if (err := validate_password(password, username=username)):
+        return error_response(err, 400)
+
+    conn = None
+    try:
+        conn = get_conn()
+        with conn.cursor() as cur:
+            # Username and email must be globally unique. Pending rows count
+            # towards the constraint so a second signup with the same email
+            # while an approval is in flight gets a clear error.
+            cur.execute("SELECT 1 FROM users WHERE LOWER(username) = %s LIMIT 1", (username,))
+            if cur.fetchone():
+                return error_response("username_taken", 409)
+            cur.execute("SELECT 1 FROM users WHERE LOWER(email) = %s LIMIT 1", (email,))
+            if cur.fetchone():
+                return error_response("email_taken", 409)
+            try:
+                cur.execute("""
+                    INSERT INTO users (username, full_name, password_hash, role, email, phone,
+                                       active, approval_status)
+                    VALUES (%s, %s, %s, %s, %s, %s, false, 'pending')
+                    RETURNING id
+                """, (username, full_name[:150], hash_password(password), role, email, phone))
+                new_id = cur.fetchone()[0]
+            except psycopg2.IntegrityError as ie:
+                # Two concurrent signups for the same username/email can race
+                # past the SELECT-then-INSERT check. The unique index catches
+                # it; surface a clean error instead of a 500.
+                conn.rollback()
+                msg = str(ie).lower()
+                if "email" in msg:
+                    return error_response("email_taken", 409)
+                return error_response("username_taken", 409)
+        conn.commit()
+        log.info("📝 Signup pending: %s (%s) id=%s", username, role, new_id)
+
+        # Send the user a confirmation that their request is in the queue.
+        # Best-effort: a missing SMTP config shouldn't block account creation.
+        try:
+            subject, text, html = signup_pending_email(full_name)
+            send_mail(email, subject, text, html)
+        except Exception as e:
+            log.warning("signup_pending_email failed for %s: %s", email, e)
+
+        return jsonify({"ok": True, "pending": True})
+    except Exception as e:
+        log.error("register error: %s", e)
+        return error_response("server", 500)
+    finally:
+        if conn:
+            conn.close()
 
 
 # ─── Session endpoints ─────────────────────────────────────────────────────
 
 @auth_bp.route("/logout", methods=["POST"])
 def logout():
+    # Mark offline immediately by stamping last_seen far enough in the past
+    # that the admin "online within 2 minutes" check fails. Using NULL would
+    # also work, but a timestamp keeps the column queryable for "last seen X
+    # minutes ago" displays.
+    uid = session.get("user_id")
+    if uid:
+        conn = None
+        try:
+            conn = get_conn()
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE users SET last_seen = NOW() - INTERVAL '10 minutes' WHERE id = %s",
+                    (uid,),
+                )
+            conn.commit()
+        except Exception as e:
+            log.debug("logout last_seen reset failed: %s", e)
+        finally:
+            if conn:
+                conn.close()
     session.clear()
     return jsonify({"ok": True})
 
