@@ -350,16 +350,27 @@ async function approvePending(id) {
   const sel = document.querySelector(`.pending-role-select[data-pid="${id}"]`);
   const role = sel ? sel.value : null;
   try {
-    await api(`/api/users/${id}/approve`, { method: "POST", body: { role } });
-    toast(t("admin.approved_toast"), "success");
+    const res = await api(`/api/users/${id}/approve`, { method: "POST", body: { role } });
+    // The backend returns email_sent so we can warn the admin when SMTP /
+    // Resend isn't configured — otherwise the user would silently never get
+    // a confirmation email.
+    if (res && res.email_sent === false) {
+      toast(t("admin.approved_email_unconfigured"), "warn");
+    } else {
+      toast(t("admin.approved_toast"), "success");
+    }
     loadUsers();
   } catch (e) { toastError(e); }
 }
 
 async function rejectPending(id) {
   try {
-    await api(`/api/users/${id}/reject`, { method: "POST" });
-    toast(t("admin.rejected_toast"), "success");
+    const res = await api(`/api/users/${id}/reject`, { method: "POST" });
+    if (res && res.email_sent === false) {
+      toast(t("admin.rejected_email_unconfigured"), "warn");
+    } else {
+      toast(t("admin.rejected_toast"), "success");
+    }
     loadUsers();
   } catch (e) { toastError(e); }
 }

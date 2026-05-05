@@ -1401,6 +1401,7 @@ html[dir="ltr"] .toast.show { transform: translateX(-50%) translateY(0); }
 .toast.show { opacity: 1; }
 .toast.success { border-color: rgba(0, 131, 124, 0.32); color: var(--accent-2); }
 .toast.error   { border-color: rgba(186, 26, 26, 0.32); color: var(--danger); }
+.toast.warn    { border-color: rgba(214, 153, 0, 0.32); color: var(--warning, #d69900); }
 .toast.has-action {
   display: inline-flex;
   align-items: center;
@@ -3751,7 +3752,12 @@ body:has(.auth-shell) { overflow-x: hidden; }
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  /* `safe center` keeps the form vertically centered when it fits, but
+     falls back to flex-start once content would overflow — without the
+     `safe` keyword, `center` pushes the top of a tall form (e.g. signup
+     with errors visible) above the panel's top edge and there's no way
+     to scroll up to it (the body itself is overflow:hidden on desktop). */
+  justify-content: safe center;
   width: 100%;
   max-width: 420px;
   margin: 0 auto;

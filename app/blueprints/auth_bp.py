@@ -202,7 +202,9 @@ def register():
         return error_response(err, 400)
     if (err := validate_email(email, required=True)):
         return error_response(err, 400)
-    if (err := validate_phone(phone, required=False)):
+    # Phone is required on signup so the admin has a second way to reach the
+    # user during approval (email may bounce / land in spam).
+    if (err := validate_phone(phone, required=True)):
         return error_response(err, 400)
     if (err := validate_password(password, username=username)):
         return error_response(err, 400)

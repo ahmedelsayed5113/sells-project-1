@@ -414,14 +414,20 @@ def approve_user(user_id):
         log.info("✅ User %s approved by uid=%s as role=%s",
                  user_id, session.get("user_id"), target_role)
 
+        # Surface email status to the admin UI: send_mail returns False when
+        # neither RESEND_API_KEY nor SMTP credentials are configured, which is
+        # the most common reason approval emails "don't arrive". The frontend
+        # turns this into a warning toast so the admin knows to follow up out
+        # of band instead of silently leaving the user in the dark.
+        email_sent = False
         if row.get("email"):
             try:
                 subject, text, html = signup_approved_email(row["full_name"] or "")
-                send_mail(row["email"], subject, text, html)
+                email_sent = bool(send_mail(row["email"], subject, text, html))
             except Exception as e:
                 log.warning("approve email failed for %s: %s", row["email"], e)
 
-        return jsonify({"ok": True})
+        return jsonify({"ok": True, "email_sent": email_sent, "email": row.get("email")})
     except Exception as e:
         log.error("approve_user: %s", e)
         return error_response("server", 500)
@@ -455,14 +461,15 @@ def reject_user(user_id):
         conn.commit()
         log.info("🚫 User %s rejected by uid=%s", user_id, session.get("user_id"))
 
+        email_sent = False
         if row.get("email"):
             try:
                 subject, text, html = signup_rejected_email(row["full_name"] or "")
-                send_mail(row["email"], subject, text, html)
+                email_sent = bool(send_mail(row["email"], subject, text, html))
             except Exception as e:
                 log.warning("reject email failed for %s: %s", row["email"], e)
 
-        return jsonify({"ok": True})
+        return jsonify({"ok": True, "email_sent": email_sent, "email": row.get("email")})
     except Exception as e:
         log.error("reject_user: %s", e)
         return error_response("server", 500)

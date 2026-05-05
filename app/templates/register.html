@@ -67,7 +67,7 @@
           <label for="full_name" data-i18n="auth.full_name"></label>
           <div class="auth-input-wrap">
             <span class="material-symbols-outlined auth-input-icon" aria-hidden="true">badge</span>
-            <input type="text" id="full_name" maxlength="150" required>
+            <input type="text" id="full_name" maxlength="150" required autocomplete="name" data-i18n-placeholder="auth.full_name_ph">
           </div>
         </div>
 
@@ -84,18 +84,15 @@
           <label for="email" data-i18n="auth.email"></label>
           <div class="auth-input-wrap">
             <span class="material-symbols-outlined auth-input-icon" aria-hidden="true">mail</span>
-            <input type="email" id="email" maxlength="150" required autocomplete="email">
+            <input type="email" id="email" maxlength="150" required autocomplete="email" data-i18n-placeholder="auth.email_placeholder">
           </div>
         </div>
 
         <div class="field">
-          <label for="phone">
-            <span data-i18n="auth.phone"></span>
-            <small data-i18n="common.optional"></small>
-          </label>
+          <label for="phone" data-i18n="auth.phone"></label>
           <div class="auth-input-wrap">
             <span class="material-symbols-outlined auth-input-icon" aria-hidden="true">call</span>
-            <input type="tel" id="phone" maxlength="20" autocomplete="tel">
+            <input type="tel" id="phone" maxlength="20" required autocomplete="tel" data-i18n-placeholder="auth.phone_placeholder">
           </div>
         </div>
 
@@ -114,7 +111,7 @@
           <label for="password" data-i18n="auth.password"></label>
           <div class="auth-input-wrap">
             <span class="material-symbols-outlined auth-input-icon" aria-hidden="true">lock</span>
-            <input type="password" id="password" minlength="8" maxlength="128" required autocomplete="new-password">
+            <input type="password" id="password" minlength="8" maxlength="128" required autocomplete="new-password" data-i18n-placeholder="auth.password_ph">
             <button type="button" class="pw-toggle pw-toggle-flush" data-target="password" data-i18n-aria-label="common.show_password">
               <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
             </button>
@@ -123,7 +120,19 @@
             <li data-rule="length"><span class="material-symbols-outlined" aria-hidden="true">radio_button_unchecked</span><span data-i18n="profile.rule_length"></span></li>
             <li data-rule="letter"><span class="material-symbols-outlined" aria-hidden="true">radio_button_unchecked</span><span data-i18n="profile.rule_letter"></span></li>
             <li data-rule="digit"><span class="material-symbols-outlined" aria-hidden="true">radio_button_unchecked</span><span data-i18n="profile.rule_digit"></span></li>
+            <li data-rule="match"><span class="material-symbols-outlined" aria-hidden="true">radio_button_unchecked</span><span data-i18n="auth.rule_match"></span></li>
           </ul>
+        </div>
+
+        <div class="field">
+          <label for="password_confirm" data-i18n="auth.confirm_password"></label>
+          <div class="auth-input-wrap">
+            <span class="material-symbols-outlined auth-input-icon" aria-hidden="true">lock</span>
+            <input type="password" id="password_confirm" minlength="8" maxlength="128" required autocomplete="new-password" data-i18n-placeholder="auth.password_confirm_ph">
+            <button type="button" class="pw-toggle pw-toggle-flush" data-target="password_confirm" data-i18n-aria-label="common.show_password">
+              <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+            </button>
+          </div>
         </div>
 
         <button type="submit" class="btn btn-primary btn-full auth-submit" id="registerBtn" data-i18n="auth.signup_btn"></button>
@@ -148,6 +157,16 @@ const errorMsg = document.getElementById("errorMsg");
 const form = document.getElementById("registerForm");
 const btn = document.getElementById("registerBtn");
 const pw = document.getElementById("password");
+const pwConfirm = document.getElementById("password_confirm");
+
+// Always anchor any error/success at the top of the panel so the user can
+// see what happened without having to scroll up. Without this, a long form
+// can push the message below the fold.
+function _showError(text) {
+  errorMsg.textContent = text;
+  errorMsg.classList.add("show");
+  errorMsg.scrollIntoView({ behavior: "smooth", block: "center" });
+}
 
 // Live password rule indicator — same shape as admin/profile pages so users
 // see exactly which rule is missing without a round-trip to the server.
@@ -157,16 +176,18 @@ function refreshPwRules() {
     length: v.length >= 8,
     letter: /[A-Za-z]/.test(v),
     digit:  /\d/.test(v),
+    match:  v.length > 0 && pwConfirm.value === v,
   };
   document.querySelectorAll("#pwRules li").forEach(li => {
     const r = li.getAttribute("data-rule");
-    const passed = rules[r];
+    const passed = !!rules[r];
     li.classList.toggle("passed", passed);
     const icon = li.querySelector(".material-symbols-outlined");
     if (icon) icon.textContent = passed ? "check_circle" : "radio_button_unchecked";
   });
 }
 pw.addEventListener("input", refreshPwRules);
+pwConfirm.addEventListener("input", refreshPwRules);
 
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -180,22 +201,31 @@ form.addEventListener("submit", async (e) => {
     role:      document.getElementById("role").value,
     password:  pw.value,
   };
+  const pwConfirmVal = pwConfirm.value;
 
-  if (!body.full_name || !body.username || !body.email || !body.password) {
-    errorMsg.textContent = t("errors.required_fields_missing");
-    errorMsg.classList.add("show"); return;
+  if (!body.full_name || !body.username || !body.email || !body.phone || !body.password) {
+    _showError(t("errors.required_fields_missing"));
+    return;
   }
   if (!/^[a-z0-9_.]{3,50}$/.test(body.username)) {
-    errorMsg.textContent = t("errors.username_too_short");
-    errorMsg.classList.add("show"); return;
+    _showError(t("errors.username_too_short"));
+    return;
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) {
-    errorMsg.textContent = t("errors.invalid_email");
-    errorMsg.classList.add("show"); return;
+    _showError(t("errors.invalid_email"));
+    return;
+  }
+  if (!/^\+?[0-9][0-9\s\-]{6,19}$/.test(body.phone)) {
+    _showError(t("errors.invalid_phone"));
+    return;
   }
   if (body.password.length < 8 || !/[A-Za-z]/.test(body.password) || !/\d/.test(body.password)) {
-    errorMsg.textContent = t("errors.weak_password");
-    errorMsg.classList.add("show"); return;
+    _showError(t("errors.weak_password"));
+    return;
+  }
+  if (body.password !== pwConfirmVal) {
+    _showError(t("errors.password_mismatch"));
+    return;
   }
 
   btn.disabled = true;
@@ -209,9 +239,9 @@ form.addEventListener("submit", async (e) => {
     form.hidden = true;
     document.getElementById("successPanel").hidden = false;
     applyLang(true);
+    document.getElementById("successPanel").scrollIntoView({ behavior: "smooth", block: "center" });
   } catch (err) {
-    errorMsg.textContent = tError(err);
-    errorMsg.classList.add("show");
+    _showError(tError(err));
     btn.disabled = false;
     btn.textContent = prev;
   }
