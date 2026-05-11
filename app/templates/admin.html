@@ -14,17 +14,6 @@
   <button class="btn btn-primary" onclick="openNew()" data-i18n="admin.add_user"></button>
 </div>
 
-<!-- Persistent reminder when outbound email isn't configured. Hidden until
-     /api/util/mailer-status confirms it's missing. Reset / approval / signup
-     emails silently no-op without it, so the admin needs to see it on every
-     page load until SMTP / Resend env vars are set. -->
-<div class="mailer-warning" id="mailerWarning" hidden>
-  <span class="material-symbols-outlined" aria-hidden="true">mark_email_unread</span>
-  <div>
-    <div class="mailer-warning-title" data-i18n="admin.mailer_warn_title"></div>
-    <div class="mailer-warning-body" data-i18n="admin.mailer_warn_body"></div>
-  </div>
-</div>
 
 <!-- Top tiles -->
 <div class="bento" id="adminTiles"></div>
@@ -284,14 +273,6 @@ function clearAdminSearch() {
   onAdminSearchInput();
 }
 
-async function _checkMailerStatus() {
-  try {
-    const r = await api("/api/util/mailer-status");
-    const banner = document.getElementById("mailerWarning");
-    if (banner) banner.hidden = !!(r && r.configured);
-  } catch (_) { /* non-blocking; leave banner hidden */ }
-}
-
 async function loadUsers() {
   try {
     const [u, ts, pending] = await Promise.all([
@@ -299,7 +280,6 @@ async function loadUsers() {
       teams.length ? Promise.resolve(teams) : api("/api/teams").catch(() => []),
       api("/api/users/pending").catch(() => []),
     ]);
-    _checkMailerStatus();
     users = u;
     teams = ts || [];
     pendingRequests = pending || [];
