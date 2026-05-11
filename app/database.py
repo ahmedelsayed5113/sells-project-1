@@ -591,7 +591,143 @@ def init_all_tables():
                         cur.execute(f"CREATE INDEX IF NOT EXISTS {idx} ON units({col});")
                 conn.commit()
 
-        log.info("✅ All tables ensured (users, kpi_entries, salary_config, payroll, hr_records, teams)")
+            # ═══ CRM REPORT INGESTION ════════════════════════════════════════
+            # Tables for the Excel-CRM upload pipeline (P1a: data layer +
+            # parser + dedup; KPI recalc and lead_assignments land in P1b/P2).
+            #
+            # FK target is `marketing_campaigns(id)` — the existing
+            # campaigns-style table — not a fictional `campaigns` table.
+            # Mobile is stored normalized (see app/crm_logic.normalize_mobile).
+            # Stage is stored BOTH raw and normalized so we never lose what
+            # the CRM actually wrote, and the normalized column is what KPIs
+            # roll up on. `event_hash` is UNIQUE so re-uploading the same
+            # sheet is idempotent — duplicates fall through ON CONFLICT.
+            with conn.cursor() as cur:
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS crm_report_uploads (
+                        id                    SERIAL PRIMARY KEY,
+                        campaign_id           INTEGER NOT NULL REFERENCES marketing_campaigns(id) ON DELETE CASCADE,
+                        file_name             TEXT,
+                        uploaded_by           INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                        status                VARCHAR(20) DEFAULT 'PENDING',
+                        total_rows            INTEGER DEFAULT 0,
+                        total_leads           INTEGER DEFAULT 0,
+                        total_events          INTEGER DEFAULT 0,
+                        new_events            INTEGER DEFAULT 0,
+                        duplicate_events      INTEGER DEFAULT 0,
+                        unmatched_sales_reps  JSONB DEFAULT '[]'::jsonb,
+                        unmatched_stages      JSONB DEFAULT '[]'::jsonb,
+                        warnings              JSONB DEFAULT '[]'::jsonb,
+                        error_message         TEXT,
+                        is_voided             BOOLEAN DEFAULT FALSE,
+                        created_at            TIMESTAMP DEFAULT NOW(),
+                        processed_at          TIMESTAMP
+                    );
+                """)
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_crm_uploads_campaign "
+                    "ON crm_report_uploads(campaign_id, created_at DESC);"
+                )
+
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS leads (
+                        id          SERIAL PRIMARY KEY,
+                        campaign_id INTEGER NOT NULL REFERENCES marketing_campaigns(id) ON DELETE CASCADE,
+                        client_name TEXT,
+                        mobile      TEXT NOT NULL,
+                        created_at  TIMESTAMP DEFAULT NOW(),
+                        updated_at  TIMESTAMP DEFAULT NOW(),
+                        UNIQUE (campaign_id, mobile)
+                    );
+                """)
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_leads_campaign_mobile "
+                    "ON leads(campaign_id, mobile);"
+                )
+
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS lead_events (
+                        id                   SERIAL PRIMARY KEY,
+                        lead_id              INTEGER NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+                        campaign_id          INTEGER NOT NULL REFERENCES marketing_campaigns(id) ON DELETE CASCADE,
+                        sales_user_id        INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                        raw_sales_rep_name   TEXT,
+                        raw_stage            TEXT,
+                        normalized_stage     VARCHAR(40),
+                        follow_date          TIMESTAMP,
+                        comment              TEXT,
+                        source_upload_id     INTEGER REFERENCES crm_report_uploads(id) ON DELETE SET NULL,
+                        source_row_number    INTEGER,
+                        event_hash           VARCHAR(64) UNIQUE,
+                        is_voided            BOOLEAN DEFAULT FALSE,
+                        created_at           TIMESTAMP DEFAULT NOW()
+                    );
+                """)
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_lead_events_lead_date ON lead_events(lead_id, follow_date);")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_lead_events_campaign ON lead_events(campaign_id);")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_lead_events_sales_user ON lead_events(sales_user_id);")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_lead_events_normalized_stage ON lead_events(normalized_stage);")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_lead_events_follow_date ON lead_events(follow_date);")
+
+                # campaign_id NULL = global mapping (applies to every campaign
+                # unless an override exists). Per-campaign rows take precedence
+                # — see crm_logic.normalize_stage() for the lookup order.
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS stage_mappings (
+                        id                SERIAL PRIMARY KEY,
+                        campaign_id       INTEGER REFERENCES marketing_campaigns(id) ON DELETE CASCADE,
+                        raw_stage         TEXT NOT NULL,
+                        normalized_stage  VARCHAR(40) NOT NULL,
+                        created_by        INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                        created_at        TIMESTAMP DEFAULT NOW()
+                    );
+                """)
+                # UNIQUE (campaign_id, raw_stage) can't be a plain table-level
+                # constraint because campaign_id is NULL for globals and NULL
+                # values don't compare equal in Postgres. Two partial unique
+                # indexes give us the constraint we actually want.
+                cur.execute("""
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_stage_mappings_camp_uniq
+                    ON stage_mappings(campaign_id, LOWER(TRIM(raw_stage)))
+                    WHERE campaign_id IS NOT NULL;
+                """)
+                cur.execute("""
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_stage_mappings_global_uniq
+                    ON stage_mappings(LOWER(TRIM(raw_stage)))
+                    WHERE campaign_id IS NULL;
+                """)
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_stage_mappings_lookup "
+                    "ON stage_mappings(campaign_id, raw_stage);"
+                )
+
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS sales_rep_mappings (
+                        id             SERIAL PRIMARY KEY,
+                        campaign_id    INTEGER REFERENCES marketing_campaigns(id) ON DELETE CASCADE,
+                        raw_name       TEXT NOT NULL,
+                        sales_user_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                        created_by     INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                        created_at     TIMESTAMP DEFAULT NOW()
+                    );
+                """)
+                cur.execute("""
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_sales_rep_mappings_camp_uniq
+                    ON sales_rep_mappings(campaign_id, LOWER(TRIM(raw_name)))
+                    WHERE campaign_id IS NOT NULL;
+                """)
+                cur.execute("""
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_sales_rep_mappings_global_uniq
+                    ON sales_rep_mappings(LOWER(TRIM(raw_name)))
+                    WHERE campaign_id IS NULL;
+                """)
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_sales_rep_mappings_lookup "
+                    "ON sales_rep_mappings(campaign_id, raw_name);"
+                )
+                conn.commit()
+
+        log.info("✅ All tables ensured (users, kpi_entries, salary_config, payroll, hr_records, teams, crm_ingestion)")
 
     except Exception as e:
         log.error(f"❌ DB init error: {e}")

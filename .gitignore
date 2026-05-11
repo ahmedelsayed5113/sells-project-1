@@ -14,6 +14,11 @@ env/
 .env.local
 .env.*.local
 
+# One-off local scripts that hold API keys / experimental code.
+# Anything you stage here must move to a properly env-driven module
+# under app/ first.
+/script.py
+
 # Logs
 *.log
 sync_log.txt

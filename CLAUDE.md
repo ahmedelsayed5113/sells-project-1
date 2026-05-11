@@ -50,6 +50,7 @@ Default first-run admin: `admin / admin123` (override via `DEFAULT_ADMIN_*` env 
 | `/api/teams` | `teams_bp.py` | team CRUD + membership |
 | `/api/finance` | `finance_bp.py` | revenue/commission projections |
 | `/api/marketing` | `marketing_bp.py` | campaign tracking |
+| `/api/util` | `util_bp.py` | small helpers consumed by the SPA (server `today`, mailer-configured flag) |
 | `/api` (units, stats, sync) | `propfinder_bp.py` | PropFinder unit listing + manual sync trigger |
 
 ### Roles and home routing
@@ -79,6 +80,22 @@ When the KPI catalog changes, edit only `kpi_logic.py`; the dashboard, data-entr
 - Password hashes: PBKDF2-SHA256 via Werkzeug. Legacy `sha256(password + 'ain_kpi_2026_salt')` hashes still verify and are upgraded on next login (`needs_rehash`).
 - CSRF: double-submit token. Frontend `app/static/js/common.js#api()` fetches `/api/auth/me` once to learn the token, then includes it as `X-CSRF-Token` on every non-GET. Server enforces with `@csrf_protect`. On 403/`forbidden`, the client clears the cached token and refetches.
 - Rate limit: `@rate_limit(name, limit, window)` from `app/auth.py` — in-memory only, fine for single-worker deploys.
+- **Signup approval flow.** `/api/auth/register` lands new rows with `active=false, approval_status='pending'` and emails the requester. Admin lists pending at `GET /api/users/pending` and acts via `POST /api/users/<id>/approve` (optionally rewriting the role) or `/reject` (hard-delete). Both send the recipient a transactional email; the response carries `email_sent` so the admin UI can warn when the mailer isn't configured. Login of a pending account is rejected with `account_pending_approval` (revealed only on a correct password to avoid enumeration).
+- **Online/offline.** A `before_request` hook in `app/__init__.py` stamps `users.last_seen = NOW()` once every ~30s for authenticated requests. The admin user listing derives `is_online = last_seen > NOW() - INTERVAL '2 minutes'`. Logout sets `last_seen` back 10 minutes so the user reads offline immediately.
+- **Avatar uploads.** Stored inline in `users.avatar_url` as a base64 data URL (`data:image/png;base64,...`) — avoids needing S3 on Railway's ephemeral filesystem. The client resizes to 256×256 before POSTing; server validates the MIME and caps at 200 KB after decode. The data URL is intentionally **not** mirrored into the cookie session (a fat avatar blows past the ~4 KB cookie cap and silently drops the Set-Cookie). `current_user()` fetches it per request and caches via `flask.g`.
+
+### Transactional mail (`app/mailer.py`)
+- Two backends: Resend HTTPS API (preferred — works where outbound SMTP is firewalled like Railway), or `smtplib` fallback. `send_mail()` picks based on which env vars are set; if neither is configured it logs a warning and returns `False` without raising, so dev keeps working.
+- `mailer_is_configured()` is surfaced via `/api/util/mailer-status` and powers the persistent "mailer not configured" banner in `/admin`.
+- Four templates: `signup_pending_email`, `signup_approved_email`, `signup_rejected_email`, `password_reset_email`. Each takes a `theme="light"|"dark"` kwarg and renders the shell from `_palette(theme)` — keep both palettes in mind when adding a new template. Shared chrome is in helpers (`_wrap_html`, `_brand_header`, `_footer`, `_status_card`, `_cta_button`, `_info_card`).
+- All recipient-facing copy is English-only inside emails (we drive theming, not language, per recipient).
+
+### User preferences (theme + language)
+- `users.preferred_theme` (`light`/`dark`) and `preferred_lang` (`ar`/`en`) are the source of truth for the user's display identity across the app **and** outbound emails. Seeded at signup from the body of `/api/auth/register` (the form sends the current screen's theme/lang) and rotated on every toggle while authenticated.
+- `POST /api/auth/preferences` `{theme?, lang?}` persists from the client. Called by a debounced `_pushPreference()` in `common.js` whenever `setTheme()` / `setLang()` fires — anonymous toggles fail silently and stay local.
+- `/api/auth/me` returns `preferred_theme`/`preferred_lang`. `_fetchCsrf()` adopts them into localStorage when this device is out of sync (cross-device).
+- Email send sites (`forgot_password`, signup approve/reject) pass the user's `preferred_theme` to the mailer. `forgot_password` also appends `&theme=...&lang=...` to the reset URL so the page the link opens in matches the email — even on a fresh device with no localStorage.
+- `base.html` head scripts honour `?theme=` and `?lang=` query params *before* first paint and persist them to localStorage. That's what makes email links open flash-free in the correct skin.
 
 ### Master V sync
 `app/sync_service.py:start_sync_scheduler()` spawns a daemon thread that runs `run_sync()` 15s after boot then every 14 days. The job iterates `PLACES` (city → Master V id), pulls compounds, flattens unit details, and upserts into the `units` table. `sync_status` (module-level dict) backs `/api/sync/status`. **Always set `DISABLE_SYNC=true` for local development** — the sync hits a real API and takes minutes.
@@ -89,7 +106,7 @@ When the KPI catalog changes, edit only `kpi_logic.py`; the dashboard, data-entr
 - All copy is keyed via `data-i18n="namespace.key"`. Strings live in `app/static/js/i18n.js` (`I18N.ar`/`I18N.en`). `applyLang()` runs on `DOMContentLoaded` and on every language toggle. Pages can implement `function onLangChange(lang)` to re-render dynamic content. Both AR and EN keys must be added; falls back to AR then to the key itself.
 - RTL is the default; `dir` and `lang` are set on `<html>` before the body renders to avoid Arabic flash.
 - Charts: only `Plotly` plus the helpers in `app/static/js/charts.js` (`drawBarChart`, `drawHorizontalBar`, `drawDonut`, `drawLineChart`, `drawAreaChart`, `drawGauge`, `drawRadarChart`, `drawStackedBar`, `drawGroupedBar`, `drawHeatmap`, `drawTreemap`, `drawFunnel`, `drawScatter`, `drawComboBarLine`). Chart calls funnel through `_waitForPlotly()` so it's safe to call them before the Plotly CDN loads.
-- Cache busting: `style.css` is requested with `?v=glass2` from `base.html`. Bump that token whenever a CSS change must invalidate browser caches.
+- Cache busting: `style.css`, `i18n.js`, and `common.js` are all requested with the same `?v=` token from `base.html` (currently `flat56`). Bump that token on every commit that touches CSS or those JS files so browsers refetch — `git log --oneline -- app/templates/base.html` shows the cadence.
 
 ### Design system
 `app/static/css/style.css` is hand-written (no Tailwind/build). Conventions:

@@ -35,6 +35,7 @@ def create_app():
     from app.blueprints.teams_bp import teams_bp
     from app.blueprints.marketing_bp import marketing_bp
     from app.blueprints.util_bp import util_bp
+    from app.blueprints.crm_bp import crm_bp
 
     app.register_blueprint(pages_bp)
     app.register_blueprint(auth_bp)
@@ -45,6 +46,7 @@ def create_app():
     app.register_blueprint(teams_bp)
     app.register_blueprint(marketing_bp)
     app.register_blueprint(util_bp)
+    app.register_blueprint(crm_bp)
 
     # Error handlers — API paths get structured JSON, browser gets a friendly page
     @app.errorhandler(404)
