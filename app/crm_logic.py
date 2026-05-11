@@ -1194,3 +1194,163 @@ def _json_dumps_safe(obj) -> str:
     psycopg2 (used elsewhere)."""
     import json
     return json.dumps(obj, sort_keys=True, ensure_ascii=False)
+
+
+# ═══ Reporting helpers (P4) ═════════════════════════════════════════════
+
+def _response_rate_pct(total: int, no_answer: int) -> float:
+    """Percent of attempts that landed on something other than NO_ANSWER.
+
+    `total` is the count of events (or unique leads, depending on caller)
+    — both use the same shape. We round to one decimal so the value
+    survives a JSON round-trip without ".0000000004"-style drift.
+
+    Edge case: total=0 → 0.0 (not NaN — caller renders "—" if it wants
+    to distinguish "no data" from "0%"). negatives clamp to 0 since they
+    can't happen in well-formed input but a stray bug shouldn't produce
+    a 700% rate either.
+    """
+    if total is None or total <= 0:
+        return 0.0
+    answered = max(0, total - max(0, no_answer or 0))
+    return round((answered / total) * 100.0, 1)
+
+
+# ═══ Retroactive mapping application (P4) ═══════════════════════════════
+#
+# When an admin adds or removes a stage/sales-rep mapping, the historical
+# events in lead_events keep the value they were ingested with. These
+# helpers re-derive that value against the current mappings table and
+# UPDATE the affected rows in place, returning the campaign_ids that
+# need a full recalc afterwards.
+#
+# Design notes:
+#   - The helpers don't know whether they were called for an ADD or a
+#     DELETE. They just re-derive — which is correct in both directions
+#     because normalize_stage / match_sales_user read the live mappings
+#     table.
+#   - For stage: we update normalized_stage. is_voided rows are skipped.
+#   - For sales-rep: we update sales_user_id. Skipping is_voided too.
+#   - Callers are responsible for committing the mapping row change
+#     BEFORE calling these (so the live re-derivation sees the new
+#     state) and for running recalc_after_upload per returned campaign.
+
+
+def apply_stage_mapping_change(raw_stage: str, campaign_id_scope, conn) -> set:
+    """Re-derive normalized_stage for every event whose raw_stage matches.
+
+    `campaign_id_scope`:
+      - integer → only events in that campaign
+      - None    → global change; updates events across every campaign
+                  (per-campaign mappings still win in the re-derivation
+                  because normalize_stage uses the proper lookup order)
+
+    Returns a set of affected campaign_ids. Empty set means no events
+    matched — caller can skip the recalc loop entirely.
+    """
+    if raw_stage is None:
+        return set()
+    raw_key = str(raw_stage).strip().lower()
+    if not raw_key:
+        return set()
+
+    affected: set = set()
+    with conn.cursor() as cur:
+        # SELECT first so we can recompute per-event in Python — the
+        # mapping lookup is 3-tier (per-campaign → global → default) and
+        # encoding that in a single UPDATE statement would be brittle.
+        if campaign_id_scope is not None:
+            cur.execute(
+                """
+                SELECT id, campaign_id, raw_stage
+                FROM lead_events
+                WHERE LOWER(TRIM(raw_stage)) = %s
+                  AND campaign_id = %s
+                  AND is_voided = FALSE
+                """,
+                (raw_key, campaign_id_scope),
+            )
+        else:
+            cur.execute(
+                """
+                SELECT id, campaign_id, raw_stage
+                FROM lead_events
+                WHERE LOWER(TRIM(raw_stage)) = %s
+                  AND is_voided = FALSE
+                """,
+                (raw_key,),
+            )
+        rows = cur.fetchall()
+
+    for event_id, campaign_id, original_raw in rows:
+        new_stage = normalize_stage(original_raw, campaign_id=campaign_id, conn=conn)
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE lead_events SET normalized_stage = %s WHERE id = %s",
+                (new_stage, event_id),
+            )
+        affected.add(campaign_id)
+
+    conn.commit()
+    return affected
+
+
+def apply_sales_rep_mapping_change(raw_name: str, campaign_id_scope, conn) -> set:
+    """Re-derive sales_user_id for every event whose raw_sales_rep_name
+    normalizes to this raw_name. Mirrors apply_stage_mapping_change but
+    keyed on the normalized name.
+
+    Scope: an integer campaign_id (per-campaign change) or None (global).
+
+    Returns the set of affected campaign_ids. Whether those campaigns'
+    KPIs/intervention/assignments actually change depends on the recalc
+    chain the caller runs afterwards.
+    """
+    if raw_name is None:
+        return set()
+    norm = normalize_sales_name(raw_name)
+    if not norm:
+        return set()
+
+    affected: set = set()
+    with conn.cursor() as cur:
+        # Match events by NORMALIZED raw_name, not exact string — keeps
+        # "Rana Hany" and "rana  hany" together (same as the parser).
+        if campaign_id_scope is not None:
+            cur.execute(
+                """
+                SELECT id, campaign_id, raw_sales_rep_name
+                FROM lead_events
+                WHERE REGEXP_REPLACE(LOWER(TRIM(raw_sales_rep_name)), '\\s+', ' ', 'g') = %s
+                  AND raw_sales_rep_name IS NOT NULL
+                  AND raw_sales_rep_name <> ''
+                  AND campaign_id = %s
+                  AND is_voided = FALSE
+                """,
+                (norm, campaign_id_scope),
+            )
+        else:
+            cur.execute(
+                """
+                SELECT id, campaign_id, raw_sales_rep_name
+                FROM lead_events
+                WHERE REGEXP_REPLACE(LOWER(TRIM(raw_sales_rep_name)), '\\s+', ' ', 'g') = %s
+                  AND raw_sales_rep_name IS NOT NULL
+                  AND raw_sales_rep_name <> ''
+                  AND is_voided = FALSE
+                """,
+                (norm,),
+            )
+        rows = cur.fetchall()
+
+    for event_id, campaign_id, original_raw in rows:
+        new_user_id = match_sales_user(original_raw, campaign_id, conn)
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE lead_events SET sales_user_id = %s WHERE id = %s",
+                (new_user_id, event_id),
+            )
+        affected.add(campaign_id)
+
+    conn.commit()
+    return affected

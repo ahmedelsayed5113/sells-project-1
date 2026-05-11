@@ -72,6 +72,15 @@ def admin_page():
     return render_template("admin.html", user=current_user())
 
 
+@pages_bp.route("/admin/crm-settings")
+@role_required("admin")
+def admin_crm_settings_page():
+    """Stage + sales-rep mappings CRUD. Admin-only — manager can't add
+    mappings because doing so triggers retroactive recalc that rewrites
+    historical KPIs and that decision belongs with the system owner."""
+    return render_template("admin_crm_settings.html", user=current_user())
+
+
 @pages_bp.route("/profile")
 @login_required
 def profile_page():

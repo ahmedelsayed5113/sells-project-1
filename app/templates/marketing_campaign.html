@@ -252,16 +252,152 @@
   </div>
 </section>
 
-<!-- ── Placeholder panels for tabs that ship in later phases ────────── -->
-{% for panel in ['daily', 'marketing'] %}
-<section class="crm-tab-panel" data-panel="{{ panel }}" role="tabpanel" hidden>
-  <div class="glass-card" style="padding:48px;text-align:center">
-    <span class="material-symbols-outlined" aria-hidden="true"
-          style="font-size:48px;color:var(--text-dim)">hourglass_empty</span>
-    <h3 style="margin-top:12px" data-i18n="crm.overview.coming_soon"></h3>
+<!-- ── Daily Activity tab (P4) ──────────────────────────────────────── -->
+<section class="crm-tab-panel" data-panel="daily" role="tabpanel" hidden>
+  <!-- Range picker -->
+  <div class="glass-card" style="padding:14px 18px;margin-bottom:18px">
+    <div style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap">
+      <div class="field" style="margin:0">
+        <label data-i18n="crm.daily.from"></label>
+        <input type="date" id="dailyFrom">
+      </div>
+      <div class="field" style="margin:0">
+        <label data-i18n="crm.daily.to"></label>
+        <input type="date" id="dailyTo">
+      </div>
+      <button class="btn btn-primary" onclick="loadDaily()">
+        <span data-i18n="common.refresh"></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Top totals -->
+  <div class="stats-grid" style="margin-bottom:20px">
+    <div class="kpi-tile">
+      <span class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">phone_in_talk</span></span>
+      <span class="kpi-tile-label" data-i18n="crm.daily.total_attempts"></span>
+      <span class="kpi-tile-value" id="dailyTotal">—</span>
+    </div>
+    <div class="kpi-tile">
+      <span class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">check_circle</span></span>
+      <span class="kpi-tile-label" data-i18n="crm.daily.answered"></span>
+      <span class="kpi-tile-value" id="dailyAnswered">—</span>
+    </div>
+    <div class="kpi-tile">
+      <span class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">trending_up</span></span>
+      <span class="kpi-tile-label" data-i18n="crm.daily.response_rate"></span>
+      <span class="kpi-tile-value" id="dailyRate">—</span>
+    </div>
+  </div>
+
+  <div id="dailyEmpty" class="glass-card" style="padding:48px;text-align:center" hidden>
+    <span class="material-symbols-outlined" aria-hidden="true" style="font-size:48px;color:var(--text-dim)">event_busy</span>
+    <h3 style="margin-top:12px" data-i18n="crm.daily.empty"></h3>
+  </div>
+
+  <div class="bento" id="dailyChartsBlock" hidden>
+    <div class="chart-card span-12">
+      <div class="chart-card-header">
+        <h3 class="chart-card-title" data-i18n="crm.daily.attempts_vs_answered"></h3>
+      </div>
+      <div id="dailyAttemptsChart" class="chart-host" style="min-height:280px"></div>
+    </div>
+    <div class="chart-card span-6">
+      <div class="chart-card-header">
+        <h3 class="chart-card-title" data-i18n="crm.daily.stage_breakdown_daily"></h3>
+      </div>
+      <div id="dailyStageChart" class="chart-host" style="min-height:260px"></div>
+    </div>
+    <div class="chart-card span-6">
+      <div class="chart-card-header">
+        <h3 class="chart-card-title" data-i18n="crm.daily.response_rate_over_time"></h3>
+      </div>
+      <div id="dailyRateChart" class="chart-host" style="min-height:260px"></div>
+    </div>
+  </div>
+
+  <div class="glass-card table-wrap" id="dailyTableWrap" style="padding:0;overflow-x:auto;margin-top:18px" hidden>
+    <table id="dailyTable">
+      <thead>
+        <tr>
+          <th data-i18n="crm.daily.col.date"></th>
+          <th style="text-align:end" data-i18n="crm.daily.total_attempts"></th>
+          <th style="text-align:end" data-i18n="crm.stages.NO_ANSWER"></th>
+          <th style="text-align:end" data-i18n="crm.stages.FOLLOWING"></th>
+          <th style="text-align:end" data-i18n="crm.stages.MEETING"></th>
+          <th style="text-align:end" data-i18n="crm.stages.CANCELLATION"></th>
+          <th style="text-align:end" data-i18n="crm.stages.INTERESTED"></th>
+          <th style="text-align:end" data-i18n="crm.daily.answered"></th>
+          <th style="text-align:end" data-i18n="crm.daily.response_rate"></th>
+        </tr>
+      </thead>
+      <tbody id="dailyRows"></tbody>
+    </table>
   </div>
 </section>
-{% endfor %}
+
+<!-- ── Marketing Report tab (P4) ────────────────────────────────────── -->
+<section class="crm-tab-panel" data-panel="marketing" role="tabpanel" hidden>
+  <div id="mktrEmpty" class="glass-card" style="padding:48px;text-align:center" hidden>
+    <span class="material-symbols-outlined" aria-hidden="true" style="font-size:48px;color:var(--text-dim)">analytics</span>
+    <h3 style="margin-top:12px" data-i18n="crm.marketing.empty"></h3>
+  </div>
+
+  <div id="mktrBody" hidden>
+    <div class="stats-grid" style="margin-bottom:20px">
+      <div class="kpi-tile">
+        <span class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">groups</span></span>
+        <span class="kpi-tile-label" data-i18n="crm.marketing.unique_leads"></span>
+        <span class="kpi-tile-value" id="mktrTotal">—</span>
+      </div>
+      <div class="kpi-tile">
+        <span class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">trending_up</span></span>
+        <span class="kpi-tile-label" data-i18n="crm.daily.response_rate"></span>
+        <span class="kpi-tile-value" id="mktrResponse">—</span>
+      </div>
+      <div class="kpi-tile">
+        <span class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">trending_down</span></span>
+        <span class="kpi-tile-label" data-i18n="crm.marketing.no_answer_rate"></span>
+        <span class="kpi-tile-value" id="mktrNoAnswer">—</span>
+      </div>
+    </div>
+
+    <div class="bento">
+      <div class="chart-card span-6">
+        <div class="chart-card-header">
+          <h3 class="chart-card-title" data-i18n="crm.marketing.stage_breakdown_unique"></h3>
+        </div>
+        <div id="mktrDonut" class="chart-host" style="min-height:280px"></div>
+      </div>
+      <div class="glass-card span-6" style="padding:20px 22px">
+        <h3 class="chart-card-title" style="margin:0 0 14px" data-i18n="crm.marketing.insights"></h3>
+        <ul id="mktrInsights" class="mktr-insights"></ul>
+      </div>
+    </div>
+
+    <!-- Rate comparison bars — single bento card so the layout balances. -->
+    <div class="glass-card" style="padding:20px 22px;margin-top:18px">
+      <h3 class="chart-card-title" style="margin:0 0 14px" data-i18n="crm.marketing.rates"></h3>
+      <div class="mktr-rate-grid">
+        <div class="mktr-rate">
+          <div class="mktr-rate-label"><span data-i18n="crm.daily.response_rate"></span></div>
+          <div class="mktr-bar"><div class="mktr-bar-fill is-positive" id="mktrBarResponse" style="width:0%"></div></div>
+          <div class="mktr-rate-value" id="mktrBarResponseLbl">0%</div>
+        </div>
+        <div class="mktr-rate">
+          <div class="mktr-rate-label"><span data-i18n="crm.marketing.no_answer_rate"></span></div>
+          <div class="mktr-bar"><div class="mktr-bar-fill is-warn" id="mktrBarNoAnswer" style="width:0%"></div></div>
+          <div class="mktr-rate-value" id="mktrBarNoAnswerLbl">0%</div>
+        </div>
+        <div class="mktr-rate">
+          <div class="mktr-rate-label"><span data-i18n="crm.marketing.intervention_rate"></span></div>
+          <div class="mktr-bar"><div class="mktr-bar-fill is-danger" id="mktrBarIntervention" style="width:0%"></div></div>
+          <div class="mktr-rate-value" id="mktrBarInterventionLbl">0%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
 <!-- Floating "Upload CRM Report" FAB — sticky bottom-end. -->
 <button class="crm-fab" id="crmFab" type="button"
@@ -330,6 +466,8 @@ let pollTries = 0;
 let salesLoaded = false;
 let leadsLoaded = false;
 let invTabLoaded = false;
+let dailyLoaded = false;
+let mktrLoaded = false;
 document.querySelectorAll(".crm-tab").forEach(btn => {
   btn.addEventListener("click", () => {
     const target = btn.getAttribute("data-tab");
@@ -355,6 +493,17 @@ document.querySelectorAll(".crm-tab").forEach(btn => {
     } else if (target === "intervention" && !invTabLoaded) {
       invTabLoaded = true;
       loadInterventionTab();
+    } else if (target === "daily" && !dailyLoaded) {
+      dailyLoaded = true;
+      seedDailyDates();
+      loadDaily();
+    } else if (target === "daily" && dailyData) {
+      renderDaily();  // re-draw on language flip
+    } else if (target === "marketing" && !mktrLoaded) {
+      mktrLoaded = true;
+      loadMarketingReport();
+    } else if (target === "marketing" && mktrData) {
+      renderMarketingReport();
     }
   });
 });
@@ -1015,15 +1164,182 @@ document.getElementById("invTabStatus").addEventListener("change", loadIntervent
 document.getElementById("invTabPriority").addEventListener("change", loadInterventionTab);
 
 
+// ════════════════════════════════════════════════════════════════════
+// Daily Activity tab (P4)
+// ════════════════════════════════════════════════════════════════════
+
+let dailyData = null;
+
+function seedDailyDates() {
+  // Seed the inputs with [last 30 days .. today] in the browser's locale.
+  // Server will use the same default if we leave them blank, but pre-
+  // populating tells the user what range they're looking at.
+  const today = new Date();
+  const start = new Date(today);
+  start.setDate(start.getDate() - 29);
+  document.getElementById("dailyTo").value = today.toISOString().slice(0, 10);
+  document.getElementById("dailyFrom").value = start.toISOString().slice(0, 10);
+}
+
+async function loadDaily() {
+  const from = document.getElementById("dailyFrom").value;
+  const to = document.getElementById("dailyTo").value;
+  const params = new URLSearchParams();
+  if (from) params.set("from", from);
+  if (to) params.set("to", to);
+  try {
+    dailyData = await api(`/api/crm/campaigns/${CAMPAIGN_ID}/daily-activity?${params.toString()}`);
+    renderDaily();
+  } catch (e) {
+    toastError(e);
+  }
+}
+
+function renderDaily() {
+  if (!dailyData) return;
+  const days = dailyData.days || [];
+  const totals = dailyData.totals || {};
+
+  // Top tiles
+  document.getElementById("dailyTotal").textContent = fmtNum(totals.total_attempts);
+  document.getElementById("dailyAnswered").textContent = fmtNum(totals.answered_count);
+  document.getElementById("dailyRate").textContent =
+    (totals.total_attempts > 0 ? totals.response_rate_pct + "%" : "—");
+
+  const hasData = days.length > 0;
+  document.getElementById("dailyEmpty").hidden = hasData;
+  document.getElementById("dailyChartsBlock").hidden = !hasData;
+  document.getElementById("dailyTableWrap").hidden = !hasData;
+  if (!hasData) return;
+
+  const xLabels = days.map(d => d.date);
+  // Chart 1: attempts vs answered as two lines so the gap is visible.
+  Charts.drawLineChart("dailyAttemptsChart", [
+    { name: t("crm.daily.total_attempts"), x: xLabels, y: days.map(d => d.total_attempts) },
+    { name: t("crm.daily.answered"),       x: xLabels, y: days.map(d => d.answered_count) },
+  ]);
+  // Chart 2: per-stage stacked bars per day.
+  Charts.drawStackedBar("dailyStageChart", [
+    { name: t("crm.stages.NO_ANSWER"),    values: days.map(d => d.no_answer_count) },
+    { name: t("crm.stages.FOLLOWING"),    values: days.map(d => d.following_count) },
+    { name: t("crm.stages.MEETING"),      values: days.map(d => d.meeting_count) },
+    { name: t("crm.stages.CANCELLATION"), values: days.map(d => d.cancellation_count) },
+    { name: t("crm.stages.INTERESTED"),   values: days.map(d => d.interested_count) },
+  ], xLabels);
+  // Chart 3: response-rate line.
+  Charts.drawLineChart("dailyRateChart", [
+    { name: t("crm.daily.response_rate"), x: xLabels, y: days.map(d => d.response_rate_pct) },
+  ]);
+
+  // Detail table
+  const tbody = document.getElementById("dailyRows");
+  tbody.innerHTML = "";
+  days.forEach(d => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${escapeHtml(fmtDateShort(d.date))}</td>
+      <td style="text-align:end">${fmtNum(d.total_attempts)}</td>
+      <td style="text-align:end">${fmtNum(d.no_answer_count)}</td>
+      <td style="text-align:end">${fmtNum(d.following_count)}</td>
+      <td style="text-align:end">${fmtNum(d.meeting_count)}</td>
+      <td style="text-align:end">${fmtNum(d.cancellation_count)}</td>
+      <td style="text-align:end">${fmtNum(d.interested_count)}</td>
+      <td style="text-align:end">${fmtNum(d.answered_count)}</td>
+      <td style="text-align:end">${d.response_rate_pct}%</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Marketing Report tab (P4)
+// ════════════════════════════════════════════════════════════════════
+
+let mktrData = null;
+
+async function loadMarketingReport() {
+  try {
+    mktrData = await api(`/api/crm/campaigns/${CAMPAIGN_ID}/marketing-report`);
+    renderMarketingReport();
+  } catch (e) {
+    toastError(e);
+  }
+}
+
+function renderMarketingReport() {
+  if (!mktrData) return;
+  const total = mktrData.total_unique_leads || 0;
+  document.getElementById("mktrEmpty").hidden = total > 0;
+  document.getElementById("mktrBody").hidden = total <= 0;
+  if (total <= 0) return;
+
+  document.getElementById("mktrTotal").textContent     = fmtNum(total);
+  document.getElementById("mktrResponse").textContent  = mktrData.response_rate_pct + "%";
+  document.getElementById("mktrNoAnswer").textContent  = mktrData.no_answer_rate_pct + "%";
+
+  // Donut — reuse the same color story as Overview.
+  const labels = [];
+  const values = [];
+  STAGE_TOKENS.forEach(tok => {
+    const n = (mktrData.stage_breakdown_unique || {})[tok] || 0;
+    if (n > 0) {
+      labels.push(t("crm.stages." + tok));
+      values.push(n);
+    }
+  });
+  Charts.drawDonut("mktrDonut", { labels, values });
+
+  // Insights — static rules, not "AI". Each rule emits a single bullet.
+  const insights = [];
+  if (mktrData.response_rate_pct >= 60)
+    insights.push({ icon: "trending_up", color: "var(--accent-2)", textKey: "crm.marketing.insight.high_response" });
+  else if (mktrData.response_rate_pct >= 40)
+    insights.push({ icon: "trending_flat", color: "var(--text-muted)", textKey: "crm.marketing.insight.moderate_response" });
+  else
+    insights.push({ icon: "trending_down", color: "var(--warning)", textKey: "crm.marketing.insight.low_response" });
+
+  if (mktrData.intervention_rate_pct >= 10)
+    insights.push({ icon: "warning", color: "var(--danger)", textKey: "crm.marketing.insight.high_intervention" });
+  if ((mktrData.stage_breakdown_unique || {}).MEETING > 0)
+    insights.push({ icon: "handshake", color: "var(--brand)", textKey: "crm.marketing.insight.has_meetings" });
+
+  const ul = document.getElementById("mktrInsights");
+  ul.innerHTML = "";
+  insights.forEach(ins => {
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <span class="material-symbols-outlined" style="color:${ins.color}" aria-hidden="true">${ins.icon}</span>
+      <span data-i18n="${ins.textKey}">${escapeHtml(t(ins.textKey))}</span>
+    `;
+    ul.appendChild(li);
+  });
+
+  // Rate comparison bars
+  setBar("mktrBarResponse",     mktrData.response_rate_pct);
+  setBar("mktrBarNoAnswer",     mktrData.no_answer_rate_pct);
+  setBar("mktrBarIntervention", mktrData.intervention_rate_pct);
+}
+
+function setBar(barId, pct) {
+  const clamped = Math.max(0, Math.min(100, pct || 0));
+  document.getElementById(barId).style.width = clamped + "%";
+  document.getElementById(barId + "Lbl").textContent = (pct || 0) + "%";
+}
+
+
 function onLangChange() {
   if (overview) renderOverview();
   if (salesData) renderSalesKpis();
   if (leadsLoaded) renderLeadsTable();
   if (invTabLoaded) loadInterventionTab();
+  if (dailyData) renderDaily();
+  if (mktrData) renderMarketingReport();
 }
 function onThemeChange() {
   if (overview) renderStageDonut(overview.stage_counts || {});
   if (salesData) renderSalesCharts(salesData.reps || []);
+  if (dailyData) renderDaily();
+  if (mktrData) renderMarketingReport();
 }
 
 loadOverview();
@@ -1249,5 +1565,41 @@ loadOverview();
   .iv-meta dd { margin: 0; color: var(--text); }
   .iv-comment { white-space: normal; line-height: 1.55; }
   .iv-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* Marketing Report — insights + rate bars. */
+  .mktr-insights { list-style: none; margin: 0; padding: 0; }
+  .mktr-insights li {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 0;
+    font-size: 14px; color: var(--text);
+    border-bottom: 1px solid var(--border);
+  }
+  .mktr-insights li:last-child { border-bottom: none; }
+  .mktr-insights .material-symbols-outlined { font-size: 20px; flex-shrink: 0; }
+
+  .mktr-rate-grid {
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .mktr-rate { display: grid; grid-template-columns: 160px 1fr 60px; gap: 12px; align-items: center; }
+  .mktr-rate-label { font-size: 13px; color: var(--text-muted); font-weight: 600; }
+  .mktr-rate-value { font-weight: 700; text-align: end; color: var(--text); }
+  .mktr-bar {
+    height: 10px; border-radius: 9999px;
+    background: var(--surface-recessed);
+    overflow: hidden;
+  }
+  .mktr-bar-fill {
+    height: 100%;
+    transition: width 0.4s var(--ease);
+    border-radius: 9999px;
+  }
+  .mktr-bar-fill.is-positive { background: linear-gradient(90deg, var(--accent-2), #40dcd1); }
+  .mktr-bar-fill.is-warn     { background: linear-gradient(90deg, var(--warning), #ffb84d); }
+  .mktr-bar-fill.is-danger   { background: linear-gradient(90deg, var(--danger), #ff6b6b); }
+
+  @media (max-width: 600px) {
+    .mktr-rate { grid-template-columns: 1fr; gap: 4px; }
+    .mktr-rate-value { text-align: start; }
+  }
 </style>
 {% endblock %}

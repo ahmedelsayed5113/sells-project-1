@@ -34,6 +34,7 @@ from app.crm_logic import (  # noqa: E402
     normalize_stage,
     _classify_lead_intervention,
     _assignments_from_events,
+    _response_rate_pct,
     enrich_timeline_events,
     ASSIGNMENT_TYPE_FRESH,
     ASSIGNMENT_TYPE_ROTATION,
@@ -654,6 +655,43 @@ def test_enrich_timeline_events():
            detail=str([(e["follow_date"].day, e["is_transfer"]) for e in out]))
 
 
+# ─── Response-rate percent helper (P4) ──────────────────────────────────
+#
+# _response_rate_pct(total, no_answer) returns the percentage of attempts
+# that landed on something other than NO_ANSWER. Used by both the daily
+# activity endpoint and the marketing report — keeping the formula in one
+# place is what makes those two views agree on numbers.
+
+def test_response_rate_pct():
+    print("─── _response_rate_pct ───")
+    # Normal mid-range case — 11/20 answered = 55%
+    _check("11 of 20 answered → 55.0",
+           _response_rate_pct(20, 9) == 55.0,
+           detail=str(_response_rate_pct(20, 9)))
+    # All answered → 100%
+    _check("all answered → 100.0",
+           _response_rate_pct(10, 0) == 100.0)
+    # None answered → 0%
+    _check("none answered → 0.0",
+           _response_rate_pct(10, 10) == 0.0)
+    # total=0 → 0.0 (no NaN division)
+    _check("total=0 → 0.0",
+           _response_rate_pct(0, 0) == 0.0)
+    # total=None defensive guard → 0.0
+    _check("total=None → 0.0",
+           _response_rate_pct(None, 0) == 0.0)
+    # no_answer=None defensive guard treats it as 0
+    _check("no_answer=None → 100.0 with total>0",
+           _response_rate_pct(5, None) == 100.0)
+    # Rounding to one decimal
+    _check("rounds to 1 decimal (1/3) → 66.7",
+           _response_rate_pct(3, 1) == 66.7,
+           detail=str(_response_rate_pct(3, 1)))
+    # Negative no_answer clamps to 0 — defensive against bad input
+    _check("negative no_answer clamps to 0 → 100.0",
+           _response_rate_pct(10, -3) == 100.0)
+
+
 # ─── Required-column enforcement ───────────────────────────────────────
 
 def test_missing_required_column_raises():
@@ -690,6 +728,7 @@ def main():
     test_intervention_classifier()
     test_assignments_from_events()
     test_enrich_timeline_events()
+    test_response_rate_pct()
 
     print()
     if _failures:

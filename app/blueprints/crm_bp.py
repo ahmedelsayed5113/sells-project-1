@@ -19,7 +19,17 @@ from app.auth import (
     login_required,
     role_required,
 )
-from app.crm_logic import build_lead_timeline
+from datetime import date, datetime, timedelta
+
+from app.crm_logic import (
+    DEFAULT_STAGE_MAP,
+    apply_sales_rep_mapping_change,
+    apply_stage_mapping_change,
+    build_lead_timeline,
+    normalize_sales_name,
+    recalc_after_upload,
+    _response_rate_pct,
+)
 from app.crm_processor import start_processing_thread
 from app.database import get_conn
 
@@ -965,6 +975,592 @@ def intervention_open_count():
         })
     except Exception as e:
         log.error("intervention_open_count: %s", e)
+        return error_response("server", 500)
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+# ─── GET daily activity (P4) ────────────────────────────────────────────
+
+_DAILY_DEFAULT_DAYS = 30
+
+
+def _parse_iso_date(s):
+    if not s:
+        return None
+    try:
+        return date.fromisoformat(str(s).strip())
+    except (ValueError, TypeError):
+        return None
+
+
+@crm_bp.route("/campaigns/<int:campaign_id>/daily-activity", methods=["GET"])
+@login_required
+@role_required("admin", "manager", "marketing")
+def campaign_daily_activity(campaign_id: int):
+    """Per-day event aggregation. Counts are based on event ROWS (not
+    unique leads) — same day can have multiple attempts on the same
+    lead and we want to see them all. NULL-stage events are excluded
+    (they're tracked as warnings via the unmatched-suggestions feed).
+
+    Default range: last 30 days. The frontend's two date inputs map to
+    `from` and `to` (inclusive on both ends).
+    """
+    to_d = _parse_iso_date(request.args.get("to")) or date.today()
+    from_d = _parse_iso_date(request.args.get("from"))
+    if from_d is None:
+        from_d = to_d - timedelta(days=_DAILY_DEFAULT_DAYS - 1)
+    if from_d > to_d:
+        return error_response("range_inverted", 400)
+
+    conn = None
+    try:
+        conn = get_conn()
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT 1 FROM marketing_campaigns WHERE id = %s",
+                (campaign_id,),
+            )
+            if not cur.fetchone():
+                return error_response("not_found", 404)
+
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            # FILTER (...) lets one pass produce all six per-stage buckets;
+            # cheaper than a CASE-based pivot for the volumes we expect.
+            cur.execute(
+                """
+                SELECT DATE(follow_date) AS day,
+                       COUNT(*) AS total_attempts,
+                       COUNT(*) FILTER (WHERE normalized_stage = 'NO_ANSWER')    AS no_answer_count,
+                       COUNT(*) FILTER (WHERE normalized_stage = 'FOLLOWING')    AS following_count,
+                       COUNT(*) FILTER (WHERE normalized_stage = 'MEETING')      AS meeting_count,
+                       COUNT(*) FILTER (WHERE normalized_stage = 'CANCELLATION') AS cancellation_count,
+                       COUNT(*) FILTER (WHERE normalized_stage = 'INTERESTED')   AS interested_count,
+                       COUNT(*) FILTER (WHERE normalized_stage = 'REQUEST')      AS request_count
+                FROM lead_events
+                WHERE campaign_id = %s
+                  AND normalized_stage IS NOT NULL
+                  AND is_voided = FALSE
+                  AND follow_date >= %s::date
+                  AND follow_date <  (%s::date + INTERVAL '1 day')
+                GROUP BY DATE(follow_date)
+                ORDER BY DATE(follow_date) ASC
+                """,
+                (campaign_id, from_d, to_d),
+            )
+            rows = cur.fetchall()
+
+        days = []
+        total_attempts = 0
+        total_answered = 0
+        for r in rows:
+            total = r["total_attempts"] or 0
+            no_ans = r["no_answer_count"] or 0
+            answered = total - no_ans
+            days.append({
+                "date": r["day"].isoformat(),
+                "total_attempts": total,
+                "no_answer_count": no_ans,
+                "following_count": r["following_count"] or 0,
+                "meeting_count": r["meeting_count"] or 0,
+                "cancellation_count": r["cancellation_count"] or 0,
+                "interested_count": r["interested_count"] or 0,
+                "request_count": r["request_count"] or 0,
+                "answered_count": answered,
+                "response_rate_pct": _response_rate_pct(total, no_ans),
+            })
+            total_attempts += total
+            total_answered += answered
+
+        return jsonify({
+            "campaign_id": campaign_id,
+            "from": from_d.isoformat(),
+            "to": to_d.isoformat(),
+            "days": days,
+            "totals": {
+                "total_attempts": total_attempts,
+                "answered_count": total_answered,
+                "response_rate_pct": _response_rate_pct(total_attempts, total_attempts - total_answered),
+            },
+        })
+    except Exception as e:
+        log.error("campaign_daily_activity %s: %s", campaign_id, e)
+        return error_response("server", 500)
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+# ─── GET marketing report (unique-lead aggregation) (P4) ────────────────
+
+@crm_bp.route("/campaigns/<int:campaign_id>/marketing-report", methods=["GET"])
+@login_required
+@role_required("admin", "manager", "marketing")
+def campaign_marketing_report(campaign_id: int):
+    """Unique-lead rollup — same DISTINCT ON pattern as campaign_kpis so
+    the two views never disagree on which stage a lead "is in". Computes
+    rates against total_unique_leads (skipping leads whose every event
+    was NULL-stage)."""
+    conn = None
+    try:
+        conn = get_conn()
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT 1 FROM marketing_campaigns WHERE id = %s",
+                (campaign_id,),
+            )
+            if not cur.fetchone():
+                return error_response("not_found", 404)
+
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                """
+                WITH latest AS (
+                    SELECT DISTINCT ON (le.lead_id)
+                           le.lead_id, le.normalized_stage
+                    FROM lead_events le
+                    JOIN leads l ON l.id = le.lead_id
+                    WHERE l.campaign_id = %s
+                      AND le.normalized_stage IS NOT NULL
+                      AND le.is_voided = FALSE
+                    ORDER BY le.lead_id, le.follow_date DESC NULLS LAST, le.id DESC
+                )
+                SELECT normalized_stage, COUNT(*) AS n FROM latest
+                GROUP BY normalized_stage
+                """,
+                (campaign_id,),
+            )
+            buckets = {r["normalized_stage"]: r["n"] for r in cur.fetchall()}
+
+            cur.execute(
+                """
+                SELECT COUNT(*) FILTER (WHERE status = 'OPEN') AS open_intervention
+                FROM manager_intervention_flags
+                WHERE campaign_id = %s
+                """,
+                (campaign_id,),
+            )
+            intervention = cur.fetchone()
+            open_intervention = (intervention["open_intervention"] or 0) if intervention else 0
+
+        # Every stage key surfaces — the front-end always has a key to
+        # read from even when the count is zero.
+        breakdown = {tok: buckets.get(tok, 0) for tok in (
+            "NO_ANSWER", "FOLLOWING", "MEETING",
+            "CANCELLATION", "INTERESTED", "REQUEST",
+        )}
+        total_unique = sum(breakdown.values())
+        no_answer = breakdown["NO_ANSWER"]
+        answered = total_unique - no_answer
+
+        no_answer_rate = round(((no_answer / total_unique) * 100.0), 1) if total_unique > 0 else 0.0
+        intervention_rate = round(((open_intervention / total_unique) * 100.0), 1) if total_unique > 0 else 0.0
+
+        return jsonify({
+            "campaign_id": campaign_id,
+            "total_unique_leads": total_unique,
+            "answered_unique_leads": answered,
+            "no_answer_unique_leads": no_answer,
+            "stage_breakdown_unique": breakdown,
+            "response_rate_pct": _response_rate_pct(total_unique, no_answer),
+            "no_answer_rate_pct": no_answer_rate,
+            "intervention_rate_pct": intervention_rate,
+            "open_intervention_count": open_intervention,
+        })
+    except Exception as e:
+        log.error("campaign_marketing_report %s: %s", campaign_id, e)
+        return error_response("server", 500)
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+# ─── Admin CRM mappings — CRUD + suggestions (P4) ───────────────────────
+
+# Canonical stage tokens — admin can only map to one of these. Keeping
+# the set tight prevents typos from creating a stage the rest of the
+# pipeline doesn't know how to handle.
+_CANONICAL_STAGE_TOKENS = frozenset(set(DEFAULT_STAGE_MAP.values()))
+
+
+@crm_bp.route("/stage-mappings", methods=["GET"])
+@login_required
+@role_required("admin")
+def list_stage_mappings():
+    """List every stage mapping, joined with the campaign name where the
+    mapping is per-campaign (NULL campaign_id = global). Ordered by
+    scope first (globals on top) then most-recently-created."""
+    conn = None
+    try:
+        conn = get_conn()
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT s.id, s.campaign_id, c.campaign_name,
+                       s.raw_stage, s.normalized_stage,
+                       s.created_by, u.full_name AS created_by_name,
+                       s.created_at
+                FROM stage_mappings s
+                LEFT JOIN marketing_campaigns c ON c.id = s.campaign_id
+                LEFT JOIN users u                ON u.id = s.created_by
+                ORDER BY (s.campaign_id IS NULL) DESC, s.created_at DESC
+                """,
+            )
+            rows = cur.fetchall()
+        return jsonify([{
+            "id": r["id"],
+            "campaign_id": r["campaign_id"],
+            "campaign_name": r["campaign_name"],
+            "raw_stage": r["raw_stage"],
+            "normalized_stage": r["normalized_stage"],
+            "created_by": r["created_by"],
+            "created_by_name": r["created_by_name"],
+            "created_at": r["created_at"].isoformat() if r["created_at"] else None,
+        } for r in rows])
+    except Exception as e:
+        log.error("list_stage_mappings: %s", e)
+        return error_response("server", 500)
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+@crm_bp.route("/stage-mappings", methods=["POST"])
+@login_required
+@role_required("admin")
+@csrf_protect
+def create_stage_mapping():
+    """Add a stage mapping AND retroactively re-derive every matching
+    event's normalized_stage. Affected campaigns get a full recalc so
+    KPIs and intervention reflect the new mapping immediately."""
+    data = request.get_json(silent=True) or {}
+    raw_stage = (data.get("raw_stage") or "").strip()
+    normalized = (data.get("normalized_stage") or "").strip().upper()
+    campaign_raw = data.get("campaign_id")
+
+    if not raw_stage:
+        return error_response("required_fields_missing", 400)
+    if normalized not in _CANONICAL_STAGE_TOKENS:
+        return error_response("invalid_input", 400)
+    campaign_id = None
+    if campaign_raw not in (None, "", "all"):
+        try:
+            campaign_id = int(campaign_raw)
+        except (ValueError, TypeError):
+            return error_response("invalid_input", 400)
+
+    conn = None
+    try:
+        conn = get_conn()
+        if campaign_id is not None:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1 FROM marketing_campaigns WHERE id = %s", (campaign_id,))
+                if not cur.fetchone():
+                    return error_response("not_found", 404)
+
+        with conn.cursor() as cur:
+            try:
+                cur.execute(
+                    """
+                    INSERT INTO stage_mappings
+                        (campaign_id, raw_stage, normalized_stage, created_by)
+                    VALUES (%s, %s, %s, %s)
+                    RETURNING id
+                    """,
+                    (campaign_id, raw_stage, normalized, session.get("user_id")),
+                )
+                new_id = cur.fetchone()[0]
+            except psycopg2.errors.UniqueViolation:
+                conn.rollback()
+                return error_response("invalid_input", 409)
+        conn.commit()
+
+        # Retroactive recalc — the mapping is committed, so the
+        # normalize_stage lookup will see it.
+        affected = apply_stage_mapping_change(raw_stage, campaign_id, conn)
+        for cid in affected:
+            recalc_after_upload(cid, conn)
+        log.info("Stage mapping %s created (raw=%r → %s, scope=%s); recalculated %d campaign(s)",
+                 new_id, raw_stage, normalized, campaign_id or "GLOBAL", len(affected))
+        return jsonify({
+            "ok": True, "id": new_id,
+            "affected_campaigns": sorted(list(affected)),
+        }), 201
+    except Exception as e:
+        log.error("create_stage_mapping: %s", e)
+        return error_response("server", 500)
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+@crm_bp.route("/stage-mappings/<int:mapping_id>", methods=["DELETE"])
+@login_required
+@role_required("admin")
+@csrf_protect
+def delete_stage_mapping(mapping_id: int):
+    """Delete the mapping then retroactively re-derive normalized_stage
+    for matching events. The same event might be picked up by another
+    surviving mapping (per-campaign override or default), in which case
+    its value just changes; otherwise it falls back to NULL."""
+    conn = None
+    try:
+        conn = get_conn()
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT raw_stage, campaign_id FROM stage_mappings WHERE id = %s",
+                (mapping_id,),
+            )
+            row = cur.fetchone()
+            if not row:
+                return error_response("not_found", 404)
+            raw_stage, campaign_id = row
+            cur.execute("DELETE FROM stage_mappings WHERE id = %s", (mapping_id,))
+        conn.commit()
+
+        affected = apply_stage_mapping_change(raw_stage, campaign_id, conn)
+        for cid in affected:
+            recalc_after_upload(cid, conn)
+        log.info("Stage mapping %s deleted; recalculated %d campaign(s)",
+                 mapping_id, len(affected))
+        return jsonify({
+            "ok": True,
+            "affected_campaigns": sorted(list(affected)),
+        })
+    except Exception as e:
+        log.error("delete_stage_mapping %s: %s", mapping_id, e)
+        return error_response("server", 500)
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+@crm_bp.route("/sales-rep-mappings", methods=["GET"])
+@login_required
+@role_required("admin")
+def list_sales_rep_mappings():
+    conn = None
+    try:
+        conn = get_conn()
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT m.id, m.campaign_id, c.campaign_name,
+                       m.raw_name, m.sales_user_id,
+                       u.full_name AS sales_user_name,
+                       m.created_by, cu.full_name AS created_by_name,
+                       m.created_at
+                FROM sales_rep_mappings m
+                LEFT JOIN marketing_campaigns c ON c.id = m.campaign_id
+                LEFT JOIN users u                ON u.id = m.sales_user_id
+                LEFT JOIN users cu               ON cu.id = m.created_by
+                ORDER BY (m.campaign_id IS NULL) DESC, m.created_at DESC
+                """,
+            )
+            rows = cur.fetchall()
+        return jsonify([{
+            "id": r["id"],
+            "campaign_id": r["campaign_id"],
+            "campaign_name": r["campaign_name"],
+            "raw_name": r["raw_name"],
+            "sales_user_id": r["sales_user_id"],
+            "sales_user_name": r["sales_user_name"],
+            "created_by": r["created_by"],
+            "created_by_name": r["created_by_name"],
+            "created_at": r["created_at"].isoformat() if r["created_at"] else None,
+        } for r in rows])
+    except Exception as e:
+        log.error("list_sales_rep_mappings: %s", e)
+        return error_response("server", 500)
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+@crm_bp.route("/sales-rep-mappings", methods=["POST"])
+@login_required
+@role_required("admin")
+@csrf_protect
+def create_sales_rep_mapping():
+    """Map a raw rep-name string to an existing user. Retroactive recalc
+    flips the sales_user_id on every event that had this unmatched name
+    and runs the full recalc chain — assignments rebuild because the
+    rep IDENTITY changed (unmatched raw_name → matched user_id)."""
+    data = request.get_json(silent=True) or {}
+    raw_name = (data.get("raw_name") or "").strip()
+    sales_user_raw = data.get("sales_user_id")
+    campaign_raw = data.get("campaign_id")
+
+    if not raw_name:
+        return error_response("required_fields_missing", 400)
+    try:
+        sales_user_id = int(sales_user_raw)
+    except (ValueError, TypeError):
+        return error_response("invalid_input", 400)
+    campaign_id = None
+    if campaign_raw not in (None, "", "all"):
+        try:
+            campaign_id = int(campaign_raw)
+        except (ValueError, TypeError):
+            return error_response("invalid_input", 400)
+
+    conn = None
+    try:
+        conn = get_conn()
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT 1 FROM users WHERE id = %s AND role IN ('sales','team_leader')",
+                (sales_user_id,),
+            )
+            if not cur.fetchone():
+                return error_response("not_found", 404)
+            if campaign_id is not None:
+                cur.execute("SELECT 1 FROM marketing_campaigns WHERE id = %s", (campaign_id,))
+                if not cur.fetchone():
+                    return error_response("not_found", 404)
+
+        with conn.cursor() as cur:
+            try:
+                cur.execute(
+                    """
+                    INSERT INTO sales_rep_mappings
+                        (campaign_id, raw_name, sales_user_id, created_by)
+                    VALUES (%s, %s, %s, %s)
+                    RETURNING id
+                    """,
+                    (campaign_id, raw_name, sales_user_id, session.get("user_id")),
+                )
+                new_id = cur.fetchone()[0]
+            except psycopg2.errors.UniqueViolation:
+                conn.rollback()
+                return error_response("invalid_input", 409)
+        conn.commit()
+
+        affected = apply_sales_rep_mapping_change(raw_name, campaign_id, conn)
+        for cid in affected:
+            recalc_after_upload(cid, conn)
+        log.info("Sales-rep mapping %s created (raw=%r → user=%s, scope=%s); recalculated %d campaign(s)",
+                 new_id, raw_name, sales_user_id, campaign_id or "GLOBAL", len(affected))
+        return jsonify({
+            "ok": True, "id": new_id,
+            "affected_campaigns": sorted(list(affected)),
+        }), 201
+    except Exception as e:
+        log.error("create_sales_rep_mapping: %s", e)
+        return error_response("server", 500)
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+@crm_bp.route("/sales-rep-mappings/<int:mapping_id>", methods=["DELETE"])
+@login_required
+@role_required("admin")
+@csrf_protect
+def delete_sales_rep_mapping(mapping_id: int):
+    """Delete the mapping then re-derive sales_user_id for matching
+    events. Same idempotency property as the stage delete: the event's
+    user_id may flip to another mapping, to a users.full_name fuzzy
+    match, or back to NULL."""
+    conn = None
+    try:
+        conn = get_conn()
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT raw_name, campaign_id FROM sales_rep_mappings WHERE id = %s",
+                (mapping_id,),
+            )
+            row = cur.fetchone()
+            if not row:
+                return error_response("not_found", 404)
+            raw_name, campaign_id = row
+            cur.execute("DELETE FROM sales_rep_mappings WHERE id = %s", (mapping_id,))
+        conn.commit()
+
+        affected = apply_sales_rep_mapping_change(raw_name, campaign_id, conn)
+        for cid in affected:
+            recalc_after_upload(cid, conn)
+        log.info("Sales-rep mapping %s deleted; recalculated %d campaign(s)",
+                 mapping_id, len(affected))
+        return jsonify({
+            "ok": True,
+            "affected_campaigns": sorted(list(affected)),
+        })
+    except Exception as e:
+        log.error("delete_sales_rep_mapping %s: %s", mapping_id, e)
+        return error_response("server", 500)
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+@crm_bp.route("/unmatched-suggestions", methods=["GET"])
+@login_required
+@role_required("admin")
+def unmatched_suggestions():
+    """Live-state suggestions: aggregate every event currently sitting
+    with a NULL normalized_stage or NULL sales_user_id, capped at 50
+    rows per kind. Live state beats reading the historical
+    crm_report_uploads.warnings because mappings added since those
+    uploads may have already resolved some of them."""
+    conn = None
+    try:
+        conn = get_conn()
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT TRIM(raw_stage) AS raw_stage, COUNT(*) AS n
+                FROM lead_events
+                WHERE normalized_stage IS NULL
+                  AND raw_stage IS NOT NULL AND TRIM(raw_stage) <> ''
+                  AND is_voided = FALSE
+                GROUP BY TRIM(raw_stage)
+                ORDER BY COUNT(*) DESC, TRIM(raw_stage) ASC
+                LIMIT 50
+                """,
+            )
+            stages = [{"raw_stage": r["raw_stage"], "count": r["n"]} for r in cur.fetchall()]
+
+            cur.execute(
+                """
+                SELECT TRIM(raw_sales_rep_name) AS raw_name, COUNT(*) AS n
+                FROM lead_events
+                WHERE sales_user_id IS NULL
+                  AND raw_sales_rep_name IS NOT NULL AND TRIM(raw_sales_rep_name) <> ''
+                  AND is_voided = FALSE
+                GROUP BY TRIM(raw_sales_rep_name)
+                ORDER BY COUNT(*) DESC, TRIM(raw_sales_rep_name) ASC
+                LIMIT 50
+                """,
+            )
+            reps = [{"raw_name": r["raw_name"], "count": r["n"]} for r in cur.fetchall()]
+
+            # Eligible sales users for the dropdown.
+            cur.execute(
+                """
+                SELECT id, full_name, role
+                FROM users
+                WHERE role IN ('sales','team_leader') AND active = TRUE
+                ORDER BY full_name ASC
+                """,
+            )
+            users = [{"id": r["id"], "full_name": r["full_name"], "role": r["role"]} for r in cur.fetchall()]
+
+            cur.execute(
+                "SELECT id, campaign_name FROM marketing_campaigns ORDER BY campaign_name ASC"
+            )
+            campaigns = [{"id": r["id"], "campaign_name": r["campaign_name"]} for r in cur.fetchall()]
+
+        return jsonify({
+            "unmatched_stages": stages,
+            "unmatched_reps": reps,
+            "sales_users": users,
+            "campaigns": campaigns,
+            "stage_tokens": sorted(_CANONICAL_STAGE_TOKENS),
+        })
+    except Exception as e:
+        log.error("unmatched_suggestions: %s", e)
         return error_response("server", 500)
     finally:
         if conn is not None:

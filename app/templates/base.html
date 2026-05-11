@@ -13,7 +13,7 @@
        wins; otherwise we follow the OS preference (prefers-color-scheme). -->
   <script>(function(){try{var q=new URLSearchParams(window.location.search);var qt=(q.get('theme')||'').toLowerCase();if(qt==='dark'||qt==='light'){localStorage.setItem('ain_theme',qt);}}catch(_){}var t=localStorage.getItem('ain_theme');if(!t){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})()</script>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=flat59">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=flat60">
   {% block head %}{% endblock %}
 </head>
 <body>
@@ -88,6 +88,12 @@
             <span class="sidebar-link-icon"><span class="material-symbols-outlined">groups</span></span>
             <span data-i18n="nav.teams"></span>
           </a>
+          {# CRM Settings — admin-only because adding a mapping triggers
+             retroactive recalc that rewrites historical KPIs. #}
+          <a href="/admin/crm-settings" class="sidebar-link {% if request.path == '/admin/crm-settings' %}active{% endif %}">
+            <span class="sidebar-link-icon"><span class="material-symbols-outlined">tune</span></span>
+            <span data-i18n="nav.crm_settings"></span>
+          </a>
           {% endif %}
         {% endif %}
 
@@ -154,8 +160,8 @@
     </main>
   </div>
 
-  <script src="{{ url_for('static', filename='js/i18n.js') }}?v=flat59"></script>
-  <script src="{{ url_for('static', filename='js/common.js') }}?v=flat59"></script>
+  <script src="{{ url_for('static', filename='js/i18n.js') }}?v=flat60"></script>
+  <script src="{{ url_for('static', filename='js/common.js') }}?v=flat60"></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>
