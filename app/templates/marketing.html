@@ -274,6 +274,97 @@
   </details>
 </div>
 
+<!-- ── CRM Reports — added in P1b. Lives outside #dashboard so it stays
+     visible regardless of which campaign is selected in the dropdown above.
+     Data comes from /api/crm/campaigns-summary (no scoping in marketing_bp
+     either, so we match the existing visibility model). -->
+<section class="mkt-section reveal" style="margin-top:24px">
+  <h2 class="mkt-section-title">
+    <span class="material-symbols-outlined" aria-hidden="true">cloud_upload</span>
+    <span data-i18n="crm.marketing.section_title"></span>
+  </h2>
+  <div class="glass-card table-wrap" style="padding:0;overflow-x:auto">
+    <table id="crmCampaignTable">
+      <thead>
+        <tr>
+          <th data-i18n="crm.marketing.col.campaign"></th>
+          <th data-i18n="crm.marketing.col.leads" style="text-align:end"></th>
+          <th data-i18n="crm.marketing.col.intervention" style="text-align:end"></th>
+          <th data-i18n="crm.marketing.col.last_upload"></th>
+          <th data-i18n="crm.marketing.col.actions" style="text-align:end"></th>
+        </tr>
+      </thead>
+      <tbody id="crmCampaignRows">
+        <tr><td colspan="5" class="text-muted" style="padding:18px;text-align:center"
+                data-i18n="common.loading"></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- CRM upload modal — same shape as marketing_campaign.html, kept inline
+     here so the /marketing page can trigger an upload per row without
+     navigating away. -->
+<div class="modal-backdrop" id="crmUploadModal" role="dialog" aria-modal="true" aria-labelledby="crmUploadTitle">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="crmUploadTitle" data-i18n="crm.upload.title"></div>
+      <button class="modal-close" onclick="closeModal('crmUploadModal')" data-i18n-aria-label="common.close">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="text-muted" id="crmUploadCampaignLabel" style="margin-bottom:10px;font-weight:600"></p>
+      <div id="crmUploadIdle">
+        <p class="text-muted" style="margin-bottom:10px" data-i18n="crm.upload.choose_file"></p>
+        <input type="file" id="crmUploadFile" accept=".xlsx"
+               style="width:100%;padding:10px;border:1px dashed var(--border);border-radius:var(--radius-sm)">
+        <p class="text-dim" style="font-size:12px;margin-top:8px" data-i18n="crm.upload.cap_hint"></p>
+      </div>
+      <div id="crmUploadRunning" hidden>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span class="loading"></span>
+          <span data-i18n="crm.upload.processing"></span>
+        </div>
+        <p class="text-muted" style="margin-top:8px;font-size:13px" id="crmUploadProgress"></p>
+      </div>
+      <div id="crmUploadResult" hidden>
+        <div class="upload-result-banner" id="crmUploadBanner"></div>
+        <dl class="upload-summary-grid" id="crmUploadSummary"></dl>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button id="crmUploadCancel" class="btn btn-ghost" onclick="closeModal('crmUploadModal')"
+              data-i18n="common.cancel"></button>
+      <button id="crmUploadGo" class="btn btn-primary" onclick="crmDoUpload()"
+              data-i18n="crm.upload.button"></button>
+      <button id="crmUploadDone" class="btn btn-primary" onclick="crmFinishUpload()" hidden
+              data-i18n="common.ok"></button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .upload-result-banner {
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 14px;
+    font-weight: 500;
+  }
+  .upload-result-banner.is-success {
+    background: rgba(0, 131, 124, 0.08); color: var(--accent-2);
+    border: 1px solid rgba(0, 131, 124, 0.32);
+  }
+  .upload-result-banner.is-error {
+    background: var(--danger-soft); color: var(--danger);
+    border: 1px solid rgba(186, 26, 26, 0.25);
+  }
+  .upload-summary-grid {
+    display: grid; grid-template-columns: 1fr auto;
+    row-gap: 6px; column-gap: 16px; margin: 0;
+  }
+  .upload-summary-grid dt { color: var(--text-muted); font-size: 13px; }
+  .upload-summary-grid dd { margin: 0; font-weight: 600; }
+</style>
+
 <!-- Campaign create/edit modal -->
 <div class="modal-backdrop" id="campModal" role="dialog" aria-modal="true" aria-labelledby="campModalTitle">
   <div class="modal modal-wide">
@@ -1142,9 +1233,213 @@ async function confirmPeriodDelete() {
 }
 
 // ─── Lifecycle ─────────────────────────────────────────────────────────
-function onLangChange() { if (dashboard) renderDashboard(); }
+function onLangChange() { if (dashboard) renderDashboard(); loadCrmSummary(); }
 function onThemeChange() { if (dashboard) renderDashboard(); }
 
 loadCampaigns();
+
+// ════════════════════════════════════════════════════════════════════
+// CRM REPORTS SECTION (added P1b)
+// ════════════════════════════════════════════════════════════════════
+
+let crmCampaignList = [];
+let crmUploadTargetId = null;
+let crmPollTimer = null;
+let crmPollTries = 0;
+
+async function loadCrmSummary() {
+  try {
+    crmCampaignList = await api("/api/crm/campaigns-summary");
+    renderCrmTable();
+  } catch (e) {
+    // Soft-fail. Surface the error in-row rather than disrupting the rest
+    // of /marketing — the page can still do its primary job without CRM.
+    const tbody = document.getElementById("crmCampaignRows");
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="5" class="text-muted" style="padding:18px;text-align:center">${escapeHtml(tError(e))}</td></tr>`;
+    }
+  }
+}
+
+function renderCrmTable() {
+  const tbody = document.getElementById("crmCampaignRows");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+  if (!crmCampaignList.length) {
+    tbody.innerHTML = `<tr><td colspan="5" class="text-muted" style="padding:18px;text-align:center" data-i18n="mk.empty_state"></td></tr>`;
+    applyLang(true);
+    return;
+  }
+  crmCampaignList.forEach(c => {
+    const tr = document.createElement("tr");
+    const lastUp = c.last_upload_at
+      ? new Intl.DateTimeFormat(getLang() === "ar" ? "ar-EG" : "en-GB",
+          { day: "2-digit", month: "short", year: "numeric" }).format(new Date(c.last_upload_at))
+      : "—";
+    // Small inline pill — uses existing color tokens so we don't add a
+    // new class to the global stylesheet for one table.
+    const interventionCell = c.open_intervention > 0
+      ? `<span style="background:rgba(196,114,0,0.12);color:var(--warning);font-weight:700;padding:2px 10px;border-radius:9999px;font-size:12px">${c.open_intervention}</span>`
+      : `<span class="text-muted">0</span>`;
+    tr.innerHTML = `
+      <td>${escapeHtml(c.campaign_name)}</td>
+      <td style="text-align:end">${(c.total_leads || 0).toLocaleString()}</td>
+      <td style="text-align:end">${interventionCell}</td>
+      <td>${lastUp}</td>
+      <td style="text-align:end">
+        <a class="btn btn-sm" href="/marketing/campaigns/${c.campaign_id}">
+          <span data-i18n="crm.marketing.action.open"></span>
+        </a>
+        <button class="btn btn-sm btn-primary" data-camp="${c.campaign_id}" data-name="${escapeHtml(c.campaign_name)}">
+          <span data-i18n="crm.marketing.action.upload"></span>
+        </button>
+      </td>
+    `;
+    tr.querySelector("button[data-camp]").addEventListener("click", (e) => {
+      const btn = e.currentTarget;
+      crmOpenUpload(parseInt(btn.getAttribute("data-camp"), 10), btn.getAttribute("data-name"));
+    });
+    tbody.appendChild(tr);
+  });
+  applyLang(true);
+}
+
+function crmOpenUpload(campaignId, campaignName) {
+  crmUploadTargetId = campaignId;
+  document.getElementById("crmUploadCampaignLabel").textContent = campaignName || "";
+  crmResetUploadModal();
+  openModal("crmUploadModal");
+}
+
+function crmResetUploadModal() {
+  document.getElementById("crmUploadFile").value = "";
+  document.getElementById("crmUploadIdle").hidden = false;
+  document.getElementById("crmUploadRunning").hidden = true;
+  document.getElementById("crmUploadResult").hidden = true;
+  document.getElementById("crmUploadGo").hidden = false;
+  document.getElementById("crmUploadGo").disabled = false;
+  document.getElementById("crmUploadCancel").hidden = false;
+  document.getElementById("crmUploadDone").hidden = true;
+  document.getElementById("crmUploadBanner").className = "upload-result-banner";
+  document.getElementById("crmUploadBanner").textContent = "";
+  document.getElementById("crmUploadSummary").innerHTML = "";
+}
+
+async function crmDoUpload() {
+  const fileInput = document.getElementById("crmUploadFile");
+  const file = fileInput.files && fileInput.files[0];
+  if (!file || !crmUploadTargetId) {
+    toast(t("errors.required_fields_missing"), "error");
+    return;
+  }
+  if (!file.name.toLowerCase().endsWith(".xlsx")) {
+    toast(t("crm.upload.bad_type"), "error");
+    return;
+  }
+
+  document.getElementById("crmUploadIdle").hidden = true;
+  document.getElementById("crmUploadRunning").hidden = false;
+  document.getElementById("crmUploadGo").disabled = true;
+
+  const fd = new FormData();
+  fd.append("file", file);
+  let uploadId = null;
+  try {
+    let csrf = window._CSRF || null;
+    if (!csrf) {
+      try {
+        const me = await fetch("/api/auth/me", { credentials: "same-origin" });
+        const meJson = await me.json();
+        csrf = meJson.csrf || null;
+      } catch (_) {}
+    }
+    const r = await fetch(`/api/crm/campaigns/${crmUploadTargetId}/upload`, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: csrf ? { "X-CSRF-Token": csrf } : {},
+      body: fd,
+    });
+    const data = await r.json();
+    if (!r.ok) throw { data, status: r.status };
+    uploadId = data.upload_id;
+  } catch (e) {
+    document.getElementById("crmUploadRunning").hidden = true;
+    document.getElementById("crmUploadIdle").hidden = false;
+    document.getElementById("crmUploadGo").disabled = false;
+    toastError(e);
+    return;
+  }
+
+  crmPollTries = 0;
+  crmPollTimer = setInterval(() => crmPoll(uploadId), 2000);
+}
+
+async function crmPoll(uploadId) {
+  crmPollTries += 1;
+  if (crmPollTries > 60) {
+    clearInterval(crmPollTimer); crmPollTimer = null;
+    crmShowResult({ status: "FAILED", error_message: t("crm.upload.timeout") || "Timed out" });
+    return;
+  }
+  try {
+    const s = await api(`/api/crm/uploads/${uploadId}/status`);
+    if (s.status === "COMPLETED" || s.status === "FAILED") {
+      clearInterval(crmPollTimer); crmPollTimer = null;
+      crmShowResult(s);
+    } else {
+      document.getElementById("crmUploadProgress").textContent =
+        `${t("crm.upload.processing")} (${crmPollTries}/60)`;
+    }
+  } catch (e) {
+    clearInterval(crmPollTimer); crmPollTimer = null;
+    crmShowResult({ status: "FAILED", error_message: tError(e) });
+  }
+}
+
+function crmShowResult(s) {
+  document.getElementById("crmUploadRunning").hidden = true;
+  document.getElementById("crmUploadResult").hidden = false;
+  document.getElementById("crmUploadGo").hidden = true;
+  document.getElementById("crmUploadCancel").hidden = true;
+  document.getElementById("crmUploadDone").hidden = false;
+
+  const banner = document.getElementById("crmUploadBanner");
+  if (s.status === "FAILED") {
+    banner.className = "upload-result-banner is-error";
+    banner.textContent = s.error_message || t("crm.upload.failed");
+    return;
+  }
+  banner.className = "upload-result-banner is-success";
+  banner.textContent = t("crm.upload.completed");
+
+  const grid = document.getElementById("crmUploadSummary");
+  grid.innerHTML = "";
+  [["crm.upload.summary.total_events", s.total_events],
+   ["crm.upload.summary.new_events", s.new_events],
+   ["crm.upload.summary.duplicates", s.duplicate_events]].forEach(([k, v]) => {
+    const dt = document.createElement("dt");
+    dt.setAttribute("data-i18n", k);
+    dt.textContent = t(k);
+    const dd = document.createElement("dd");
+    dd.textContent = (v || 0).toLocaleString();
+    grid.appendChild(dt); grid.appendChild(dd);
+  });
+}
+
+function crmFinishUpload() {
+  closeModal("crmUploadModal");
+  // Refresh just the summary table — no need to reload the whole marketing
+  // page (which would also rebuild the heavy dashboard for the selected
+  // campaign).
+  loadCrmSummary();
+}
+
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+loadCrmSummary();
 </script>
 {% endblock %}

@@ -32,6 +32,11 @@ from app.crm_logic import (  # noqa: E402
     normalize_mobile,
     normalize_sales_name,
     normalize_stage,
+    _classify_lead_intervention,
+    TRIGGER_NO_ANSWER_AFTER_FOLLOWING,
+    TRIGGER_NO_ANSWER_AFTER_MEETING,
+    PRIORITY_HIGH,
+    PRIORITY_MEDIUM,
 )
 from app.crm_parser import parse_crm_excel  # noqa: E402
 
@@ -282,6 +287,104 @@ def test_event_hash_dedup():
            detail=f"got {len(h1)} hashes, {len(set(h1))} unique")
 
 
+# ─── Manager intervention classifier ───────────────────────────────────
+#
+# These exercise the pure-function core of recalc_manager_intervention
+# without needing a database. The classifier takes an ordered list of event
+# dicts (ASC by follow_date) and returns either None (no flag) or the flag
+# payload.
+
+def _ev(stage, day, comment="", sales_user_id=7):
+    """Build a minimal event dict matching the cursor row shape."""
+    return {
+        "id": day * 10,
+        "lead_id": 1,
+        "normalized_stage": stage,
+        "follow_date": datetime(2026, 4, day),
+        "comment": comment,
+        "sales_user_id": sales_user_id,
+    }
+
+
+def test_intervention_classifier():
+    print("─── _classify_lead_intervention ───")
+
+    # Empty timeline → no flag
+    _check("empty timeline → None",
+           _classify_lead_intervention([]) is None)
+
+    # NO_ANSWER from first contact → no flag (spec says no)
+    _check("NO_ANSWER on its own → None",
+           _classify_lead_intervention([_ev("NO_ANSWER", 1)]) is None)
+
+    # Three NO_ANSWERs in a row, never went positive → no flag (spec says no)
+    _check("repeated NO_ANSWER only → None",
+           _classify_lead_intervention([
+               _ev("NO_ANSWER", 1), _ev("NO_ANSWER", 2), _ev("NO_ANSWER", 3),
+           ]) is None)
+
+    # Following → NO_ANSWER → MEDIUM
+    verdict = _classify_lead_intervention([
+        _ev("FOLLOWING", 1, comment="will think"),
+        _ev("NO_ANSWER", 2, comment="silence"),
+    ])
+    _check("Following → NO_ANSWER raises AFTER_FOLLOWING",
+           verdict is not None and verdict["trigger"] == TRIGGER_NO_ANSWER_AFTER_FOLLOWING,
+           detail=str(verdict))
+    _check("AFTER_FOLLOWING is MEDIUM",
+           verdict["priority"] == PRIORITY_MEDIUM)
+    _check("previous_positive_stage is FOLLOWING",
+           verdict["previous_positive_stage"] == "FOLLOWING")
+    _check("last_comment carried from latest NO_ANSWER",
+           verdict["last_comment"] == "silence")
+
+    # Meeting → NO_ANSWER → HIGH
+    verdict = _classify_lead_intervention([
+        _ev("MEETING", 1),
+        _ev("NO_ANSWER", 2),
+    ])
+    _check("Meeting → NO_ANSWER raises AFTER_MEETING",
+           verdict is not None and verdict["trigger"] == TRIGGER_NO_ANSWER_AFTER_MEETING)
+    _check("AFTER_MEETING is HIGH",
+           verdict["priority"] == PRIORITY_HIGH)
+
+    # Following → Meeting → NO_ANSWER → HIGH (meeting outranks following)
+    verdict = _classify_lead_intervention([
+        _ev("FOLLOWING", 1), _ev("MEETING", 2), _ev("NO_ANSWER", 3),
+    ])
+    _check("FOLLOWING + MEETING + NO_ANSWER → AFTER_MEETING wins",
+           verdict["trigger"] == TRIGGER_NO_ANSWER_AFTER_MEETING,
+           detail=verdict["trigger"])
+    _check("priority is HIGH when meeting present",
+           verdict["priority"] == PRIORITY_HIGH)
+
+    # Last_positive_stage_date is the MOST RECENT positive stage's date
+    verdict = _classify_lead_intervention([
+        _ev("FOLLOWING", 1), _ev("FOLLOWING", 5), _ev("NO_ANSWER", 6),
+    ])
+    _check("last_positive_stage_date = most recent matching positive",
+           verdict["last_positive_stage_date"].day == 5,
+           detail=str(verdict["last_positive_stage_date"]))
+
+    # Latest stage = MEETING → no flag (spec says no — only NO_ANSWER triggers)
+    _check("latest=MEETING → None",
+           _classify_lead_intervention([
+               _ev("NO_ANSWER", 1), _ev("FOLLOWING", 2), _ev("MEETING", 3),
+           ]) is None)
+
+    # Latest stage = CANCELLATION → no flag
+    _check("latest=CANCELLATION → None",
+           _classify_lead_intervention([
+               _ev("MEETING", 1), _ev("CANCELLATION", 2),
+           ]) is None)
+
+    # Latest stage = INTERESTED → no flag
+    _check("latest=INTERESTED → None",
+           _classify_lead_intervention([
+               _ev("FOLLOWING", 1), _ev("INTERESTED", 2),
+           ]) is None)
+
+
 # ─── Required-column enforcement ───────────────────────────────────────
 
 def test_missing_required_column_raises():
@@ -315,6 +418,7 @@ def main():
     test_parser()
     test_event_hash_dedup()
     test_missing_required_column_raises()
+    test_intervention_classifier()
 
     print()
     if _failures:

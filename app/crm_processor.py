@@ -19,7 +19,7 @@ import logging
 import threading
 import traceback
 
-from app.crm_logic import compute_event_hash
+from app.crm_logic import compute_event_hash, recalc_after_upload
 from app.crm_parser import parse_crm_excel
 from app.database import get_conn
 
@@ -140,6 +140,23 @@ def _process_upload(upload_id: int, file_bytes: bytes, campaign_id: int) -> None
                 )
                 log.warning("CRM upload %s, row %s skipped: %s",
                             upload_id, row.get("row_number"), row_exc)
+
+        # ── Recalc KPIs + Manager Intervention ──────────────────────────
+        # Runs before the COMPLETED flip so the overview endpoint never
+        # serves stale aggregates between "events landed" and "rollups
+        # caught up". Either recalc raising propagates to the outer
+        # exception handler, which marks the upload FAILED — better than
+        # leaving the user with a green "completed" toast on a sheet that
+        # corrupted the dashboards.
+        try:
+            recalc_after_upload(campaign_id, conn)
+        except Exception as recalc_exc:
+            warnings.append(
+                f"Recalc failed after ingest: {type(recalc_exc).__name__}: {recalc_exc}"
+            )
+            log.error("CRM upload %s recalc failed: %s\n%s",
+                      upload_id, recalc_exc, traceback.format_exc())
+            raise
 
         # ── Finalize ────────────────────────────────────────────────────
         with conn.cursor() as cur:

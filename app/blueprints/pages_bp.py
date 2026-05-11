@@ -1,8 +1,9 @@
 """
 Pages blueprint: serves HTML pages with role-based routing
 """
-from flask import Blueprint, render_template, redirect, session
+from flask import Blueprint, abort, render_template, redirect, session
 from app.auth import login_required, role_required, role_home, current_user
+from app.database import get_conn
 
 pages_bp = Blueprint("pages", __name__)
 
@@ -81,6 +82,35 @@ def profile_page():
 @role_required("marketing", "manager", "admin")
 def marketing_page():
     return render_template("marketing.html", user=current_user())
+
+
+@pages_bp.route("/marketing/campaigns/<int:campaign_id>")
+@role_required("marketing", "manager", "admin")
+def marketing_campaign_detail(campaign_id):
+    """Per-campaign CRM page. We 404 here (not from the API) so a bookmarked
+    URL to a deleted campaign gets a clean redirect to /marketing instead
+    of an "Invalid token" page.
+    """
+    conn = None
+    try:
+        conn = get_conn()
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, campaign_name FROM marketing_campaigns WHERE id = %s",
+                (campaign_id,),
+            )
+            row = cur.fetchone()
+    finally:
+        if conn is not None:
+            conn.close()
+    if not row:
+        abort(404)
+    campaign = {"id": row[0], "name": row[1]}
+    return render_template(
+        "marketing_campaign.html",
+        user=current_user(),
+        campaign=campaign,
+    )
 
 
 @pages_bp.route("/teams")

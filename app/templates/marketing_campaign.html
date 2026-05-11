@@ -1,0 +1,601 @@
+{% extends "base.html" %}
+{% block title %}{{ campaign.name }} · CRM{% endblock %}
+
+{% block content %}
+<!-- Hero ribbon — same primitive used across the system. -->
+<section class="hero-ribbon">
+  <div>
+    <h1 class="page-title">{{ campaign.name }}</h1>
+    <p class="page-subtitle">
+      <span data-i18n="crm.overview.title"></span>
+      <span class="hero-dot" aria-hidden="true">·</span>
+      <span id="lastUpdatedLine" class="text-muted"></span>
+    </p>
+  </div>
+  <div class="hero-actions">
+    <a href="/marketing" class="btn btn-ghost">
+      <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+      <span data-i18n="common.back"></span>
+    </a>
+  </div>
+</section>
+
+<!-- Tabs — Overview is wired now; the rest are placeholders for later phases. -->
+<nav class="crm-tabs" role="tablist" aria-label="campaign sections">
+  <button class="crm-tab is-active" role="tab" aria-selected="true" data-tab="overview">
+    <span data-i18n="crm.tabs.overview"></span>
+  </button>
+  <button class="crm-tab" role="tab" aria-selected="false" data-tab="sales">
+    <span data-i18n="crm.tabs.sales"></span>
+  </button>
+  <button class="crm-tab" role="tab" aria-selected="false" data-tab="leads">
+    <span data-i18n="crm.tabs.leads"></span>
+  </button>
+  <button class="crm-tab" role="tab" aria-selected="false" data-tab="intervention">
+    <span data-i18n="crm.tabs.intervention"></span>
+  </button>
+  <button class="crm-tab" role="tab" aria-selected="false" data-tab="daily">
+    <span data-i18n="crm.tabs.daily"></span>
+  </button>
+  <button class="crm-tab" role="tab" aria-selected="false" data-tab="marketing">
+    <span data-i18n="crm.tabs.marketing"></span>
+  </button>
+</nav>
+
+<!-- ── Overview tab ─────────────────────────────────────────────────── -->
+<section class="crm-tab-panel" data-panel="overview" role="tabpanel">
+  <!-- 4 KPI tiles. Layout uses .stats-grid + .kpi-tile per design system. -->
+  <div class="stats-grid" style="margin-bottom:20px">
+    <div class="kpi-tile">
+      <span class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">groups</span></span>
+      <span class="kpi-tile-label" data-i18n="crm.overview.total_leads"></span>
+      <span class="kpi-tile-value" id="kpiTotalLeads">—</span>
+    </div>
+    <div class="kpi-tile">
+      <span class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">warning</span></span>
+      <span class="kpi-tile-label" data-i18n="crm.overview.open_intervention"></span>
+      <span class="kpi-tile-value" id="kpiOpenIntervention">—</span>
+    </div>
+    <div class="kpi-tile">
+      <span class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">priority_high</span></span>
+      <span class="kpi-tile-label" data-i18n="crm.overview.high_priority"></span>
+      <span class="kpi-tile-value" id="kpiHighPriority">—</span>
+    </div>
+    <div class="kpi-tile">
+      <span class="kpi-tile-icon"><span class="material-symbols-outlined" aria-hidden="true">cloud_upload</span></span>
+      <span class="kpi-tile-label" data-i18n="crm.overview.last_upload"></span>
+      <span class="kpi-tile-value" id="kpiLastUpload" style="font-size:18px">—</span>
+    </div>
+  </div>
+
+  <div class="bento">
+    <!-- Stage breakdown donut. Plotly via Charts.drawDonut. -->
+    <div class="chart-card span-7">
+      <div class="chart-card-header">
+        <h3 class="chart-card-title" data-i18n="crm.overview.stage_breakdown"></h3>
+      </div>
+      <div id="stageDonut" class="chart-host" style="min-height:280px"></div>
+      <div id="stageEmpty" class="text-muted text-center" style="display:none;padding:60px 20px"
+           data-i18n="crm.overview.no_data"></div>
+    </div>
+
+    <!-- Top 5 HIGH-priority intervention items. -->
+    <div class="glass-card span-5" style="padding:18px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 class="chart-card-title" data-i18n="crm.overview.intervention_summary"></h3>
+        <a href="#" class="text-link" id="interventionViewAll"
+           data-i18n="crm.overview.view_all"></a>
+      </div>
+      <ul class="intervention-list" id="interventionList">
+        <li class="intervention-empty text-muted" data-i18n="crm.overview.intervention_none"></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ── Placeholder panels for tabs that ship in later phases ────────── -->
+{% for panel in ['sales', 'leads', 'intervention', 'daily', 'marketing'] %}
+<section class="crm-tab-panel" data-panel="{{ panel }}" role="tabpanel" hidden>
+  <div class="glass-card" style="padding:48px;text-align:center">
+    <span class="material-symbols-outlined" aria-hidden="true"
+          style="font-size:48px;color:var(--text-dim)">hourglass_empty</span>
+    <h3 style="margin-top:12px" data-i18n="crm.overview.coming_soon"></h3>
+  </div>
+</section>
+{% endfor %}
+
+<!-- Floating "Upload CRM Report" FAB — sticky bottom-end. -->
+<button class="crm-fab" id="crmFab" type="button"
+        data-i18n-title="crm.upload.title" data-i18n-aria-label="crm.upload.title">
+  <span class="material-symbols-outlined" aria-hidden="true">cloud_upload</span>
+  <span data-i18n="crm.upload.title"></span>
+</button>
+
+<!-- ── Upload modal ─────────────────────────────────────────────────── -->
+<div class="modal-backdrop" id="uploadModal" role="dialog" aria-modal="true" aria-labelledby="uploadModalTitle">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="uploadModalTitle" data-i18n="crm.upload.title"></div>
+      <button class="modal-close" onclick="closeModal('uploadModal')" data-i18n-aria-label="common.close">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Idle state: file picker. -->
+      <div id="uploadStateIdle">
+        <p class="text-muted" style="margin-bottom:14px" data-i18n="crm.upload.choose_file"></p>
+        <input type="file" id="uploadFile" accept=".xlsx"
+               style="width:100%;padding:10px;border:1px dashed var(--border);border-radius:var(--radius-sm)">
+        <p class="text-dim" style="font-size:12px;margin-top:8px" data-i18n="crm.upload.cap_hint"></p>
+      </div>
+
+      <!-- Processing state: spinner + status text. -->
+      <div id="uploadStateRunning" hidden>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span class="loading"></span>
+          <span data-i18n="crm.upload.processing"></span>
+        </div>
+        <p class="text-muted" style="margin-top:8px;font-size:13px" id="uploadProgressLabel"></p>
+      </div>
+
+      <!-- Result state: summary + warnings. -->
+      <div id="uploadStateResult" hidden>
+        <div class="upload-result-banner" id="uploadResultBanner"></div>
+        <dl class="upload-summary-grid" id="uploadSummary"></dl>
+        <div id="uploadWarnings"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button id="uploadCancelBtn" class="btn btn-ghost" onclick="closeModal('uploadModal')"
+              data-i18n="common.cancel"></button>
+      <button id="uploadGoBtn" class="btn btn-primary" onclick="startUpload()"
+              data-i18n="crm.upload.button"></button>
+      <button id="uploadDoneBtn" class="btn btn-primary" onclick="finishUpload()" hidden
+              data-i18n="common.ok"></button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/charts.js') }}?v=flat57"></script>
+<script>
+const CAMPAIGN_ID = {{ campaign.id }};
+const STAGE_TOKENS = ["NO_ANSWER", "FOLLOWING", "MEETING", "CANCELLATION", "INTERESTED", "REQUEST"];
+let overview = null;
+let pollTimer = null;
+let pollTries = 0;
+
+// ─── Tabs ─────────────────────────────────────────────────────────────
+document.querySelectorAll(".crm-tab").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const target = btn.getAttribute("data-tab");
+    document.querySelectorAll(".crm-tab").forEach(b => {
+      const active = b === btn;
+      b.classList.toggle("is-active", active);
+      b.setAttribute("aria-selected", active ? "true" : "false");
+    });
+    document.querySelectorAll(".crm-tab-panel").forEach(p => {
+      p.hidden = p.getAttribute("data-panel") !== target;
+    });
+  });
+});
+
+// ─── Load + render overview ──────────────────────────────────────────
+async function loadOverview() {
+  try {
+    overview = await api(`/api/crm/campaigns/${CAMPAIGN_ID}/overview`);
+    renderOverview();
+  } catch (e) {
+    toastError(e);
+  }
+  // Top-5 intervention sample comes from the dedicated endpoint so the
+  // donut data doesn't bloat with full text fields.
+  try {
+    const list = await api(`/api/crm/campaigns/${CAMPAIGN_ID}/intervention?status=OPEN&priority=HIGH`);
+    renderInterventionTop(list);
+  } catch (e) {
+    // Soft-fail — the rest of the page is still useful without this card.
+    console.warn("intervention sample failed:", e);
+  }
+}
+
+function renderOverview() {
+  if (!overview) return;
+  // KPI tiles
+  setText("kpiTotalLeads", fmtNum(overview.total_leads));
+  setText("kpiOpenIntervention", fmtNum(overview.manager_intervention_count));
+  setText("kpiHighPriority", fmtNum((overview.intervention_breakdown || {}).HIGH || 0));
+  setText("kpiLastUpload", overview.last_upload_at
+    ? fmtDateShort(overview.last_upload_at)
+    : t("common.never") || "—");
+
+  // Last-updated subtitle line (under hero)
+  const summary = overview.last_upload_summary;
+  const lastLine = document.getElementById("lastUpdatedLine");
+  if (lastLine) {
+    if (summary && summary.uploaded_at) {
+      const by = summary.uploaded_by_name ? ` · ${summary.uploaded_by_name}` : "";
+      lastLine.textContent = `${t("crm.overview.last_upload")}: ${fmtDateTimeShort(summary.uploaded_at)}${by}`;
+    } else {
+      lastLine.textContent = t("crm.overview.no_uploads_yet");
+    }
+  }
+
+  // Donut
+  renderStageDonut(overview.stage_counts || {});
+}
+
+function renderStageDonut(stageCounts) {
+  const host = document.getElementById("stageDonut");
+  const empty = document.getElementById("stageEmpty");
+  const labels = [];
+  const values = [];
+  STAGE_TOKENS.forEach(tok => {
+    const n = stageCounts[tok] || 0;
+    if (n > 0) {
+      labels.push(t("crm.stages." + tok));
+      values.push(n);
+    }
+  });
+  if (!values.length) {
+    host.style.display = "none";
+    empty.style.display = "block";
+    return;
+  }
+  host.style.display = "block";
+  empty.style.display = "none";
+  // Charts.drawDonut funnels through _waitForPlotly so calling it before
+  // Plotly's CDN finishes is safe.
+  Charts.drawDonut(host, labels, values);
+}
+
+function renderInterventionTop(list) {
+  const el = document.getElementById("interventionList");
+  el.innerHTML = "";
+  if (!list || !list.length) {
+    const li = document.createElement("li");
+    li.className = "intervention-empty text-muted";
+    li.textContent = t("crm.overview.intervention_none");
+    el.appendChild(li);
+    return;
+  }
+  list.slice(0, 5).forEach(item => {
+    const li = document.createElement("li");
+    li.className = "intervention-item";
+    const priorityClass = item.priority === "HIGH" ? "is-high" : "is-medium";
+    li.innerHTML = `
+      <span class="intervention-priority ${priorityClass}">${escapeHtml(item.priority)}</span>
+      <div class="intervention-body">
+        <div class="intervention-name">${escapeHtml(item.client_name || item.mobile || "")}</div>
+        <div class="intervention-meta text-muted">
+          ${escapeHtml(item.mobile || "")}
+          ${item.last_comment ? " · " + escapeHtml(item.last_comment) : ""}
+        </div>
+      </div>
+    `;
+    el.appendChild(li);
+  });
+}
+
+// ─── Upload + polling ────────────────────────────────────────────────
+document.getElementById("crmFab").addEventListener("click", () => {
+  resetUploadModal();
+  openModal("uploadModal");
+});
+
+function resetUploadModal() {
+  document.getElementById("uploadFile").value = "";
+  document.getElementById("uploadStateIdle").hidden = false;
+  document.getElementById("uploadStateRunning").hidden = true;
+  document.getElementById("uploadStateResult").hidden = true;
+  document.getElementById("uploadGoBtn").hidden = false;
+  document.getElementById("uploadGoBtn").disabled = false;
+  document.getElementById("uploadCancelBtn").hidden = false;
+  document.getElementById("uploadDoneBtn").hidden = true;
+  document.getElementById("uploadResultBanner").className = "upload-result-banner";
+  document.getElementById("uploadResultBanner").textContent = "";
+  document.getElementById("uploadSummary").innerHTML = "";
+  document.getElementById("uploadWarnings").innerHTML = "";
+}
+
+async function startUpload() {
+  const fileInput = document.getElementById("uploadFile");
+  const file = fileInput.files && fileInput.files[0];
+  if (!file) {
+    toast(t("errors.required_fields_missing"), "error");
+    return;
+  }
+  // Client-side .xlsx hint. The server re-validates.
+  if (!file.name.toLowerCase().endsWith(".xlsx")) {
+    toast(t("crm.upload.bad_type"), "error");
+    return;
+  }
+
+  document.getElementById("uploadStateIdle").hidden = true;
+  document.getElementById("uploadStateRunning").hidden = false;
+  document.getElementById("uploadGoBtn").disabled = true;
+
+  const fd = new FormData();
+  fd.append("file", file);
+
+  let uploadId = null;
+  try {
+    // FormData uploads need to bypass the JSON wrapper in `api()`. Hit fetch
+    // directly but keep the CSRF flow: api() seeds _CSRF on first call via
+    // /me; we re-use that token here.
+    let csrf = window._CSRF || null;
+    if (!csrf) {
+      try {
+        const me = await fetch("/api/auth/me", { credentials: "same-origin" });
+        const meJson = await me.json();
+        csrf = meJson.csrf || null;
+      } catch (_) { /* leave null */ }
+    }
+    const r = await fetch(`/api/crm/campaigns/${CAMPAIGN_ID}/upload`, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: csrf ? { "X-CSRF-Token": csrf } : {},
+      body: fd,
+    });
+    const data = await r.json();
+    if (!r.ok) throw { data: data, status: r.status };
+    uploadId = data.upload_id;
+  } catch (e) {
+    document.getElementById("uploadStateRunning").hidden = true;
+    document.getElementById("uploadStateIdle").hidden = false;
+    document.getElementById("uploadGoBtn").disabled = false;
+    toastError(e);
+    return;
+  }
+
+  // Poll every 2s, cap at 60 tries (~2 minutes).
+  pollTries = 0;
+  pollTimer = setInterval(() => pollOnce(uploadId), 2000);
+}
+
+async function pollOnce(uploadId) {
+  pollTries += 1;
+  if (pollTries > 60) {
+    clearInterval(pollTimer);
+    pollTimer = null;
+    showUploadResult({ status: "FAILED", error_message: t("crm.upload.timeout") || "Timed out" });
+    return;
+  }
+  try {
+    const s = await api(`/api/crm/uploads/${uploadId}/status`);
+    if (s.status === "COMPLETED" || s.status === "FAILED") {
+      clearInterval(pollTimer);
+      pollTimer = null;
+      showUploadResult(s);
+    } else {
+      const lbl = document.getElementById("uploadProgressLabel");
+      lbl.textContent = `${t("crm.upload.processing")} (${pollTries}/60)`;
+    }
+  } catch (e) {
+    clearInterval(pollTimer);
+    pollTimer = null;
+    showUploadResult({ status: "FAILED", error_message: tError(e) });
+  }
+}
+
+function showUploadResult(s) {
+  document.getElementById("uploadStateRunning").hidden = true;
+  document.getElementById("uploadStateResult").hidden = false;
+  document.getElementById("uploadGoBtn").hidden = true;
+  document.getElementById("uploadCancelBtn").hidden = true;
+  document.getElementById("uploadDoneBtn").hidden = false;
+
+  const banner = document.getElementById("uploadResultBanner");
+  if (s.status === "FAILED") {
+    banner.className = "upload-result-banner is-error";
+    banner.textContent = (s.error_message || t("crm.upload.failed"));
+    return;
+  }
+  banner.className = "upload-result-banner is-success";
+  banner.textContent = t("crm.upload.completed");
+
+  // Summary table
+  const grid = document.getElementById("uploadSummary");
+  grid.innerHTML = "";
+  const rows = [
+    ["crm.upload.summary.total_events", s.total_events],
+    ["crm.upload.summary.new_events", s.new_events],
+    ["crm.upload.summary.duplicates", s.duplicate_events],
+  ];
+  rows.forEach(([k, v]) => {
+    const dt = document.createElement("dt");
+    dt.setAttribute("data-i18n", k);
+    dt.textContent = t(k);
+    const dd = document.createElement("dd");
+    dd.textContent = fmtNum(v || 0);
+    grid.appendChild(dt);
+    grid.appendChild(dd);
+  });
+
+  // Warnings — unmatched reps + unmatched stages + generic warnings
+  const warnHost = document.getElementById("uploadWarnings");
+  warnHost.innerHTML = "";
+  const unmatchedReps = s.unmatched_sales_reps || [];
+  const unmatchedStages = s.unmatched_stages || [];
+  if (unmatchedReps.length) {
+    warnHost.appendChild(buildWarnBlock("crm.upload.warnings.unmatched_reps", unmatchedReps));
+  }
+  if (unmatchedStages.length) {
+    warnHost.appendChild(buildWarnBlock("crm.upload.warnings.unmatched_stages", unmatchedStages));
+  }
+  if (Array.isArray(s.warnings) && s.warnings.length) {
+    warnHost.appendChild(buildWarnBlock("crm.upload.warnings.other", s.warnings.slice(0, 20)));
+  }
+}
+
+function buildWarnBlock(titleKey, items) {
+  const wrap = document.createElement("div");
+  wrap.className = "upload-warn-block";
+  const h = document.createElement("h4");
+  h.setAttribute("data-i18n", titleKey);
+  h.textContent = t(titleKey);
+  wrap.appendChild(h);
+  const ul = document.createElement("ul");
+  items.forEach(item => {
+    const li = document.createElement("li");
+    li.textContent = String(item);
+    ul.appendChild(li);
+  });
+  wrap.appendChild(ul);
+  return wrap;
+}
+
+function finishUpload() {
+  closeModal("uploadModal");
+  // Hard reload — the overview hits the freshly-computed campaign_kpis row.
+  window.location.reload();
+}
+
+// ─── Small utilities (intentionally local to keep common.js untouched) ─
+function setText(id, txt) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = txt;
+}
+function fmtNum(n) {
+  if (n == null) return "—";
+  try { return Number(n).toLocaleString(); } catch (_) { return String(n); }
+}
+function fmtDateShort(iso) {
+  try {
+    return new Intl.DateTimeFormat(getLang() === "ar" ? "ar-EG" : "en-GB",
+      { day: "2-digit", month: "short", year: "numeric" }).format(new Date(iso));
+  } catch (_) { return iso; }
+}
+function fmtDateTimeShort(iso) {
+  try {
+    return new Intl.DateTimeFormat(getLang() === "ar" ? "ar-EG" : "en-GB",
+      { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+  } catch (_) { return iso; }
+}
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function onLangChange() { if (overview) renderOverview(); }
+function onThemeChange() { if (overview) renderStageDonut(overview.stage_counts || {}); }
+
+loadOverview();
+</script>
+
+<!-- Page-scoped CSS — uses existing tokens, no new design language. -->
+<style>
+  .crm-tabs {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 20px;
+    padding: 0 4px;
+  }
+  .crm-tab {
+    background: transparent;
+    border: none;
+    padding: 12px 18px;
+    font: inherit;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+  }
+  .crm-tab:hover { color: var(--text); background: var(--surface-recessed); }
+  .crm-tab.is-active {
+    color: var(--brand);
+    border-bottom-color: var(--brand);
+    font-weight: 600;
+  }
+
+  /* Floating Upload FAB. inset-inline-end keeps it on the trailing edge
+     in both RTL and LTR. */
+  .crm-fab {
+    position: fixed;
+    bottom: 24px;
+    inset-inline-end: 24px;
+    z-index: 100;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 22px;
+    background: var(--grad-brand);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    font: inherit;
+    font-weight: 600;
+    box-shadow: 0 8px 28px rgba(71, 77, 197, 0.42), inset 0 1px 0 rgba(255,255,255,0.2);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .crm-fab:hover { transform: translateY(-2px); box-shadow: 0 12px 36px rgba(71,77,197,0.48); }
+  .crm-fab:active { transform: translateY(0); }
+
+  /* Intervention list — uses existing tokens. */
+  .intervention-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+  .intervention-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 10px 12px;
+    background: var(--surface-recessed);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+  }
+  .intervention-priority {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 3px 8px;
+    border-radius: var(--radius-pill);
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .intervention-priority.is-high   { background: rgba(186,26,26,0.10); color: var(--danger); }
+  .intervention-priority.is-medium { background: rgba(196,114,0,0.12); color: var(--warning); }
+  .intervention-body { flex: 1; min-width: 0; }
+  .intervention-name { font-weight: 600; }
+  .intervention-meta { font-size: 12px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .intervention-empty { padding: 14px 4px; }
+
+  /* Upload modal — minimal additions. */
+  .upload-result-banner {
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 14px;
+    font-weight: 500;
+  }
+  .upload-result-banner.is-success {
+    background: rgba(0, 131, 124, 0.08); color: var(--accent-2);
+    border: 1px solid rgba(0, 131, 124, 0.32);
+  }
+  .upload-result-banner.is-error {
+    background: var(--danger-soft); color: var(--danger);
+    border: 1px solid rgba(186, 26, 26, 0.25);
+  }
+  .upload-summary-grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    row-gap: 6px;
+    column-gap: 16px;
+    margin: 0 0 14px;
+  }
+  .upload-summary-grid dt { color: var(--text-muted); font-size: 13px; }
+  .upload-summary-grid dd { margin: 0; font-weight: 600; }
+  .upload-warn-block { margin-top: 10px; }
+  .upload-warn-block h4 {
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--warning); margin: 0 0 6px;
+  }
+  .upload-warn-block ul { margin: 0; padding-inline-start: 18px; font-size: 13px; color: var(--text-muted); }
+  .upload-warn-block li { margin: 2px 0; }
+  .hero-dot { margin: 0 6px; color: var(--text-dim); }
+  .hero-actions { display: flex; gap: 8px; }
+  .text-link { color: var(--brand); text-decoration: none; font-size: 13px; font-weight: 600; }
+  .text-link:hover { text-decoration: underline; }
+</style>
+{% endblock %}

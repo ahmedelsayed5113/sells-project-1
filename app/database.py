@@ -701,6 +701,56 @@ def init_all_tables():
                     "ON stage_mappings(campaign_id, raw_stage);"
                 )
 
+                # campaign_kpis — one row per campaign, recomputed in full
+                # after each upload via crm_logic.recalc_campaign_kpis. UNIQUE
+                # on campaign_id lets the recalc do INSERT … ON CONFLICT
+                # without first SELECTing whether the row exists.
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS campaign_kpis (
+                        id                          SERIAL PRIMARY KEY,
+                        campaign_id                 INTEGER UNIQUE NOT NULL REFERENCES marketing_campaigns(id) ON DELETE CASCADE,
+                        total_leads                 INTEGER DEFAULT 0,
+                        stage_counts                JSONB DEFAULT '{}'::jsonb,
+                        manager_intervention_count  INTEGER DEFAULT 0,
+                        last_upload_at              TIMESTAMP,
+                        updated_at                  TIMESTAMP DEFAULT NOW()
+                    );
+                """)
+
+                # manager_intervention_flags — one row per lead that currently
+                # meets a trigger. UNIQUE on lead_id is what makes the recalc
+                # idempotent: if a lead's situation changes from "NO_ANSWER
+                # after MEETING" back to "still talking" (latest stage flips
+                # off NO_ANSWER), the recalc DELETEs the flag.
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS manager_intervention_flags (
+                        id                        SERIAL PRIMARY KEY,
+                        lead_id                   INTEGER UNIQUE NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+                        campaign_id               INTEGER NOT NULL REFERENCES marketing_campaigns(id) ON DELETE CASCADE,
+                        sales_user_id             INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                        trigger_type              VARCHAR(40) NOT NULL,
+                        current_stage             VARCHAR(40),
+                        previous_positive_stage   VARCHAR(40),
+                        priority                  VARCHAR(10),
+                        last_positive_stage_date  TIMESTAMP,
+                        last_no_answer_date       TIMESTAMP,
+                        last_comment              TEXT,
+                        status                    VARCHAR(15) DEFAULT 'OPEN',
+                        reviewed_by               INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                        reviewed_at               TIMESTAMP,
+                        created_at                TIMESTAMP DEFAULT NOW(),
+                        updated_at                TIMESTAMP DEFAULT NOW()
+                    );
+                """)
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_intervention_campaign_status "
+                    "ON manager_intervention_flags(campaign_id, status);"
+                )
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_intervention_priority "
+                    "ON manager_intervention_flags(priority, status);"
+                )
+
                 cur.execute("""
                     CREATE TABLE IF NOT EXISTS sales_rep_mappings (
                         id             SERIAL PRIMARY KEY,
