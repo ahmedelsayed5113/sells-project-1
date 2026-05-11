@@ -694,12 +694,12 @@ function renderScenarios() {
       <div class="mkt-scenario-card${isRec ? ' is-recommended' : ''}"
            style="cursor:pointer;transition:border-color .2s"
            onclick="selectScenario('${key}')"
-           title="اضغط لاختيار هذا السيناريو">
+           title="${t('mk.scenario_pick_tooltip')}">
         <div class="mkt-scenario-head">
           <div class="mkt-scenario-title">${t("mk.scenario_" + key)}</div>
           ${isRec
             ? `<span class="badge badge-excellent">${t("mk.recommended_label")}</span>`
-            : `<span style="font-size:11px;color:var(--text-muted)">اضغط للاختيار</span>`}
+            : `<span style="font-size:11px;color:var(--text-muted)">${t("mk.scenario_pick_hint")}</span>`}
         </div>
         <dl class="mkt-scenario-stats">
           <div><dt>${t("mk.target_cpd")}</dt><dd>${egp(s.target_cost_per_deal)}</dd></div>

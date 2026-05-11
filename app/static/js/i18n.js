@@ -851,6 +851,8 @@ const I18N = {
     "mk.scenario_balanced":     "Balanced — متوازن (16%)",
     "mk.scenario_aggressive":   "Aggressive — هجومي (17%)",
     "mk.recommended_label":     "السيناريو الموصى به",
+    "mk.scenario_pick_hint":    "اضغط للاختيار",
+    "mk.scenario_pick_tooltip": "اضغط لاختيار هذا السيناريو",
 
     "mk.add_period":   "+ إضافة فترة",
     "mk.edit_period":  "تعديل الفترة",
@@ -1939,6 +1941,8 @@ const I18N = {
     "mk.scenario_balanced":     "Balanced (16%)",
     "mk.scenario_aggressive":   "Aggressive (17%)",
     "mk.recommended_label":     "Recommended scenario",
+    "mk.scenario_pick_hint":    "Click to select",
+    "mk.scenario_pick_tooltip": "Click to pick this scenario",
 
     "mk.add_period":   "+ Add period",
     "mk.edit_period":  "Edit period",
