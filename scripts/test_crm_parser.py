@@ -33,6 +33,9 @@ from app.crm_logic import (  # noqa: E402
     normalize_sales_name,
     normalize_stage,
     _classify_lead_intervention,
+    _assignments_from_events,
+    ASSIGNMENT_TYPE_FRESH,
+    ASSIGNMENT_TYPE_ROTATION,
     TRIGGER_NO_ANSWER_AFTER_FOLLOWING,
     TRIGGER_NO_ANSWER_AFTER_MEETING,
     PRIORITY_HIGH,
@@ -385,6 +388,128 @@ def test_intervention_classifier():
            ]) is None)
 
 
+# ─── Assignment builder (Fresh vs Rotation) ─────────────────────────────
+#
+# Pure-function tests for _assignments_from_events. The function takes an
+# ASC-sorted event list (each dict needs follow_date, sales_user_id,
+# raw_sales_rep_name) and returns the ordered assignment dicts.
+
+def _aev(day, user_id=None, raw_name=None):
+    """Minimal event tuple matching the live row shape."""
+    return {
+        "follow_date": datetime(2026, 4, day),
+        "sales_user_id": user_id,
+        "raw_sales_rep_name": raw_name,
+    }
+
+
+def test_assignments_from_events():
+    print("─── _assignments_from_events ───")
+
+    # No events → no assignments
+    _check("empty → []", _assignments_from_events([]) == [])
+
+    # Single event with one rep → one FRESH assignment, ended_at=None
+    out = _assignments_from_events([_aev(1, user_id=7)])
+    _check("single event → 1 FRESH",
+           len(out) == 1
+           and out[0]["assignment_type"] == ASSIGNMENT_TYPE_FRESH
+           and out[0]["ended_at"] is None
+           and out[0]["sales_user_id"] == 7,
+           detail=str(out))
+
+    # Three events, same rep → still 1 FRESH, ended_at=None
+    out = _assignments_from_events([
+        _aev(1, user_id=7), _aev(2, user_id=7), _aev(3, user_id=7),
+    ])
+    _check("same rep streak → 1 FRESH",
+           len(out) == 1
+           and out[0]["assignment_type"] == ASSIGNMENT_TYPE_FRESH
+           and out[0]["ended_at"] is None,
+           detail=str(out))
+
+    # Rep A → Rep B: 2 assignments. A is FRESH (closed), B is ROTATION (open).
+    out = _assignments_from_events([
+        _aev(1, user_id=7), _aev(2, user_id=7), _aev(3, user_id=9),
+    ])
+    _check("A→B → FRESH(A) + ROTATION(B)",
+           len(out) == 2
+           and out[0]["assignment_type"] == ASSIGNMENT_TYPE_FRESH
+           and out[0]["sales_user_id"] == 7
+           and out[0]["ended_at"].day == 3
+           and out[1]["assignment_type"] == ASSIGNMENT_TYPE_ROTATION
+           and out[1]["sales_user_id"] == 9
+           and out[1]["ended_at"] is None,
+           detail=str(out))
+
+    # Rep returning later (A → B → A) → 3 assignments, the returning A is
+    # ROTATION (NOT another FRESH).
+    out = _assignments_from_events([
+        _aev(1, user_id=7), _aev(2, user_id=9), _aev(3, user_id=7),
+    ])
+    _check("A→B→A → 3 assignments, returning A is ROTATION",
+           len(out) == 3
+           and out[0]["assignment_type"] == ASSIGNMENT_TYPE_FRESH
+           and out[1]["assignment_type"] == ASSIGNMENT_TYPE_ROTATION
+           and out[2]["assignment_type"] == ASSIGNMENT_TYPE_ROTATION
+           and out[2]["sales_user_id"] == 7,
+           detail=str(out))
+
+    # Both reps unmatched (no sales_user_id, raw names differ) → still works
+    out = _assignments_from_events([
+        _aev(1, raw_name="Rana Hany"),
+        _aev(2, raw_name="rana  hany"),  # normalizes to same
+        _aev(3, raw_name="Yara K"),
+    ])
+    _check("unmatched: normalized-name compare collapses 'rana  hany'",
+           len(out) == 2
+           and out[0]["assignment_type"] == ASSIGNMENT_TYPE_FRESH
+           and out[1]["sales_user_id"] is None
+           and out[1]["raw_sales_rep_name"] == "Yara K",
+           detail=str(out))
+
+    # Mixed: matched user_id vs unmatched raw name → never equal (rotation)
+    out = _assignments_from_events([
+        _aev(1, user_id=7),
+        _aev(2, raw_name="Rana Hany"),
+    ])
+    _check("matched vs unmatched → ROTATION",
+           len(out) == 2
+           and out[1]["assignment_type"] == ASSIGNMENT_TYPE_ROTATION
+           and out[1]["sales_user_id"] is None,
+           detail=str(out))
+
+    # Events with no rep info at all → SKIPPED, don't break current assignment
+    out = _assignments_from_events([
+        _aev(1, user_id=7),
+        _aev(2, user_id=None, raw_name=None),  # ghost row, skip
+        _aev(3, user_id=7),
+    ])
+    _check("ghost (no rep) row doesn't break the streak",
+           len(out) == 1
+           and out[0]["sales_user_id"] == 7
+           and out[0]["assignment_type"] == ASSIGNMENT_TYPE_FRESH,
+           detail=str(out))
+
+    # Ghost row before any real rep → first real event still opens FRESH
+    out = _assignments_from_events([
+        _aev(1, user_id=None, raw_name=None),
+        _aev(2, user_id=7),
+    ])
+    _check("leading ghost row doesn't suppress FRESH",
+           len(out) == 1 and out[0]["assignment_type"] == ASSIGNMENT_TYPE_FRESH,
+           detail=str(out))
+
+    # Half-open interval: assignment N's ended_at == assignment N+1's started_at
+    out = _assignments_from_events([
+        _aev(1, user_id=7), _aev(5, user_id=9),
+    ])
+    _check("half-open: ended_at == next started_at",
+           out[0]["ended_at"] == out[1]["started_at"]
+           and out[0]["ended_at"].day == 5,
+           detail=str(out))
+
+
 # ─── Required-column enforcement ───────────────────────────────────────
 
 def test_missing_required_column_raises():
@@ -419,6 +544,7 @@ def main():
     test_event_hash_dedup()
     test_missing_required_column_raises()
     test_intervention_classifier()
+    test_assignments_from_events()
 
     print()
     if _failures:

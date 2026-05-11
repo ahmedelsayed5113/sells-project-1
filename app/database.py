@@ -751,6 +751,59 @@ def init_all_tables():
                     "ON manager_intervention_flags(priority, status);"
                 )
 
+                # lead_assignments (P2) — one row per "this rep owned this
+                # lead during [started_at, ended_at)" window. Rebuilt in
+                # full per lead on every recalc; we never UPDATE rows in
+                # place. The latest assignment for a lead has ended_at=NULL.
+                # raw_sales_rep_name is carried so unmatched reps still
+                # produce a row — they just won't show in sales_kpis until
+                # the admin maps them.
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS lead_assignments (
+                        id                  SERIAL PRIMARY KEY,
+                        lead_id             INTEGER NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+                        campaign_id         INTEGER NOT NULL REFERENCES marketing_campaigns(id) ON DELETE CASCADE,
+                        sales_user_id       INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                        raw_sales_rep_name  TEXT,
+                        assignment_type     VARCHAR(15) NOT NULL,
+                        started_at          TIMESTAMP NOT NULL,
+                        ended_at            TIMESTAMP,
+                        created_at          TIMESTAMP DEFAULT NOW()
+                    );
+                """)
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_assignments_lead "
+                    "ON lead_assignments(lead_id, started_at);"
+                )
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_assignments_user "
+                    "ON lead_assignments(sales_user_id, campaign_id);"
+                )
+
+                # sales_kpis (P2) — per-rep, per-campaign rollup of Fresh vs
+                # Rotation lead counts and the latest-stage outcome bucket
+                # within each assignment window. Recalc is upsert + cleanup,
+                # so UNIQUE(campaign_id, sales_user_id) is what enforces
+                # idempotency. Unmatched reps (sales_user_id IS NULL) never
+                # land here — they're surfaced as a warning instead.
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS sales_kpis (
+                        id                     SERIAL PRIMARY KEY,
+                        campaign_id            INTEGER NOT NULL REFERENCES marketing_campaigns(id) ON DELETE CASCADE,
+                        sales_user_id          INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                        fresh_leads_count      INTEGER DEFAULT 0,
+                        rotation_leads_count   INTEGER DEFAULT 0,
+                        fresh_outcomes         JSONB DEFAULT '{}'::jsonb,
+                        rotation_outcomes      JSONB DEFAULT '{}'::jsonb,
+                        updated_at             TIMESTAMP DEFAULT NOW(),
+                        UNIQUE (campaign_id, sales_user_id)
+                    );
+                """)
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_sales_kpis_campaign "
+                    "ON sales_kpis(campaign_id);"
+                )
+
                 cur.execute("""
                     CREATE TABLE IF NOT EXISTS sales_rep_mappings (
                         id             SERIAL PRIMARY KEY,

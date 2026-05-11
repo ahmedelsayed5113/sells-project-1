@@ -93,8 +93,68 @@
   </div>
 </section>
 
+<!-- ── Sales Performance tab (P2) ───────────────────────────────────── -->
+<section class="crm-tab-panel" data-panel="sales" role="tabpanel" hidden>
+  <!-- Unmatched-reps warning — only renders if there are any. Rendered
+       by JS so we don't need a server-template flag here. -->
+  <div id="salesUnmatchedWarn" class="glass-card sales-unmatched-card" hidden>
+    <span class="material-symbols-outlined" aria-hidden="true">warning</span>
+    <div class="sales-unmatched-body">
+      <div class="sales-unmatched-title" id="salesUnmatchedTitle"></div>
+      <ul class="sales-unmatched-list" id="salesUnmatchedList"></ul>
+    </div>
+  </div>
+
+  <!-- Empty state — no reps yet (no assignments / no matched reps). -->
+  <div id="salesEmpty" class="glass-card" style="padding:48px;text-align:center" hidden>
+    <span class="material-symbols-outlined" aria-hidden="true"
+          style="font-size:48px;color:var(--text-dim)">groups</span>
+    <h3 style="margin-top:12px" data-i18n="crm.sales.no_reps_yet"></h3>
+  </div>
+
+  <!-- Charts block. .bento gives us a 12-col grid that auto-stacks below
+       1100px, matching the rest of the system. -->
+  <div class="bento" id="salesChartsBlock" hidden>
+    <div class="chart-card span-12">
+      <div class="chart-card-header">
+        <h3 class="chart-card-title" data-i18n="crm.sales.totals_by_rep"></h3>
+      </div>
+      <div id="salesTotalsChart" class="chart-host" style="min-height:280px"></div>
+    </div>
+    <div class="chart-card span-6">
+      <div class="chart-card-header">
+        <h3 class="chart-card-title" data-i18n="crm.sales.fresh_outcomes"></h3>
+      </div>
+      <div id="salesFreshChart" class="chart-host" style="min-height:280px"></div>
+    </div>
+    <div class="chart-card span-6">
+      <div class="chart-card-header">
+        <h3 class="chart-card-title" data-i18n="crm.sales.rotation_outcomes"></h3>
+      </div>
+      <div id="salesRotationChart" class="chart-host" style="min-height:280px"></div>
+    </div>
+  </div>
+
+  <!-- Per-rep details table. Lives in a glass-card .table-wrap so the
+       scroll behavior on narrow viewports matches every other table. -->
+  <div class="glass-card table-wrap" id="salesTableWrap" style="margin-top:18px;padding:0;overflow-x:auto" hidden>
+    <table id="salesRepTable">
+      <thead>
+        <tr>
+          <th data-i18n="crm.sales.col.rep"></th>
+          <th style="text-align:end" data-i18n="crm.sales.fresh_leads"></th>
+          <th data-i18n="crm.sales.fresh_outcomes"></th>
+          <th style="text-align:end" data-i18n="crm.sales.rotation_leads"></th>
+          <th data-i18n="crm.sales.rotation_outcomes"></th>
+        </tr>
+      </thead>
+      <tbody id="salesRepRows"></tbody>
+    </table>
+  </div>
+</section>
+
 <!-- ── Placeholder panels for tabs that ship in later phases ────────── -->
-{% for panel in ['sales', 'leads', 'intervention', 'daily', 'marketing'] %}
+{% for panel in ['leads', 'intervention', 'daily', 'marketing'] %}
 <section class="crm-tab-panel" data-panel="{{ panel }}" role="tabpanel" hidden>
   <div class="glass-card" style="padding:48px;text-align:center">
     <span class="material-symbols-outlined" aria-hidden="true"
@@ -156,7 +216,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/charts.js') }}?v=flat57"></script>
+<script src="{{ url_for('static', filename='js/charts.js') }}?v=flat58"></script>
 <script>
 const CAMPAIGN_ID = {{ campaign.id }};
 const STAGE_TOKENS = ["NO_ANSWER", "FOLLOWING", "MEETING", "CANCELLATION", "INTERESTED", "REQUEST"];
@@ -165,6 +225,10 @@ let pollTimer = null;
 let pollTries = 0;
 
 // ─── Tabs ─────────────────────────────────────────────────────────────
+// Lazy-load the Sales panel the first time it's opened. The overview tab
+// is always pre-loaded since it's the landing view; everything else stays
+// idle until clicked so we don't make 5 API calls on first paint.
+let salesLoaded = false;
 document.querySelectorAll(".crm-tab").forEach(btn => {
   btn.addEventListener("click", () => {
     const target = btn.getAttribute("data-tab");
@@ -176,6 +240,14 @@ document.querySelectorAll(".crm-tab").forEach(btn => {
     document.querySelectorAll(".crm-tab-panel").forEach(p => {
       p.hidden = p.getAttribute("data-panel") !== target;
     });
+    if (target === "sales" && !salesLoaded) {
+      salesLoaded = true;
+      loadSalesKpis();
+    } else if (target === "sales" && salesData) {
+      // Already loaded — re-draw charts so they pick up any post-language
+      // toggle text changes or layout reflow after the panel un-hid.
+      renderSalesKpis();
+    }
   });
 });
 
@@ -244,8 +316,8 @@ function renderStageDonut(stageCounts) {
   host.style.display = "block";
   empty.style.display = "none";
   // Charts.drawDonut funnels through _waitForPlotly so calling it before
-  // Plotly's CDN finishes is safe.
-  Charts.drawDonut(host, labels, values);
+  // Plotly's CDN finishes is safe. Signature: (containerId, {labels, values}).
+  Charts.drawDonut("stageDonut", { labels, values });
 }
 
 function renderInterventionTop(list) {
@@ -477,8 +549,156 @@ function escapeHtml(s) {
     .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
-function onLangChange() { if (overview) renderOverview(); }
-function onThemeChange() { if (overview) renderStageDonut(overview.stage_counts || {}); }
+// ════════════════════════════════════════════════════════════════════
+// Sales Performance tab (P2)
+// ════════════════════════════════════════════════════════════════════
+
+let salesData = null;
+
+async function loadSalesKpis() {
+  try {
+    salesData = await api(`/api/crm/campaigns/${CAMPAIGN_ID}/sales-kpis`);
+    renderSalesKpis();
+  } catch (e) {
+    toastError(e);
+  }
+}
+
+function renderSalesKpis() {
+  if (!salesData) return;
+  const reps = salesData.reps || [];
+  const unmatched = salesData.unmatched_reps_summary || {};
+
+  renderSalesUnmatched(unmatched);
+
+  // Empty state — only if there are no matched reps AT ALL (no events
+  // attributed to a known user yet). Unmatched-only campaigns still see
+  // the warning card but not the empty state.
+  const hasReps = reps.length > 0;
+  document.getElementById("salesEmpty").hidden = hasReps;
+  document.getElementById("salesChartsBlock").hidden = !hasReps;
+  document.getElementById("salesTableWrap").hidden = !hasReps;
+  if (!hasReps) return;
+
+  renderSalesCharts(reps);
+  renderSalesTable(reps);
+}
+
+function renderSalesUnmatched(unmatched) {
+  const entries = Object.entries(unmatched);
+  const card = document.getElementById("salesUnmatchedWarn");
+  if (!entries.length) {
+    card.hidden = true;
+    return;
+  }
+  card.hidden = false;
+  const total = entries.reduce((sum, [, n]) => sum + n, 0);
+  document.getElementById("salesUnmatchedTitle").textContent =
+    t("crm.sales.unmatched_warning").replace("{count}", fmtNum(total));
+  const ul = document.getElementById("salesUnmatchedList");
+  ul.innerHTML = "";
+  entries
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)  // cap the visible list; the warning carries the full count
+    .forEach(([name, n]) => {
+      const li = document.createElement("li");
+      li.innerHTML = `<strong>${escapeHtml(name)}</strong> · ${fmtNum(n)}`;
+      ul.appendChild(li);
+    });
+}
+
+function renderSalesCharts(reps) {
+  const repLabels = reps.map(r => r.sales_name || `#${r.sales_user_id}`);
+
+  // Chart 1: Fresh vs Rotation lead-count per rep, stacked.
+  Charts.drawStackedBar(
+    "salesTotalsChart",
+    [
+      { name: t("crm.sales.fresh_leads"),    values: reps.map(r => r.fresh_leads_count    || 0) },
+      { name: t("crm.sales.rotation_leads"), values: reps.map(r => r.rotation_leads_count || 0) },
+    ],
+    repLabels,
+  );
+
+  // Charts 2 + 3: per-stage outcomes stacked. One series per stage token
+  // so the legend itself doubles as the colour key. Stages with zero
+  // counts across all reps are dropped — they'd otherwise sit in the
+  // legend taking up space.
+  drawOutcomesChart("salesFreshChart",    reps, repLabels, "fresh_outcomes");
+  drawOutcomesChart("salesRotationChart", reps, repLabels, "rotation_outcomes");
+}
+
+function drawOutcomesChart(containerId, reps, repLabels, field) {
+  const series = [];
+  STAGE_TOKENS.forEach(tok => {
+    const values = reps.map(r => (r[field] || {})[tok] || 0);
+    if (values.some(v => v > 0)) {
+      series.push({ name: t("crm.stages." + tok), values });
+    }
+  });
+  if (!series.length) {
+    // Draw an empty placeholder so the chart-card height doesn't
+    // collapse — keeps the bento grid balanced.
+    Charts.drawStackedBar(containerId, [{ name: " ", values: repLabels.map(() => 0) }], repLabels);
+    return;
+  }
+  Charts.drawStackedBar(containerId, series, repLabels);
+}
+
+function renderSalesTable(reps) {
+  const tbody = document.getElementById("salesRepRows");
+  tbody.innerHTML = "";
+  reps.forEach(r => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>
+        <div class="sales-rep-cell">
+          ${avatarHtml(r)}
+          <div class="sales-rep-name">${escapeHtml(r.sales_name || "")}</div>
+        </div>
+      </td>
+      <td style="text-align:end">${fmtNum(r.fresh_leads_count || 0)}</td>
+      <td>${outcomeChipsHtml(r.fresh_outcomes || {})}</td>
+      <td style="text-align:end">${fmtNum(r.rotation_leads_count || 0)}</td>
+      <td>${outcomeChipsHtml(r.rotation_outcomes || {})}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function avatarHtml(r) {
+  if (r.avatar_url) {
+    return `<span class="sales-avatar"><img src="${escapeHtml(r.avatar_url)}" alt=""></span>`;
+  }
+  const initial = (r.sales_name || "?").trim().charAt(0).toUpperCase() || "?";
+  return `<span class="sales-avatar sales-avatar-initial">${escapeHtml(initial)}</span>`;
+}
+
+function outcomeChipsHtml(outcomes) {
+  // Stable order matches the donut so visual cross-reference works. Empty
+  // dict (no events in window yet) shows an em-dash.
+  const parts = [];
+  STAGE_TOKENS.forEach(tok => {
+    const n = outcomes[tok];
+    if (n && n > 0) {
+      parts.push(
+        `<span class="outcome-chip outcome-${tok.toLowerCase()}">` +
+        `${escapeHtml(t("crm.stages." + tok))} <strong>${fmtNum(n)}</strong>` +
+        `</span>`
+      );
+    }
+  });
+  return parts.length ? parts.join(" ") : `<span class="text-dim">—</span>`;
+}
+
+function onLangChange() {
+  if (overview) renderOverview();
+  if (salesData) renderSalesKpis();
+}
+function onThemeChange() {
+  if (overview) renderStageDonut(overview.stage_counts || {});
+  if (salesData) renderSalesCharts(salesData.reps || []);
+}
 
 loadOverview();
 </script>
@@ -597,5 +817,58 @@ loadOverview();
   .hero-actions { display: flex; gap: 8px; }
   .text-link { color: var(--brand); text-decoration: none; font-size: 13px; font-weight: 600; }
   .text-link:hover { text-decoration: underline; }
+
+  /* ── Sales tab styles ─────────────────────────────────────────── */
+  .sales-unmatched-card {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 14px 18px;
+    border-left: 3px solid var(--warning);
+    background: rgba(196,114,0,0.06);
+    margin-bottom: 18px;
+  }
+  .sales-unmatched-card .material-symbols-outlined {
+    color: var(--warning); flex-shrink: 0; margin-top: 2px;
+  }
+  .sales-unmatched-body { flex: 1; min-width: 0; }
+  .sales-unmatched-title { font-weight: 600; color: var(--warning); }
+  .sales-unmatched-list {
+    margin: 6px 0 0; padding-inline-start: 18px;
+    color: var(--text-muted); font-size: 13px;
+  }
+  .sales-unmatched-list li { margin: 2px 0; }
+
+  .sales-rep-cell { display: flex; align-items: center; gap: 10px; }
+  .sales-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--surface-recessed);
+    overflow: hidden; display: inline-flex;
+    align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-weight: 700; color: var(--text-muted);
+  }
+  .sales-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .sales-avatar-initial { background: var(--brand-soft); color: var(--brand); }
+  .sales-rep-name { font-weight: 500; }
+
+  /* Outcome chips — small badges colored to match the stage palette.
+     Colour tokens reuse the in-app values: brand for follow-up,
+     accent for meeting, danger for cancellation, warning for no-answer. */
+  .outcome-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 9px; border-radius: 9999px;
+    font-size: 11px; font-weight: 500;
+    background: var(--surface-recessed);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    margin-inline-end: 4px;
+    white-space: nowrap;
+  }
+  .outcome-chip strong { color: var(--text); font-weight: 700; }
+  .outcome-chip.outcome-no_answer    { background: rgba(196,114,0,0.10); border-color: rgba(196,114,0,0.20); }
+  .outcome-chip.outcome-following    { background: var(--brand-soft); border-color: rgba(71,77,197,0.18); color: var(--brand); }
+  .outcome-chip.outcome-meeting      { background: rgba(0,103,98,0.10); border-color: rgba(0,103,98,0.22); color: var(--accent-2); }
+  .outcome-chip.outcome-cancellation { background: rgba(186,26,26,0.08); border-color: rgba(186,26,26,0.20); color: var(--danger); }
+  .outcome-chip.outcome-interested   { background: rgba(64,220,209,0.14); border-color: rgba(64,220,209,0.28); color: var(--accent-2); }
+  .outcome-chip.outcome-request      { background: rgba(124,131,253,0.10); border-color: rgba(124,131,253,0.22); color: var(--brand); }
 </style>
 {% endblock %}

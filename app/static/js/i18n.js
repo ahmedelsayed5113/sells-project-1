@@ -966,6 +966,17 @@ const I18N = {
     "crm.stages.CANCELLATION": "ملغي",
     "crm.stages.INTERESTED":   "مهتم",
     "crm.stages.REQUEST":      "طلب",
+
+    /* ─── Sales Performance tab (P2) ─── */
+    "crm.sales.title":              "أداء المبيعات",
+    "crm.sales.fresh_leads":        "عملاء جدد",
+    "crm.sales.rotation_leads":     "عملاء محولون",
+    "crm.sales.fresh_outcomes":     "نتائج العملاء الجدد",
+    "crm.sales.rotation_outcomes":  "نتائج العملاء المحولين",
+    "crm.sales.totals_by_rep":      "إجمالي العملاء لكل مندوب",
+    "crm.sales.col.rep":            "المندوب",
+    "crm.sales.no_reps_yet":        "لا توجد بيانات مندوبين بعد — ارفع تقرير CRM",
+    "crm.sales.unmatched_warning":  "{count} حدث لمندوبين غير مطابقين. اربطهم من إعدادات CRM (قريباً).",
   },
 
   en: {
@@ -1929,6 +1940,17 @@ const I18N = {
     "crm.stages.CANCELLATION": "Cancelled",
     "crm.stages.INTERESTED":   "Interested",
     "crm.stages.REQUEST":      "Request",
+
+    /* ─── Sales Performance tab (P2) ─── */
+    "crm.sales.title":              "Sales Performance",
+    "crm.sales.fresh_leads":        "Fresh Leads",
+    "crm.sales.rotation_leads":     "Rotation Leads",
+    "crm.sales.fresh_outcomes":     "Fresh Outcomes",
+    "crm.sales.rotation_outcomes":  "Rotation Outcomes",
+    "crm.sales.totals_by_rep":      "Total Leads per Rep",
+    "crm.sales.col.rep":            "Sales Rep",
+    "crm.sales.no_reps_yet":        "No rep data yet — upload a CRM report",
+    "crm.sales.unmatched_warning":  "{count} events have unmatched sales reps. Map them in CRM Settings (coming soon).",
   },
 };
 

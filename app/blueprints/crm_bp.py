@@ -385,6 +385,93 @@ def campaign_intervention(campaign_id: int):
             conn.close()
 
 
+# ─── GET per-rep Fresh vs Rotation rollup ───────────────────────────────
+
+@crm_bp.route("/campaigns/<int:campaign_id>/sales-kpis", methods=["GET"])
+@login_required
+@role_required("admin", "manager", "marketing")
+def campaign_sales_kpis(campaign_id: int):
+    """Per-sales-rep view of Fresh + Rotation lead counts and stage
+    outcomes for the campaign. Pre-rolled-up in sales_kpis after every
+    upload; reads pull plain rows.
+
+    Unmatched reps (sales_user_id IS NULL) DO NOT appear in the rep list —
+    they show up in `unmatched_reps_summary` so the admin can pick them
+    out and map them in the CRM settings page (P4).
+    """
+    conn = None
+    try:
+        conn = get_conn()
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT 1 FROM marketing_campaigns WHERE id = %s",
+                (campaign_id,),
+            )
+            if not cur.fetchone():
+                return error_response("not_found", 404)
+
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT s.sales_user_id, s.fresh_leads_count, s.rotation_leads_count,
+                       s.fresh_outcomes, s.rotation_outcomes, s.updated_at,
+                       u.full_name AS sales_name, u.avatar_url
+                FROM sales_kpis s
+                JOIN users u ON u.id = s.sales_user_id
+                WHERE s.campaign_id = %s
+                ORDER BY s.fresh_leads_count DESC,
+                         s.rotation_leads_count DESC,
+                         u.full_name ASC
+                """,
+                (campaign_id,),
+            )
+            reps = cur.fetchall()
+
+            # Unmatched reps with at least one event. Aggregated by the
+            # raw (pre-normalization) name so the admin sees what was
+            # written in the sheet, not a sanitized form.
+            cur.execute(
+                """
+                SELECT raw_sales_rep_name AS raw, COUNT(*) AS n
+                FROM lead_events
+                WHERE campaign_id = %s
+                  AND sales_user_id IS NULL
+                  AND raw_sales_rep_name IS NOT NULL
+                  AND raw_sales_rep_name <> ''
+                  AND is_voided = FALSE
+                GROUP BY raw_sales_rep_name
+                ORDER BY n DESC, raw_sales_rep_name ASC
+                """,
+                (campaign_id,),
+            )
+            unmatched_rows = cur.fetchall()
+
+        out_reps = []
+        for r in reps:
+            out_reps.append({
+                "sales_user_id": r["sales_user_id"],
+                "sales_name": r["sales_name"],
+                "avatar_url": r["avatar_url"],
+                "fresh_leads_count": r["fresh_leads_count"],
+                "rotation_leads_count": r["rotation_leads_count"],
+                "fresh_outcomes": r["fresh_outcomes"] or {},
+                "rotation_outcomes": r["rotation_outcomes"] or {},
+                "updated_at": r["updated_at"].isoformat() if r["updated_at"] else None,
+            })
+
+        return jsonify({
+            "campaign_id": campaign_id,
+            "reps": out_reps,
+            "unmatched_reps_summary": {r["raw"]: r["n"] for r in unmatched_rows},
+        })
+    except Exception as e:
+        log.error("campaign_sales_kpis %s: %s", campaign_id, e)
+        return error_response("server", 500)
+    finally:
+        if conn is not None:
+            conn.close()
+
+
 # ─── GET cross-campaign summary (powers the /marketing CRM table) ───────
 
 @crm_bp.route("/campaigns-summary", methods=["GET"])

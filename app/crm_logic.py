@@ -608,19 +608,344 @@ def _classify_lead_intervention(events):
     }
 
 
+# ═══ Recalc — Assignments (Fresh vs Rotation) ═══════════════════════════
+#
+# An "assignment" is a half-open time window during which one sales rep
+# owned a lead. We rebuild them from scratch on every recalc — there's no
+# UPDATE path. Reasons:
+#   - Idempotency: re-uploading the same events MUST produce the same
+#     assignments, even if the previous upload was partial.
+#   - Simplicity: incremental "diff" rebuild has way more edge cases than
+#     it's worth (mid-stream rep insert, event delete via void, ...).
+#
+# The pure function _assignments_from_events takes an ASC-sorted event
+# list and returns the assignment dicts WITHOUT touching the DB — it's the
+# only piece we unit-test. rebuild_lead_assignments wraps it with the
+# DELETE + INSERT bookkeeping.
+
+ASSIGNMENT_TYPE_FRESH    = "FRESH"
+ASSIGNMENT_TYPE_ROTATION = "ROTATION"
+
+
+def _rep_key(ev):
+    """Build a comparable key for "is this the same rep as the previous event?".
+
+    Both matched → compare by sales_user_id.
+    Both unmatched → compare by normalized raw name.
+    Mixed (one has a user_id, the other doesn't) → never equal.
+    Both fully blank (no user, no name) → returns None, signalling the
+    caller to SKIP this event (don't break the current assignment).
+    """
+    uid = ev.get("sales_user_id")
+    raw = ev.get("raw_sales_rep_name")
+    if uid is not None:
+        # ("u", 7) — distinct namespace from ("r", "name") so a future raw
+        # name that happens to equal a user_id integer can't collide.
+        return ("u", uid)
+    norm = normalize_sales_name(raw or "")
+    if not norm:
+        return None
+    return ("r", norm)
+
+
+def _assignments_from_events(events):
+    """Pure function: ordered events → ordered list of assignment dicts.
+
+    Each event dict needs: follow_date, sales_user_id, raw_sales_rep_name.
+    Events without any rep info are passed through (they don't open or close
+    assignments). The first assignment is always FRESH; every subsequent
+    rep change is ROTATION, even if it's a rep returning after someone else.
+
+    Returns: [{sales_user_id, raw_sales_rep_name, assignment_type,
+               started_at, ended_at}, ...]
+    """
+    assignments = []
+    current = None
+    current_key = None
+
+    for ev in events:
+        key = _rep_key(ev)
+        if key is None:
+            # No rep info — skip without breaking the current assignment.
+            continue
+        if current is None:
+            # First rep-bearing event opens the FRESH window.
+            current = {
+                "sales_user_id": ev.get("sales_user_id"),
+                "raw_sales_rep_name": ev.get("raw_sales_rep_name"),
+                "assignment_type": ASSIGNMENT_TYPE_FRESH,
+                "started_at": ev["follow_date"],
+                "ended_at": None,
+            }
+            current_key = key
+            assignments.append(current)
+            continue
+        if key == current_key:
+            # Same rep continuing — nothing to record.
+            continue
+        # Rep flipped → close current at THIS event's date (half-open
+        # boundary: [started_at, ended_at)) and open ROTATION for the new
+        # rep.
+        current["ended_at"] = ev["follow_date"]
+        current = {
+            "sales_user_id": ev.get("sales_user_id"),
+            "raw_sales_rep_name": ev.get("raw_sales_rep_name"),
+            "assignment_type": ASSIGNMENT_TYPE_ROTATION,
+            "started_at": ev["follow_date"],
+            "ended_at": None,
+        }
+        current_key = key
+        assignments.append(current)
+
+    return assignments
+
+
+def rebuild_lead_assignments(lead_id: int, conn) -> int:
+    """Recompute all assignments for one lead. Returns count written."""
+    import psycopg2.extras
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute(
+            """
+            SELECT id, follow_date, sales_user_id, raw_sales_rep_name, campaign_id
+            FROM lead_events
+            WHERE lead_id = %s
+              AND is_voided = FALSE
+              AND follow_date IS NOT NULL
+            ORDER BY follow_date ASC, id ASC
+            """,
+            (lead_id,),
+        )
+        events = cur.fetchall()
+        if not events:
+            cur.execute("DELETE FROM lead_assignments WHERE lead_id = %s", (lead_id,))
+            return 0
+
+        campaign_id = events[0]["campaign_id"]
+        assignments = _assignments_from_events(events)
+
+        # Wipe-and-write keeps the logic obvious; the alternative (diff &
+        # patch) is fiddly and the event-counts we're walking are small.
+        cur.execute("DELETE FROM lead_assignments WHERE lead_id = %s", (lead_id,))
+        if not assignments:
+            return 0
+
+        rows = [
+            (
+                lead_id, campaign_id,
+                a["sales_user_id"], a["raw_sales_rep_name"], a["assignment_type"],
+                a["started_at"], a["ended_at"],
+            )
+            for a in assignments
+        ]
+        psycopg2.extras.execute_values(
+            cur,
+            """
+            INSERT INTO lead_assignments
+                (lead_id, campaign_id, sales_user_id, raw_sales_rep_name,
+                 assignment_type, started_at, ended_at)
+            VALUES %s
+            """,
+            rows,
+        )
+    return len(assignments)
+
+
+def rebuild_assignments_for_campaign(campaign_id: int, conn,
+                                     affected_lead_ids=None) -> int:
+    """Rebuild assignments for every lead in the campaign (or only the
+    provided subset). Returns total assignments written."""
+    with conn.cursor() as cur:
+        if affected_lead_ids is None:
+            cur.execute("SELECT id FROM leads WHERE campaign_id = %s", (campaign_id,))
+            lead_ids = [r[0] for r in cur.fetchall()]
+        else:
+            lead_ids = list(affected_lead_ids)
+
+    total = 0
+    for lid in lead_ids:
+        total += rebuild_lead_assignments(lid, conn)
+    conn.commit()
+    return total
+
+
+# ═══ Recalc — Sales KPIs ════════════════════════════════════════════════
+#
+# For each rep with at least one assignment in the campaign:
+#   fresh_leads_count    = distinct leads where rep has a FRESH assignment
+#   rotation_leads_count = distinct leads where rep has any ROTATION assignment
+#   fresh_outcomes       = histogram of the LATEST event's normalized_stage,
+#                          counted across each FRESH assignment window
+#   rotation_outcomes    = same but for ROTATION windows
+#
+# "Latest event in window" is per-assignment, not per-lead. If a rep had
+# the same lead twice (FRESH, then again as ROTATION later), both windows
+# contribute their own latest-stage to the rep's totals. The window is
+# half-open [started_at, ended_at) — ended_at=NULL means open-ended.
+
+def recalc_sales_kpis(campaign_id: int, conn) -> int:
+    """Upsert one sales_kpis row per matched rep in the campaign; delete
+    rows for reps who no longer have any assignments. Returns rep count."""
+    import psycopg2.extras
+
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        # The window-join + DISTINCT ON(assignment) gives us "latest valid
+        # event per assignment" in a single pass — much cheaper than a
+        # Python loop with per-assignment queries.
+        cur.execute(
+            """
+            WITH window_latest AS (
+                SELECT DISTINCT ON (a.id)
+                       a.id            AS assignment_id,
+                       a.lead_id,
+                       a.sales_user_id,
+                       a.assignment_type,
+                       le.normalized_stage
+                FROM lead_assignments a
+                JOIN lead_events le ON le.lead_id = a.lead_id
+                WHERE a.campaign_id = %s
+                  AND a.sales_user_id IS NOT NULL
+                  AND le.is_voided = FALSE
+                  AND le.normalized_stage IS NOT NULL
+                  AND le.follow_date >= a.started_at
+                  AND (a.ended_at IS NULL OR le.follow_date < a.ended_at)
+                ORDER BY a.id, le.follow_date DESC NULLS LAST, le.id DESC
+            )
+            SELECT sales_user_id, assignment_type, normalized_stage, COUNT(*) AS n
+            FROM window_latest
+            GROUP BY sales_user_id, assignment_type, normalized_stage
+            """,
+            (campaign_id,),
+        )
+        outcome_rows = cur.fetchall()
+
+        # Lead counts come from the assignments table directly — a rep can
+        # own a lead without that lead having a valid event in the window
+        # yet, and we still want to count them.
+        cur.execute(
+            """
+            SELECT sales_user_id, assignment_type, COUNT(DISTINCT lead_id) AS n
+            FROM lead_assignments
+            WHERE campaign_id = %s AND sales_user_id IS NOT NULL
+            GROUP BY sales_user_id, assignment_type
+            """,
+            (campaign_id,),
+        )
+        count_rows = cur.fetchall()
+
+    # Pivot: user_id → {fresh_count, rotation_count, fresh_outcomes,
+    #                   rotation_outcomes}.
+    per_user: dict = {}
+    for r in count_rows:
+        uid = r["sales_user_id"]
+        bucket = per_user.setdefault(uid, {
+            "fresh_leads_count": 0,
+            "rotation_leads_count": 0,
+            "fresh_outcomes": {},
+            "rotation_outcomes": {},
+        })
+        if r["assignment_type"] == ASSIGNMENT_TYPE_FRESH:
+            bucket["fresh_leads_count"] = r["n"]
+        else:
+            bucket["rotation_leads_count"] = r["n"]
+
+    for r in outcome_rows:
+        uid = r["sales_user_id"]
+        bucket = per_user.setdefault(uid, {
+            "fresh_leads_count": 0,
+            "rotation_leads_count": 0,
+            "fresh_outcomes": {},
+            "rotation_outcomes": {},
+        })
+        target = ("fresh_outcomes" if r["assignment_type"] == ASSIGNMENT_TYPE_FRESH
+                  else "rotation_outcomes")
+        bucket[target][r["normalized_stage"]] = r["n"]
+
+    with conn.cursor() as cur:
+        if per_user:
+            payload = [
+                (
+                    campaign_id, uid,
+                    b["fresh_leads_count"], b["rotation_leads_count"],
+                    _json_dumps_safe(b["fresh_outcomes"]),
+                    _json_dumps_safe(b["rotation_outcomes"]),
+                )
+                for uid, b in per_user.items()
+            ]
+            psycopg2.extras.execute_values(
+                cur,
+                """
+                INSERT INTO sales_kpis
+                    (campaign_id, sales_user_id, fresh_leads_count,
+                     rotation_leads_count, fresh_outcomes, rotation_outcomes)
+                VALUES %s
+                ON CONFLICT (campaign_id, sales_user_id) DO UPDATE SET
+                    fresh_leads_count    = EXCLUDED.fresh_leads_count,
+                    rotation_leads_count = EXCLUDED.rotation_leads_count,
+                    fresh_outcomes       = EXCLUDED.fresh_outcomes,
+                    rotation_outcomes    = EXCLUDED.rotation_outcomes,
+                    updated_at           = NOW()
+                """,
+                payload,
+                template="(%s, %s, %s, %s, %s::jsonb, %s::jsonb)",
+            )
+            cur.execute(
+                """
+                DELETE FROM sales_kpis
+                WHERE campaign_id = %s
+                  AND sales_user_id <> ALL(%s)
+                """,
+                (campaign_id, list(per_user.keys())),
+            )
+        else:
+            cur.execute(
+                "DELETE FROM sales_kpis WHERE campaign_id = %s",
+                (campaign_id,),
+            )
+    conn.commit()
+    return len(per_user)
+
+
 # ═══ Aggregator ═════════════════════════════════════════════════════════
 
 def recalc_after_upload(campaign_id: int, conn) -> dict:
     """Called by the background upload thread after lead_events are written.
 
-    Order matters: manager_intervention runs FIRST so campaign_kpis can read
-    its own OPEN-count via the second recalc's SQL pass. Either step can
-    raise — the processor catches and marks the upload FAILED so the user
-    sees the actual error instead of "completed but the dashboard is wrong".
+    Pipeline order (P2):
+      1. rebuild_assignments_for_campaign — Fresh/Rotation windows live here
+         and feed (3) below.
+      2. recalc_campaign_kpis — total_leads + stage_counts. NOTE this also
+         writes manager_intervention_count, but the value will be stale
+         since intervention runs in step (4). We resync it at the end.
+      3. recalc_sales_kpis — per-rep rollups, needs assignments from (1).
+      4. recalc_manager_intervention — the strict-rule flag set; returns
+         the new OPEN count which we mirror into campaign_kpis to fix the
+         staleness from step (2).
     """
-    open_count = recalc_manager_intervention(campaign_id, conn)
+    rebuild_assignments_for_campaign(campaign_id, conn)
     kpis = recalc_campaign_kpis(campaign_id, conn)
-    return {"intervention_open": open_count, "kpis": kpis}
+    rep_count = recalc_sales_kpis(campaign_id, conn)
+    open_count = recalc_manager_intervention(campaign_id, conn)
+
+    # Sync intervention count into campaign_kpis. One-row UPDATE so we
+    # never touch total_leads / stage_counts here.
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE campaign_kpis
+            SET manager_intervention_count = %s,
+                updated_at = NOW()
+            WHERE campaign_id = %s
+            """,
+            (open_count, campaign_id),
+        )
+    conn.commit()
+
+    kpis["manager_intervention_count"] = open_count
+    return {
+        "intervention_open": open_count,
+        "sales_reps_with_kpis": rep_count,
+        "kpis": kpis,
+    }
 
 
 # ─── Local helpers ──────────────────────────────────────────────────────
