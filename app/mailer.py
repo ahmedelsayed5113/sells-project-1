@@ -163,43 +163,52 @@ def _palette(theme: str) -> dict:
 
     Mirrors the in-app design system:
       light → ivory page on white card with periwinkle gradient header
-      dark  → near-black page on indigo-tinted card; same brand gradient
-              header, lifted text colors so they read against the surface.
+      dark  → deep indigo-black page on a slightly-lifted indigo card.
+              Body text is brighter than a typical "muted" color so it
+              reads from a phone at arm's length without squinting.
     """
     if theme == "dark":
         return {
-            "page_bg":      "#0c0e1f",
-            "card_bg":      "#161a30",
-            "card_shadow":  "0 6px 28px rgba(0,0,0,0.45)",
-            "title":        "#f1f1f8",
-            "text":         "#c8cbe0",
-            "text_strong":  "#ffffff",
-            "text_mid":     "#9095b5",
-            "footer_text":  "#7a7e9c",
-            "footer_border":"#262a44",
-            "info_bg":      "#1f2340",
-            "info_text":    "#c8cbe0",
-            "fine_text":    "#7a7e9c",
-            "status_text":  "#e8eaf8",
-            "outer_text":   "#5b5f7a",
-            "link":         "#a0a5ff",
+            "page_bg":       "#0a0c1c",   # deeper than before
+            "card_bg":       "#171a32",   # slight indigo tint, branded feel
+            "card_border":   "rgba(255,255,255,0.06)",  # hairline so the card edge resolves
+            "card_shadow":   "0 12px 40px rgba(0,0,0,0.55)",
+            "title":         "#ffffff",   # pure white for max contrast
+            "text":          "#dadcef",   # was #c8cbe0 — too dim on phones
+            "text_strong":   "#ffffff",
+            "text_mid":      "#8d92b2",
+            "footer_text":   "#6c7090",
+            "footer_border": "rgba(255,255,255,0.06)",
+            "info_bg":       "#1d2140",
+            "info_border":   "rgba(124,131,253,0.18)",
+            "info_text":     "#dadcef",
+            "fine_text":     "#9095b5",
+            "status_bg":     "rgba(124,131,253,0.10)",  # subtle wash, not a heavy block
+            "status_text":   "#ffffff",
+            "outer_text":    "#5b5f7a",
+            "link":          "#a8acff",
+            "divider":       "rgba(255,255,255,0.06)",
         }
     return {
-        "page_bg":      "#eef0f7",
-        "card_bg":      "#ffffff",
-        "card_shadow":  "0 6px 28px rgba(71,77,197,0.12)",
-        "title":        "#1a1b3a",
-        "text":         "#3a3c5e",
-        "text_strong":  "#1a1b3a",
-        "text_mid":     "#7c7f9a",
-        "footer_text":  "#7c7f9a",
-        "footer_border":"#e8eaf3",
-        "info_bg":      "#f5f6fb",
-        "info_text":    "#3a3c5e",
-        "fine_text":    "#3a3c5e",
-        "status_text":  "#1a1b3a",
-        "outer_text":   "#9a9db5",
-        "link":         "#474dc5",
+        "page_bg":       "#f4f5fa",
+        "card_bg":       "#ffffff",
+        "card_border":   "rgba(20,24,40,0.04)",
+        "card_shadow":   "0 12px 40px rgba(71,77,197,0.10)",
+        "title":         "#1a1b3a",
+        "text":          "#3a3c5e",
+        "text_strong":   "#1a1b3a",
+        "text_mid":      "#7c7f9a",
+        "footer_text":   "#7c7f9a",
+        "footer_border": "#e8eaf3",
+        "info_bg":       "#f5f6fb",
+        "info_border":   "rgba(71,77,197,0.10)",
+        "info_text":     "#3a3c5e",
+        "fine_text":     "#3a3c5e",
+        "status_bg":     "rgba(71,77,197,0.06)",
+        "status_text":   "#1a1b3a",
+        "outer_text":    "#9a9db5",
+        "link":          "#474dc5",
+        "divider":       "#e8eaf3",
     }
 
 
@@ -235,15 +244,48 @@ def _footer(p: dict) -> str:
     return f"""
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
       <tr>
-        <td class="em-footer-cell" style="padding:22px 36px 28px;border-top:1px solid {p['footer_border']}">
-          <p style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:1.6;color:{p['footer_text']};text-align:center">
+        <td class="em-footer-cell" style="padding:24px 40px 30px;border-top:1px solid {p['footer_border']}">
+          <p style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:1.7;color:{p['footer_text']};text-align:center;letter-spacing:0.1px">
             &copy; Ain Real Estate &middot; KPI &amp; Sales Intelligence System<br>
-            This is an automated message — please do not reply to this email.
+            <span style="color:{p['footer_text']};opacity:0.75">This is an automated message — please do not reply to this email.</span>
           </p>
         </td>
       </tr>
     </table>
 """
+
+
+def _cta_button(href: str, label: str) -> str:
+    """Brand CTA button. Same chrome on both palettes — the periwinkle
+    gradient is the brand signature, and a darker shadow keeps the button
+    grounded against either surface. Inner highlight gives it a subtle
+    pressed-glass feel that survives most email-client renderers."""
+    return f"""
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0">
+      <tr><td class="em-cta-cell">
+        <a href="{href}" class="em-cta"
+           style="display:inline-block;padding:15px 36px;background:linear-gradient(135deg,#5258d8 0%,#6c72e8 100%);background-color:#5258d8;color:#ffffff;text-decoration:none;border-radius:12px;font-size:15px;font-weight:600;letter-spacing:-0.1px;box-shadow:0 6px 18px rgba(71,77,197,0.38),inset 0 1px 0 rgba(255,255,255,0.18);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+          {label}
+        </a>
+      </td></tr>
+    </table>
+    """
+
+
+def _info_card(label: str, body_html: str, p: dict) -> str:
+    """Soft info block used for "what next" / "button not working" content.
+    A bordered surface a notch above the card-body bg so it reads as a
+    tucked-away aside without shouting."""
+    return f"""
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0 0">
+      <tr><td class="em-info-card" style="background:{p['info_bg']};border:1px solid {p['info_border']};border-radius:12px;padding:18px 20px">
+        <div style="font-size:11px;font-weight:700;color:{p['text_mid']};text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px">{label}</div>
+        <div style="font-size:13.5px;color:{p['info_text']};line-height:1.7">
+          {body_html}
+        </div>
+      </td></tr>
+    </table>
+    """
 
 
 def _wrap_html(inner: str, theme: str = "light", preheader: str = "") -> str:
@@ -256,6 +298,9 @@ def _wrap_html(inner: str, theme: str = "light", preheader: str = "") -> str:
     """
     p = _palette(theme)
     color_scheme = "dark" if theme == "dark" else "light"
+    # Hairline border around the card so the edge resolves cleanly on both
+    # palettes — without it the dark card visually melts into the page bg
+    # at certain phone gammas.
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -269,33 +314,33 @@ def _wrap_html(inner: str, theme: str = "light", preheader: str = "") -> str:
        Trim outer gutters, tighten inner padding, and drop heading size. */
     @media only screen and (max-width: 520px) {{
       .em-outer       {{ padding: 16px 8px !important; }}
-      .em-card        {{ border-radius: 14px !important; }}
-      .em-header-cell {{ padding: 24px 20px 22px !important; }}
-      .em-body-cell   {{ padding: 28px 20px 4px !important; }}
-      .em-footer-cell {{ padding: 18px 20px 24px !important; }}
-      .em-title       {{ font-size: 22px !important; line-height: 1.3 !important; }}
-      .em-text        {{ font-size: 14.5px !important; }}
+      .em-card        {{ border-radius: 16px !important; }}
+      .em-header-cell {{ padding: 26px 22px 24px !important; }}
+      .em-body-cell   {{ padding: 30px 22px 6px !important; }}
+      .em-footer-cell {{ padding: 20px 22px 26px !important; }}
+      .em-title       {{ font-size: 23px !important; line-height: 1.28 !important; }}
+      .em-text        {{ font-size: 15px !important; }}
       .em-brand-name  {{ font-size: 20px !important; }}
       .em-brand-tag   {{ font-size: 10px !important; letter-spacing: 1px !important; }}
-      .em-cta         {{ display: block !important; padding: 14px 20px !important; text-align: center !important; }}
+      .em-cta         {{ display: block !important; padding: 15px 22px !important; text-align: center !important; }}
       .em-cta-cell    {{ width: 100% !important; }}
-      .em-status-card {{ padding: 12px 14px !important; }}
-      .em-info-card   {{ padding: 14px 16px !important; }}
+      .em-status-card {{ padding: 14px 16px !important; }}
+      .em-info-card   {{ padding: 16px 18px !important; }}
     }}
   </style>
 </head>
 <body style="margin:0;padding:0;background:{p['page_bg']};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
   <span style="display:none!important;visibility:hidden;opacity:0;height:0;width:0;max-height:0;max-width:0;font-size:1px;line-height:1px;color:transparent;overflow:hidden">{preheader}</span>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="em-outer" style="background:{p['page_bg']};padding:32px 12px">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="em-outer" style="background:{p['page_bg']};padding:36px 14px">
     <tr>
       <td align="center">
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" class="em-card"
-               style="max-width:600px;width:100%;background:{p['card_bg']};border-radius:18px;overflow:hidden;box-shadow:{p['card_shadow']}">
+               style="max-width:600px;width:100%;background:{p['card_bg']};border:1px solid {p['card_border']};border-radius:20px;overflow:hidden;box-shadow:{p['card_shadow']}">
           <tr><td>{_brand_header()}</td></tr>
-          <tr><td class="em-body-cell" style="padding:36px 36px 8px">{inner}</td></tr>
+          <tr><td class="em-body-cell" style="padding:40px 40px 12px">{inner}</td></tr>
           <tr><td>{_footer(p)}</td></tr>
         </table>
-        <p style="margin:18px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:11px;color:{p['outer_text']};text-align:center">
+        <p style="margin:20px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:11px;color:{p['outer_text']};text-align:center;letter-spacing:0.2px">
           Ain Real Estate &middot; al-ainrealestate.com
         </p>
       </td>
@@ -306,17 +351,33 @@ def _wrap_html(inner: str, theme: str = "light", preheader: str = "") -> str:
 
 
 def _status_card(icon: str, accent: str, label: str, message: str, p: dict) -> str:
-    """Coloured callout strip used at the top of each lifecycle email."""
+    """Coloured callout strip at the top of each lifecycle email.
+
+    Visual: a light wash with a thicker accent rail on the leading edge,
+    a circular icon chip, and tight uppercase label. Reads cleanly on
+    both palettes — the wash is intentionally subtle so the rail does
+    the colour work and the body of the card never competes with the
+    real content below it.
+    """
     return f"""
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px">
       <tr>
-        <td class="em-status-card" style="background:{accent}14;border:1px solid {accent}33;border-left:4px solid {accent};border-radius:10px;padding:14px 16px">
-          <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+        <td class="em-status-card" style="background:{p['status_bg']};border:1px solid {accent}26;border-left:3px solid {accent};border-radius:12px;padding:16px 18px">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
             <tr>
-              <td style="vertical-align:middle;padding-right:12px;font-size:20px;line-height:1">{icon}</td>
+              <td width="40" style="vertical-align:middle;padding-right:14px">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td width="36" height="36" align="center" valign="middle"
+                        style="background:{accent}1f;border-radius:50%;font-size:18px;line-height:36px">
+                      {icon}
+                    </td>
+                  </tr>
+                </table>
+              </td>
               <td style="vertical-align:middle">
-                <div style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:{accent};line-height:1">{label}</div>
-                <div style="font-size:14px;color:{p['status_text']};margin-top:4px;line-height:1.5">{message}</div>
+                <div style="font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:{accent};line-height:1.1">{label}</div>
+                <div style="font-size:14px;color:{p['status_text']};margin-top:6px;line-height:1.5;font-weight:500">{message}</div>
               </td>
             </tr>
           </table>
@@ -345,33 +406,29 @@ You'll receive another email once your account is approved (or if it's declined)
 — The Ain Real Estate team
 """
 
+    next_steps = (
+        "1. An admin reviews your request.<br>"
+        "2. You receive an approval (or decline) email.<br>"
+        "3. If approved, sign in with the credentials you chose at signup."
+    )
     inner = f"""
     {_status_card("&#9203;", "#c47200", "Pending review", "Your request is awaiting admin approval.", p)}
 
-    <h1 class="em-title" style="margin:0 0 14px;font-size:24px;font-weight:700;color:{p['title']};letter-spacing:-0.3px;line-height:1.3">
+    <h1 class="em-title" style="margin:0 0 16px;font-size:26px;font-weight:700;color:{p['title']};letter-spacing:-0.4px;line-height:1.25">
       Welcome aboard, {name}.
     </h1>
     <p class="em-text" style="margin:0 0 14px;font-size:15px;line-height:1.7;color:{p['text']}">
       Thanks for signing up to <strong style="color:{p['text_strong']}">Ain Real Estate</strong>.
       Your registration has been received and is now in the queue for admin review.
     </p>
-    <p class="em-text" style="margin:0 0 24px;font-size:15px;line-height:1.7;color:{p['text']}">
+    <p class="em-text" style="margin:0 0 8px;font-size:15px;line-height:1.7;color:{p['text']}">
       You'll receive another email as soon as your account is approved — or if your request
       is declined. No action is needed from you in the meantime.
     </p>
 
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px">
-      <tr><td class="em-info-card" style="background:{p['info_bg']};border-radius:12px;padding:18px 20px">
-        <div style="font-size:12px;font-weight:600;color:{p['text_mid']};text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px">What happens next</div>
-        <div class="em-text" style="font-size:14px;color:{p['info_text']};line-height:1.7">
-          1. An admin reviews your request.<br>
-          2. You receive an approval (or decline) email.<br>
-          3. If approved, sign in with the credentials you chose at signup.
-        </div>
-      </td></tr>
-    </table>
+    {_info_card("What happens next", next_steps, p)}
 
-    <p class="em-text-mid" style="margin:20px 0 0;font-size:14px;color:{p['text_mid']};line-height:1.6">
+    <p class="em-text-mid" style="margin:28px 0 0;font-size:14px;color:{p['text_mid']};line-height:1.6">
       — The Ain Real Estate team
     </p>
     """
@@ -397,29 +454,22 @@ You can now sign in using the username and password you chose at registration.
     inner = f"""
     {_status_card("&#10003;", "#006762", "Approved", "Your account is active and ready to use.", p)}
 
-    <h1 class="em-title" style="margin:0 0 14px;font-size:24px;font-weight:700;color:{p['title']};letter-spacing:-0.3px;line-height:1.3">
+    <h1 class="em-title" style="margin:0 0 16px;font-size:26px;font-weight:700;color:{p['title']};letter-spacing:-0.4px;line-height:1.25">
       You're in, {name}.
     </h1>
-    <p class="em-text" style="margin:0 0 14px;font-size:15px;line-height:1.7;color:{p['text']}">
+    <p class="em-text" style="margin:0 0 6px;font-size:15px;line-height:1.7;color:{p['text']}">
       Good news — your <strong style="color:{p['text_strong']}">Ain Real Estate</strong> account has been approved
       by an admin. You can sign in right now using the username and password you chose at signup.
     </p>
 
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0">
-      <tr><td class="em-cta-cell">
-        <a href="https://al-ainrealestate.com/login" class="em-cta"
-           style="display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#474dc5 0%,#6067df 100%);background-color:#474dc5;color:#ffffff;text-decoration:none;border-radius:10px;font-size:15px;font-weight:600;letter-spacing:-0.1px;box-shadow:0 4px 12px rgba(71,77,197,0.28)">
-          Sign in to your account
-        </a>
-      </td></tr>
-    </table>
+    {_cta_button("https://al-ainrealestate.com/login", "Sign in to your account")}
 
-    <p class="em-text-mid" style="margin:0;font-size:13px;color:{p['text_mid']};line-height:1.6">
+    <p class="em-text-mid" style="margin:0;font-size:13px;color:{p['text_mid']};line-height:1.7">
       Forgot your password? Use the <strong style="color:{p['text']}">Forgot password</strong> link on the
       sign-in page and we'll send you a reset email.
     </p>
 
-    <p class="em-text-mid" style="margin:20px 0 0;font-size:14px;color:{p['text_mid']};line-height:1.6">
+    <p class="em-text-mid" style="margin:28px 0 0;font-size:14px;color:{p['text_mid']};line-height:1.6">
       — The Ain Real Estate team
     </p>
     """
@@ -445,19 +495,19 @@ If you believe this was a mistake, please contact your administrator.
     inner = f"""
     {_status_card("&#9888;", "#ba1a1a", "Not approved", "Your signup request was declined at this time.", p)}
 
-    <h1 class="em-title" style="margin:0 0 14px;font-size:24px;font-weight:700;color:{p['title']};letter-spacing:-0.3px;line-height:1.3">
+    <h1 class="em-title" style="margin:0 0 16px;font-size:26px;font-weight:700;color:{p['title']};letter-spacing:-0.4px;line-height:1.25">
       Hi {name},
     </h1>
     <p class="em-text" style="margin:0 0 14px;font-size:15px;line-height:1.7;color:{p['text']}">
       We're sorry to share that your <strong style="color:{p['text_strong']}">Ain Real Estate</strong> signup
       request was not approved at this time.
     </p>
-    <p class="em-text" style="margin:0 0 24px;font-size:15px;line-height:1.7;color:{p['text']}">
+    <p class="em-text" style="margin:0 0 8px;font-size:15px;line-height:1.7;color:{p['text']}">
       If you believe this was a mistake, or you'd like to follow up on the decision, please contact
       your administrator directly.
     </p>
 
-    <p class="em-text-mid" style="margin:20px 0 0;font-size:14px;color:{p['text_mid']};line-height:1.6">
+    <p class="em-text-mid" style="margin:28px 0 0;font-size:14px;color:{p['text_mid']};line-height:1.6">
       — The Ain Real Estate team
     </p>
     """
@@ -485,42 +535,31 @@ If you didn't request this, you can safely ignore this email — your current pa
 — The Ain Real Estate team
 """
 
+    fallback_body = (
+        "Copy and paste this URL into your browser:<br>"
+        f'<a href="{reset_url}" style="color:{p["link"]};text-decoration:none;word-break:break-all">{reset_url}</a>'
+    )
     inner = f"""
-    {_status_card("&#128274;", "#474dc5", "Password reset", f"This link is valid for {ttl_minutes} minutes.", p)}
+    {_status_card("&#128274;", "#5258d8", "Password reset", f"This link is valid for {ttl_minutes} minutes.", p)}
 
-    <h1 class="em-title" style="margin:0 0 14px;font-size:24px;font-weight:700;color:{p['title']};letter-spacing:-0.3px;line-height:1.3">
+    <h1 class="em-title" style="margin:0 0 16px;font-size:26px;font-weight:700;color:{p['title']};letter-spacing:-0.4px;line-height:1.25">
       Reset your password
     </h1>
-    <p class="em-text" style="margin:0 0 14px;font-size:15px;line-height:1.7;color:{p['text']}">
+    <p class="em-text" style="margin:0 0 6px;font-size:15px;line-height:1.7;color:{p['text']}">
       Hi <strong style="color:{p['text_strong']}">{name}</strong>, we received a request to reset the password
       on your Ain Real Estate account. Click the button below to choose a new one.
     </p>
 
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0">
-      <tr><td class="em-cta-cell">
-        <a href="{reset_url}" class="em-cta"
-           style="display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#474dc5 0%,#6067df 100%);background-color:#474dc5;color:#ffffff;text-decoration:none;border-radius:10px;font-size:15px;font-weight:600;letter-spacing:-0.1px;box-shadow:0 4px 12px rgba(71,77,197,0.28)">
-          Reset password
-        </a>
-      </td></tr>
-    </table>
+    {_cta_button(reset_url, "Reset password")}
 
-    <p class="em-text-mid" style="margin:0 0 16px;font-size:13px;color:{p['text_mid']};line-height:1.6">
+    <p class="em-text-mid" style="margin:0;font-size:13px;color:{p['text_mid']};line-height:1.7">
       This link expires in <strong style="color:{p['text']}">{ttl_minutes} minutes</strong>. If you didn't
       request a password reset, you can safely ignore this email — your current password will stay unchanged.
     </p>
 
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:20px 0 0">
-      <tr><td class="em-info-card" style="background:{p['info_bg']};border-radius:10px;padding:14px 16px">
-        <div style="font-size:11px;font-weight:600;color:{p['text_mid']};text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px">Button not working?</div>
-        <div style="font-size:12px;color:{p['fine_text']};line-height:1.6;word-break:break-all">
-          Copy and paste this URL into your browser:<br>
-          <a href="{reset_url}" style="color:{p['link']};text-decoration:none">{reset_url}</a>
-        </div>
-      </td></tr>
-    </table>
+    {_info_card("Button not working?", fallback_body, p)}
 
-    <p class="em-text-mid" style="margin:20px 0 0;font-size:14px;color:{p['text_mid']};line-height:1.6">
+    <p class="em-text-mid" style="margin:28px 0 0;font-size:14px;color:{p['text_mid']};line-height:1.6">
       — The Ain Real Estate team
     </p>
     """
